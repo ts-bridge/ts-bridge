@@ -1,6 +1,6 @@
 {
   "name": "@ts-bridge/root",
-  "version": "0.0.0",
+  "version": "1.0.0",
   "private": true,
   "description": "The root package of the monorepo.",
   "homepage": "https://github.com/ts-bridge/ts-bridge#readme",
