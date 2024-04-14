@@ -7,4 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Uncategorized
+
+- Initial commit
+
 [Unreleased]: https://github.com/ts-bridge/ts-bridge/
