@@ -1,0 +1,23 @@
+{
+  "compilerOptions": {
+    "composite": true,
+    "declaration": true,
+    "declarationMap": true,
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "lib": ["ES2022", "DOM"],
+    "module": "Node16",
+    "moduleResolution": "Node16",
+    "noEmit": true,
+    "noErrorTruncation": true,
+    "noUncheckedIndexedAccess": true,
+    "outDir": "./dist",
+    "paths": {
+      "@ts-bridge/*": ["../*/src/index.ts"]
+    },
+    "strict": true,
+    "target": "ES2022",
+    "tsBuildInfoFile": ".tsbuildinfo"
+  },
+  "exclude": ["./dist", "./node_modules"]
+}

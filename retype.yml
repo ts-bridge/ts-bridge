@@ -1,0 +1,23 @@
+input: './docs'
+output: './.retype'
+
+url: 'https://ts-bridge.dev'
+
+branding:
+  title: 'TS Bridge'
+  label: 'Docs'
+  logo: './assets/logo.svg'
+  logoDark: './assets/logo-dark.svg'
+
+edit:
+  repo: 'https://github.com/ts-bridge/ts-bridge/edit/'
+  base: '/docs'
+
+favicon: './assets/logo.png'
+
+links:
+  - text: 'GitHub'
+    link: 'https://github.com/ts-bridge/ts-bridge'
+
+footer:
+  copyright: '&copy; Copyright {{ year }}. All rights reserved.'

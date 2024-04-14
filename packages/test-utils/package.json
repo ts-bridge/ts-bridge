@@ -1,0 +1,51 @@
+{
+  "name": "@ts-bridge/test-utils",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Internal test utilities for `ts-bridge` packages. This is not meant to be used outside of the `ts-bridge` monorepo.",
+  "homepage": "https://github.com/ts-bridge/ts-bridge/tree/main/packages/test-utils#readme",
+  "bugs": {
+    "url": "https://github.com/ts-bridge/ts-bridge/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ts-bridge/ts-bridge.git"
+  },
+  "license": "MIT",
+  "author": "Maarten Zuidhoorn <maarten@zuidhoorn.com>",
+  "sideEffects": false,
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.cts",
+      "import": "./dist/index.js"
+    }
+  },
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "allow-scripts": "yarn workspace @ts-bridge/root allow-scripts",
+    "build": "tsc --project tsconfig.build.json",
+    "test": "NODE_OPTIONS=\"--experimental-vm-modules\" vitest"
+  },
+  "dependencies": {
+    "@typescript/vfs": "^1.5.0"
+  },
+  "devDependencies": {
+    "@types/lz-string": "^1.5.0",
+    "@types/node": "^20.12.7",
+    "typescript": "^5.4.5",
+    "vitest": "^1.5.0"
+  },
+  "packageManager": "yarn@4.1.1",
+  "engines": {
+    "node": "^18.18 || >=20"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  }
+}

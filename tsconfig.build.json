@@ -1,0 +1,14 @@
+{
+  "files": [],
+  "references": [
+    {
+      "path": "./packages/cli/tsconfig.build.json"
+    },
+    {
+      "path": "./packages/shims/tsconfig.build.json"
+    },
+    {
+      "path": "./packages/test-utils/tsconfig.build.json"
+    }
+  ]
+}

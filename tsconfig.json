@@ -1,0 +1,20 @@
+{
+  "compilerOptions": {
+    "noEmit": true,
+    "strict": true,
+    "strictNullChecks": true
+  },
+  "include": ["./vitest.config.mts", "./vitest.workspace.mts"],
+  "files": [],
+  "references": [
+    {
+      "path": "./packages/cli"
+    },
+    {
+      "path": "./packages/shims"
+    },
+    {
+      "path": "./packages/test-utils"
+    }
+  ]
+}

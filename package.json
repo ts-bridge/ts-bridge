@@ -1,0 +1,93 @@
+{
+  "name": "@ts-bridge/root",
+  "version": "0.0.0",
+  "private": true,
+  "description": "The root package of the monorepo.",
+  "homepage": "https://github.com/ts-bridge/ts-bridge#readme",
+  "bugs": {
+    "url": "https://github.com/ts-bridge/ts-bridge/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ts-bridge/ts-bridge.git"
+  },
+  "files": [
+    "dist"
+  ],
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "tsc --build ./tsconfig.build.json",
+    "build:docs": "retype build",
+    "postinstall": "simple-git-hooks",
+    "lint": "yarn lint:eslint && yarn lint:constraints && yarn lint:misc --check && yarn lint:dependencies --check && yarn lint:changelogs",
+    "lint:changelogs": "yarn workspaces foreach --all --no-private run lint:changelog",
+    "lint:constraints": "yarn constraints",
+    "lint:dependencies": "depcheck && yarn dedupe",
+    "lint:eslint": "eslint . --cache --ext js,cjs,mjs,ts,cts,mts",
+    "lint:fix": "yarn lint:eslint --fix && yarn lint:constraints --fix && yarn lint:misc --write && yarn lint:dependencies && yarn lint:changelogs --fix",
+    "lint:misc": "prettier '**/*.json' '**/*.md' '**/*.yml' '!.yarnrc.yml' --ignore-path .gitignore --no-error-on-unmatched-pattern",
+    "prepack": "./scripts/prepack.sh",
+    "start:docs": "retype start",
+    "test": "NODE_OPTIONS=\"--experimental-vm-modules\" vitest"
+  },
+  "simple-git-hooks": {
+    "pre-commit": "yarn lint-staged"
+  },
+  "lint-staged": {
+    "*.{js,cjs,mjs,ts,cts,mts}": [
+      "eslint --fix"
+    ],
+    "*.{json,md,yml}": [
+      "prettier --write"
+    ]
+  },
+  "devDependencies": {
+    "@lavamoat/allow-scripts": "^3.0.4",
+    "@lavamoat/preinstall-always-fail": "^2.0.0",
+    "@metamask/auto-changelog": "^3.4.4",
+    "@metamask/create-release-branch": "^3.0.0",
+    "@metamask/eslint-config": "patch:@metamask/eslint-config@npm%3A12.2.0#~/.yarn/patches/@metamask-eslint-config-npm-12.2.0-350c0acd8e.patch",
+    "@metamask/eslint-config-nodejs": "patch:@metamask/eslint-config-nodejs@npm%3A12.1.0#~/.yarn/patches/@metamask-eslint-config-nodejs-npm-12.1.0-9488facb73.patch",
+    "@metamask/eslint-config-typescript": "patch:@metamask/eslint-config-typescript@npm%3A12.1.0#~/.yarn/patches/@metamask-eslint-config-typescript-npm-12.1.0-649edb7cd3.patch",
+    "@typescript-eslint/eslint-plugin": "^5.62.0",
+    "@typescript-eslint/parser": "^5.62.0",
+    "@vitest/coverage-istanbul": "^1.5.0",
+    "depcheck": "^1.4.7",
+    "eslint": "^8.57.0",
+    "eslint-config-prettier": "^8.10.0",
+    "eslint-plugin-import-x": "^0.5.0",
+    "eslint-plugin-jsdoc": "^39.9.1",
+    "eslint-plugin-n": "^15.7.0",
+    "eslint-plugin-prettier": "^4.2.1",
+    "eslint-plugin-promise": "^6.1.1",
+    "lint-staged": "^15.2.2",
+    "prettier": "^2.8.8",
+    "prettier-plugin-packagejson": "^2.5.0",
+    "retypeapp": "^3.5.0",
+    "simple-git-hooks": "^2.11.1",
+    "typescript": "^5.4.5",
+    "vite-tsconfig-paths": "^4.3.2",
+    "vitest": "^1.5.0"
+  },
+  "peerDependencies": {
+    "typescript": ">=4.0.0"
+  },
+  "packageManager": "yarn@4.1.1",
+  "engines": {
+    "node": "^18.18 || >=20"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
+  "lavamoat": {
+    "allowScripts": {
+      "$root$": true,
+      "@lavamoat/preinstall-always-fail": false,
+      "vitest>vite>esbuild": true,
+      "simple-git-hooks": true
+    }
+  }
+}

@@ -1,0 +1,85 @@
+{
+  "name": "@ts-bridge/cli",
+  "version": "0.0.0",
+  "description": "Bridge the gap between ES modules and CommonJS modules with an easy-to-use alternative to `tsc`.",
+  "keywords": [
+    "build-tool",
+    "cjs",
+    "commonjs",
+    "development",
+    "esm",
+    "es-modules",
+    "module",
+    "hybrid",
+    "shims",
+    "tsc",
+    "tsconfig",
+    "typescript"
+  ],
+  "homepage": "https://github.com/ts-bridge/ts-bridge/tree/main/packages/cli#readme",
+  "bugs": {
+    "url": "https://github.com/ts-bridge/ts-bridge/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ts-bridge/ts-bridge.git"
+  },
+  "license": "MIT",
+  "author": "Maarten Zuidhoorn <maarten@zuidhoorn.com>",
+  "sideEffects": false,
+  "type": "module",
+  "exports": {
+    "./package.json": "./package.json"
+  },
+  "bin": {
+    "ts-bridge": "./dist/index.js",
+    "tsbridge": "./dist/index.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "allow-scripts": "yarn workspace @ts-bridge/root allow-scripts",
+    "build": "tsc --project tsconfig.build.json",
+    "lint:changelog": "../../scripts/validate-changelog.sh @ts-bridge/cli",
+    "test": "NODE_OPTIONS=\"--experimental-vm-modules\" vitest"
+  },
+  "dependencies": {
+    "chalk": "^5.3.0",
+    "resolve.exports": "^2.0.2",
+    "yargs": "^17.7.2"
+  },
+  "devDependencies": {
+    "@metamask/auto-changelog": "^3.4.4",
+    "@ts-bridge/test-utils": "workspace:^",
+    "@types/node": "^20.12.7",
+    "@types/yargs": "^17.0.32",
+    "@typescript/vfs": "^1.5.0",
+    "typescript": "^5.4.5",
+    "vite-tsconfig-paths": "^4.3.2",
+    "vitest": "^1.5.0"
+  },
+  "peerDependencies": {
+    "@ts-bridge/shims": "workspace:^",
+    "typescript": ">=4.0.0"
+  },
+  "peerDependenciesMeta": {
+    "@ts-bridge/shims": {
+      "optional": true
+    }
+  },
+  "packageManager": "yarn@4.1.1",
+  "engines": {
+    "node": "^18.18 || >=20"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
+  "lavamoat": {
+    "allowScripts": {
+      "@lavamoat/preinstall-always-fail": false,
+      "tsx>esbuild": false
+    }
+  }
+}

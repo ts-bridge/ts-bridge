@@ -1,0 +1,10 @@
+{
+  "ignores": [
+    "@lavamoat/allow-scripts",
+    "@lavamoat/preinstall-always-fail",
+    "@metamask/auto-changelog",
+    "@metamask/create-release-branch",
+    "@vitest/coverage-istanbul",
+    "prettier-plugin-packagejson"
+  ]
+}

@@ -1,0 +1,108 @@
+diff --git a/package.json b/package.json
+index edf27940b92059b5e1479050220618fa997e4225..3ca73a2722907d6bbcad27f60d95c6f67fde3e7d 100644
+--- a/package.json
++++ b/package.json
+@@ -25,7 +25,7 @@
+     "@metamask/auto-changelog": "^3.0.0",
+     "eslint": "^8.45.0",
+     "eslint-config-prettier": "^8.5.0",
+-    "eslint-plugin-import": "~2.26.0",
++    "eslint-plugin-import-x": "^0.4.4",
+     "eslint-plugin-jsdoc": "^41.1.2",
+     "eslint-plugin-prettier": "^4.2.1",
+     "eslint-plugin-promise": "^6.1.1",
+@@ -34,7 +34,7 @@
+   "peerDependencies": {
+     "eslint": "^8.27.0",
+     "eslint-config-prettier": "^8.5.0",
+-    "eslint-plugin-import": "~2.26.0",
++    "eslint-plugin-import-x": "^0.4.4",
+     "eslint-plugin-jsdoc": "^39.6.2 || ^41 || ^43.0.7",
+     "eslint-plugin-prettier": "^4.2.1",
+     "eslint-plugin-promise": "^6.1.1",
+diff --git a/src/index.js b/src/index.js
+index bc9ea17a0a4c2bd5793d155cb194285d456e0344..b49ce001876bf87970250715c23e43ca15666202 100644
+--- a/src/index.js
++++ b/src/index.js
+@@ -25,7 +25,7 @@ module.exports = {
+   extends: [
+     'eslint:recommended',
+     'plugin:prettier/recommended',
+-    'plugin:import/recommended',
++    'plugin:import-x/recommended',
+   ],
+ 
+   rules: {
+@@ -289,43 +289,43 @@ module.exports = {
+     yoda: ['error', 'never'],
+ 
+     /* import plugin rules */
+-    'import/extensions': [
++    'import-x/extensions': [
+       'error',
+       'never',
+       {
+         json: 'always',
+       },
+     ],
+-    'import/first': 'error',
+-    'import/newline-after-import': 'error',
+-    'import/no-absolute-path': 'error',
+-    'import/no-amd': 'error',
+-    'import/no-anonymous-default-export': 'error',
+-    'import/no-duplicates': 'error',
+-    'import/no-dynamic-require': 'error',
+-    'import/no-extraneous-dependencies': 'error',
+-    'import/no-mutable-exports': 'error',
+-    'import/no-named-as-default': 'error',
+-    'import/no-named-as-default-member': 'error',
+-    'import/no-named-default': 'error',
+-    'import/no-nodejs-modules': 'error',
+-    'import/no-self-import': 'error',
+-    'import/no-unassigned-import': 'error',
+-    'import/no-unresolved': [
++    'import-x/first': 'error',
++    'import-x/newline-after-import': 'error',
++    'import-x/no-absolute-path': 'error',
++    'import-x/no-amd': 'error',
++    'import-x/no-anonymous-default-export': 'error',
++    'import-x/no-duplicates': 'error',
++    'import-x/no-dynamic-require': 'error',
++    'import-x/no-extraneous-dependencies': 'error',
++    'import-x/no-mutable-exports': 'error',
++    'import-x/no-named-as-default': 'error',
++    'import-x/no-named-as-default-member': 'error',
++    'import-x/no-named-default': 'error',
++    'import-x/no-nodejs-modules': 'error',
++    'import-x/no-self-import': 'error',
++    'import-x/no-unassigned-import': 'error',
++    'import-x/no-unresolved': [
+       'error',
+       {
+         commonjs: true,
+       },
+     ],
+-    'import/no-useless-path-segments': [
++    'import-x/no-useless-path-segments': [
+       'error',
+       {
+         commonjs: true,
+         noUselessIndex: true,
+       },
+     ],
+-    'import/no-webpack-loader-syntax': 'error',
+-    'import/order': [
++    'import-x/no-webpack-loader-syntax': 'error',
++    'import-x/order': [
+       'error',
+       {
+         // This means that there will always be a newline between the import
+@@ -349,7 +349,7 @@ module.exports = {
+         },
+       },
+     ],
+-    'import/unambiguous': 'error',
++    'import-x/unambiguous': 'error',
+ 
+     /* jsdoc plugin rules */
+     'jsdoc/check-access': 'error',

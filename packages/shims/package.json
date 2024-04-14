@@ -1,0 +1,70 @@
+{
+  "name": "@ts-bridge/shims",
+  "version": "0.0.0",
+  "description": "CommonJS and ES Modules shims for TS Bridge.",
+  "keywords": [
+    "build-tool",
+    "cjs",
+    "commonjs",
+    "development",
+    "esm",
+    "es-modules",
+    "module",
+    "hybrid",
+    "shims",
+    "tsc",
+    "tsconfig",
+    "typescript"
+  ],
+  "homepage": "https://github.com/ts-bridge/ts-bridge/tree/main/packages/shims#readme",
+  "bugs": {
+    "url": "https://github.com/ts-bridge/ts-bridge/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ts-bridge/ts-bridge.git"
+  },
+  "license": "MIT",
+  "author": "Maarten Zuidhoorn <maarten@zuidhoorn.com>",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "require": "./dist/index.js"
+    },
+    "./esm": {
+      "types": "./dist/module.d.mts",
+      "import": "./dist/module.mjs"
+    },
+    "./esm/require": {
+      "types": "./dist/require.d.mts",
+      "import": "./dist/require.mjs"
+    },
+    "./package.json": "./package.json"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "allow-scripts": "yarn workspace @ts-bridge/root allow-scripts",
+    "build": "tsc --project tsconfig.build.json",
+    "lint:changelog": "../../scripts/validate-changelog.sh @ts-bridge/shims",
+    "test": "NODE_OPTIONS=\"--experimental-vm-modules\" vitest"
+  },
+  "devDependencies": {
+    "@metamask/auto-changelog": "^3.4.4",
+    "typescript": "^5.4.5",
+    "vite-tsconfig-paths": "^4.3.2",
+    "vitest": "^1.5.0"
+  },
+  "packageManager": "yarn@4.1.1",
+  "engines": {
+    "node": "^18.18 || >=20"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  }
+}
