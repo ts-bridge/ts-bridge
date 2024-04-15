@@ -59,8 +59,7 @@ jobs:
           fail-on-cache-miss: true
       - name: Dry run publish
         # Omit npm-token token to perform a dry run.
-        # TODO: Replace commit hash with latest release when published.
-        uses: MetaMask/action-npm-publish@70653d97d9bc2032176949a7bd2be46dace9d779
+        uses: MetaMask/action-npm-publish@v5
         env:
           SKIP_PREPACK: true
 
@@ -83,8 +82,7 @@ jobs:
           key: ${{ github.sha }}
           fail-on-cache-miss: true
       - name: Publish
-        # TODO: Replace commit hash with latest release when published.
-        uses: MetaMask/action-npm-publish@70653d97d9bc2032176949a7bd2be46dace9d779
+        uses: MetaMask/action-npm-publish@v5
         with:
           npm-token: ${{ secrets.NPM_TOKEN }}
         env:
