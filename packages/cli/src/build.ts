@@ -216,7 +216,10 @@ export function buildNode10({
           compilerOptions: {
             ...compilerOptions,
             module: typescript.ModuleKind.ES2022,
-            moduleResolution: ModuleResolutionKind.Node10,
+
+            // `ModuleResolutionKind.NodeJs` is in TypeScript 5 and later, but
+            // TypeScript 4 doesn't support `ModuleResolutionKind.Node10`.
+            moduleResolution: ModuleResolutionKind.NodeJs,
           },
           files,
           oldProgram: program,
@@ -240,7 +243,10 @@ export function buildNode10({
           compilerOptions: {
             ...compilerOptions,
             module: typescript.ModuleKind.CommonJS,
-            moduleResolution: ModuleResolutionKind.Node10,
+
+            // `ModuleResolutionKind.NodeJs` is in TypeScript 5 and later, but
+            // TypeScript 4 doesn't support `ModuleResolutionKind.Node10`.
+            moduleResolution: ModuleResolutionKind.NodeJs,
           },
           files,
           oldProgram: program,
