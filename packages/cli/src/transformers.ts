@@ -500,8 +500,14 @@ export function getNamedImportTransformer({
 }: TransformerOptions) {
   return (context: TransformationContext): Transformer<SourceFile> => {
     return (sourceFile: SourceFile) => {
-      const visitor = (node: Node): Node | Node[] => {
-        if (isImportDeclaration(node) && !node.importClause?.isTypeOnly) {
+      const visitor = (node: Node): Node | Node[] | undefined => {
+        if (isImportDeclaration(node)) {
+          if (node.importClause?.isTypeOnly) {
+            // If the import is type-only, we need to return `undefined` to
+            // avoid TypeScript 4.x from including the import in the output.
+            return undefined;
+          }
+
           return getNamedImportNodes(
             typeChecker,
             sourceFile,
