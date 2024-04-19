@@ -17,7 +17,7 @@ versions=$(yarn semver "${all_versions_array[@]}" --range "$version_range" --loo
 latest_patch_versions=$(echo "$versions" | tr ' ' '\n' | sort -V | awk -F. '{print $1"."$2"."$3}' | sort -t. -k1,1n -k2,2n -k3,3nr | awk -F. '!seen[$1"."$2]++')
 
 # Convert the versions to JSON.
-versions_json=$(echo "$latest_patch_versions" | jq --raw-input --raw-output --slurp 'split("\n") | .[0:-1]')
+versions_json=$(echo "$latest_patch_versions" | jq --raw-input --raw-output --compact-output --slurp 'split("\n") | .[0:-1]')
 
 # Output the JSON.
 echo "$versions_json"
