@@ -23,6 +23,7 @@ import type { Steps } from './steps.js';
 import { executeSteps } from './steps.js';
 import type { TransformerOptions } from './transformers.js';
 import {
+  getTypeImportExportTransformer,
   getExportExtensionTransformer,
   getImportExtensionTransformer,
   getRequireExtensionTransformer,
@@ -379,6 +380,7 @@ export function build({
         getRequireExtensionTransformer(extension, options),
         getImportExtensionTransformer(extension, options),
         getExportExtensionTransformer(extension, options),
+        getTypeImportExportTransformer(options),
         ...getTransformers(type, options),
       ],
       afterDeclarations: [

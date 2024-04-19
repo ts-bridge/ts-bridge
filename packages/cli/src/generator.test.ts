@@ -4,7 +4,12 @@ import {
   getVirtualEnvironment,
   noOp,
 } from '@ts-bridge/test-utils';
-import type { SourceFile, Statement } from 'typescript';
+import type {
+  ExportDeclaration,
+  ImportDeclaration,
+  SourceFile,
+  Statement,
+} from 'typescript';
 import typescript from 'typescript';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -13,6 +18,8 @@ import {
   getImportPath,
   getNamedImportNodes,
   getNamespaceImport,
+  getNonTypeExports,
+  getNonTypeImports,
   getUniqueIdentifier,
 } from './generator.js';
 
@@ -628,6 +635,172 @@ describe('getNamedImportNodes', () => {
       import {} from "foo";
       "
     `);
+  });
+});
+
+describe('getNonTypeImports', () => {
+  it('removes type imports from an import declaration', () => {
+    const importDeclaration = factory.createImportDeclaration(
+      undefined,
+      factory.createImportClause(
+        false,
+        undefined,
+        factory.createNamedImports([
+          factory.createImportSpecifier(
+            true,
+            undefined,
+            factory.createIdentifier('foo'),
+          ),
+          factory.createImportSpecifier(
+            false,
+            undefined,
+            factory.createIdentifier('bar'),
+          ),
+        ]),
+      ),
+      factory.createStringLiteral('foo'),
+      undefined,
+    );
+
+    const result = getNonTypeImports(importDeclaration);
+
+    expect(result).not.toBeUndefined();
+    expect(result).not.toStrictEqual(importDeclaration);
+    expect(compile(result as ImportDeclaration)).toMatchInlineSnapshot(`
+      ""use strict";
+      import { bar } from "foo";
+      "
+    `);
+  });
+
+  it('returns the same node if the import declaration is not a named import', () => {
+    const importDeclaration = factory.createImportDeclaration(
+      undefined,
+      factory.createImportClause(
+        false,
+        undefined,
+        factory.createNamespaceImport(factory.createIdentifier('foo')),
+      ),
+      factory.createStringLiteral('bar'),
+      undefined,
+    );
+
+    const result = getNonTypeImports(importDeclaration);
+    expect(result).toBe(importDeclaration);
+  });
+
+  it('returns the same node if there is no import clause', () => {
+    const importDeclaration = factory.createImportDeclaration(
+      undefined,
+      undefined,
+      factory.createStringLiteral('foo'),
+      undefined,
+    );
+
+    const result = getNonTypeImports(importDeclaration);
+    expect(result).toBe(importDeclaration);
+  });
+
+  it('returns `undefined` if there are no non-type named imports', () => {
+    const importDeclaration = factory.createImportDeclaration(
+      undefined,
+      factory.createImportClause(
+        false,
+        undefined,
+        factory.createNamedImports([
+          factory.createImportSpecifier(
+            true,
+            undefined,
+            factory.createIdentifier('foo'),
+          ),
+          factory.createImportSpecifier(
+            true,
+            undefined,
+            factory.createIdentifier('bar'),
+          ),
+        ]),
+      ),
+      factory.createStringLiteral('bar'),
+      undefined,
+    );
+
+    const result = getNonTypeImports(importDeclaration);
+    expect(result).toBeUndefined();
+  });
+});
+
+describe('getNonTypeExports', () => {
+  it('removes type exports from an export declaration', () => {
+    const exportDeclaration = factory.createExportDeclaration(
+      undefined,
+      false,
+      factory.createNamedExports([
+        factory.createExportSpecifier(
+          true,
+          undefined,
+          factory.createIdentifier('foo'),
+        ),
+        factory.createExportSpecifier(
+          false,
+          undefined,
+          factory.createIdentifier('bar'),
+        ),
+      ]),
+    );
+
+    const result = getNonTypeExports(exportDeclaration);
+
+    expect(result).not.toBeUndefined();
+    expect(result).not.toStrictEqual(exportDeclaration);
+    expect(compile(result as ExportDeclaration)).toMatchInlineSnapshot(`
+      ""use strict";
+      export { bar };
+      "
+    `);
+  });
+
+  it('returns the same node if the export declaration is not a named export', () => {
+    const exportDeclaration = factory.createExportDeclaration(
+      undefined,
+      false,
+      factory.createNamespaceExport(factory.createIdentifier('foo')),
+    );
+
+    const result = getNonTypeExports(exportDeclaration);
+    expect(result).toBe(exportDeclaration);
+  });
+
+  it('returns the same node if there is no export clause', () => {
+    const exportDeclaration = factory.createExportDeclaration(
+      undefined,
+      false,
+      undefined,
+    );
+
+    const result = getNonTypeExports(exportDeclaration);
+    expect(result).toBe(exportDeclaration);
+  });
+
+  it('returns `undefined` if there are no non-type named exports', () => {
+    const exportDeclaration = factory.createExportDeclaration(
+      undefined,
+      false,
+      factory.createNamedExports([
+        factory.createExportSpecifier(
+          true,
+          undefined,
+          factory.createIdentifier('foo'),
+        ),
+        factory.createExportSpecifier(
+          true,
+          undefined,
+          factory.createIdentifier('bar'),
+        ),
+      ]),
+    );
+
+    const result = getNonTypeExports(exportDeclaration);
+    expect(result).toBeUndefined();
   });
 });
 

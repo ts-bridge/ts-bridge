@@ -16,6 +16,8 @@ import {
   getImportPath,
   getNamedImportNodes,
   getNamespaceImport,
+  getNonTypeExports,
+  getNonTypeImports,
   getUniqueIdentifier,
   isGlobal,
 } from './generator.js';
@@ -515,6 +517,50 @@ export function getNamedImportTransformer({
             baseDirectory,
             system,
           );
+        }
+
+        return visitEachChild(node, visitor, context);
+      };
+
+      return visitNode(sourceFile, visitor) as SourceFile;
+    };
+  };
+}
+
+/**
+ * Get a transformer that removes type-only imports and exports. This is the
+ * standard behaviour for TypeScript 5.x, but this transformer is needed for
+ * TypeScript 4.x. This may be a bug in TypeScript 4.x's compiler API.
+ *
+ * For example, the following type-only imports and exports:
+ * ```ts
+ * import type { Foo } from 'module';
+ * export type { Foo };
+ * ```
+ *
+ * will be removed.
+ *
+ * @param _context - The transformer options. This is not used.
+ * @returns The transformer function.
+ */
+export function getTypeImportExportTransformer(_context: TransformerOptions) {
+  return (context: TransformationContext): Transformer<SourceFile> => {
+    return (sourceFile: SourceFile) => {
+      const visitor = (node: Node): Node | Node[] | undefined => {
+        if (isImportDeclaration(node)) {
+          if (node.importClause?.isTypeOnly) {
+            return undefined;
+          }
+
+          return getNonTypeImports(node);
+        }
+
+        if (isExportDeclaration(node)) {
+          if (node.isTypeOnly) {
+            return undefined;
+          }
+
+          return getNonTypeExports(node);
         }
 
         return visitEachChild(node, visitor, context);

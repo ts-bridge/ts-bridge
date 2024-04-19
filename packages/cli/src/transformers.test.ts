@@ -20,6 +20,7 @@ import {
   getRequireExtensionTransformer,
   getRequireTransformer,
   getTargetTransformer,
+  getTypeImportExportTransformer,
 } from './transformers.js';
 
 type CompileOptions = {
@@ -1225,6 +1226,63 @@ describe('getNamedImportTransformer', () => {
     ).toMatchInlineSnapshot(`
       ""use strict";
       const foo = 'bar';
+      "
+    `);
+  });
+});
+
+describe('getTypeImportExportTransformer', () => {
+  it('removes type imports and exports', async () => {
+    const environment = getVirtualEnvironment({
+      files: {
+        '/index.ts': `
+          import type { foo } from './foo';
+          export type { foo } from './foo';
+        `,
+        '/foo.ts': 'export type foo = "bar";',
+      },
+    });
+
+    expect(
+      await compile({
+        format: 'module',
+        environment,
+        transformer: getTypeImportExportTransformer({
+          typeChecker: environment.typeChecker,
+          system: environment.system,
+          baseDirectory: '/',
+        }),
+      }),
+    ).toMatchInlineSnapshot(`
+      "export {};
+      "
+    `);
+  });
+
+  it('removes named type imports and exports', async () => {
+    const environment = getVirtualEnvironment({
+      files: {
+        '/index.ts': `
+          import { type foo } from './foo';
+          import type { bar } from './foo';
+          export { type foo, bar } from './foo';
+        `,
+        '/foo.ts': 'export type foo = "bar"; export const bar = "baz";',
+      },
+    });
+
+    expect(
+      await compile({
+        format: 'module',
+        environment,
+        transformer: getTypeImportExportTransformer({
+          typeChecker: environment.typeChecker,
+          system: environment.system,
+          baseDirectory: '/',
+        }),
+      }),
+    ).toMatchInlineSnapshot(`
+      "export { bar } from './foo';
       "
     `);
   });
