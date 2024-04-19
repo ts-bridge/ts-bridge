@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Uncategorized
+
+- Add MIT license ([#2](https://github.com/ts-bridge/ts-bridge/pull/2))
+
 ## [0.1.0]
 
 ### Added
