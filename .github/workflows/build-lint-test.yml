@@ -116,7 +116,8 @@ jobs:
       - name: Install Yarn dependencies
         run: yarn --immutable --immutable-cache
       - name: Get supported TypeScript versions
-        run: echo "typescript-versions=$(yarn get-supported-typescript-versions)" >> $GITHUB_OUTPUT
+        id: get-supported-versions
+        run: echo "typescript-versions=$(yarn get-typescript-versions)" >> "$GITHUB_OUTPUT"
 
   compatibility-test:
     name: Compatibility Test
