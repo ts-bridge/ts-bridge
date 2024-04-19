@@ -1131,6 +1131,7 @@ __metadata:
     prettier: "npm:^2.8.8"
     prettier-plugin-packagejson: "npm:^2.5.0"
     retypeapp: "npm:^3.5.0"
+    semver: "npm:^7.6.0"
     simple-git-hooks: "npm:^2.11.1"
     typescript: "npm:^5.4.5"
     vite-tsconfig-paths: "npm:^4.3.2"

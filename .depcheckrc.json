@@ -5,6 +5,7 @@
     "@metamask/auto-changelog",
     "@metamask/create-release-branch",
     "@vitest/coverage-istanbul",
+    "semver",
     "prettier-plugin-packagejson"
   ]
 }
