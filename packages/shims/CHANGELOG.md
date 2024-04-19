@@ -9,9 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.1.1]
 
-### Uncategorized
+### Added
 
 - Add MIT license ([#2](https://github.com/ts-bridge/ts-bridge/pull/2))
+  - The package was already licensed under the MIT license, but the license file
+    was missing.
 
 ## [0.1.0]
 
