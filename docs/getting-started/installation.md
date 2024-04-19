@@ -8,7 +8,7 @@ icon: download
 ## Requirements
 
 - Node.js 18.18 or later.
-- TypeScript 4.0 or later.
+- TypeScript 4.8 or later.
 
 ## Installing the CLI
 
