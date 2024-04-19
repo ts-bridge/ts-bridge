@@ -120,7 +120,7 @@ jobs:
         run: echo "typescript-versions=$(yarn get-typescript-versions)" >> "$GITHUB_OUTPUT"
 
   compatibility-test:
-    name: Compatibility Test
+    name: Compatibility test
     runs-on: ubuntu-latest
     needs:
       - get-supported-versions
