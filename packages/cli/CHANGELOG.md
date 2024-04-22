@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.2]
+
+### Changed
+
+- Bump minimum TypeScript version to 4.8 ([#12](https://github.com/ts-bridge/ts-bridge/pull/12))
+  - The tool was already incompatible with TypeScript versions older than 4.8,
+    but this change makes the minimum version explicit.
+
+### Fixed
+
+- Add transformer to remove type imports and exports ([#10](https://github.com/ts-bridge/ts-bridge/pull/10))
+  - This fixes compatibility with TypeScript 4.8 and later in certain cases.
+
 ## [0.1.1]
 
 ### Added
@@ -25,6 +38,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Initial release of the `@ts-bridge/cli` package.
 
-[Unreleased]: https://github.com/ts-bridge/ts-bridge/compare/@ts-bridge/cli@0.1.1...HEAD
+[Unreleased]: https://github.com/ts-bridge/ts-bridge/compare/@ts-bridge/cli@0.1.2...HEAD
+[0.1.2]: https://github.com/ts-bridge/ts-bridge/compare/@ts-bridge/cli@0.1.1...@ts-bridge/cli@0.1.2
 [0.1.1]: https://github.com/ts-bridge/ts-bridge/compare/@ts-bridge/cli@0.1.0...@ts-bridge/cli@0.1.1
 [0.1.0]: https://github.com/ts-bridge/ts-bridge/releases/tag/@ts-bridge/cli@0.1.0
