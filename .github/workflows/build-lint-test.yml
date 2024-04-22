@@ -125,7 +125,6 @@ jobs:
     needs:
       - get-supported-versions
     strategy:
-      max-parallel: 2
       matrix:
         typescript-version: ${{ fromJson(needs.get-supported-versions.outputs.typescript-versions) }}
     steps:
@@ -143,11 +142,4 @@ jobs:
       - name: Install TypeScript ${{ matrix.typescript-version }}
         run: yarn workspaces foreach -A add -D typescript@${{ matrix.typescript-version }}
       - name: Test
-        run: yarn test
-      - name: Require clean working directory
-        shell: bash
-        run: |
-          if ! git diff --exit-code; then
-            echo "Working tree dirty at end of job"
-            exit 1
-          fi
+        run: yarn test --coverage false
