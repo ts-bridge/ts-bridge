@@ -9,11 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.1.2]
 
-### Uncategorized
+### Changed
 
-- Run tests on all supported TypeScript versions ([#11](https://github.com/ts-bridge/ts-bridge/pull/11))
 - Bump minimum TypeScript version to 4.8 ([#12](https://github.com/ts-bridge/ts-bridge/pull/12))
+  - The tool was already incompatible with TypeScript versions older than 4.8,
+    but this change makes the minimum version explicit.
+
+### Fixed
+
 - Add transformer to remove type imports and exports ([#10](https://github.com/ts-bridge/ts-bridge/pull/10))
+  - This fixes compatibility with TypeScript 4.8 and later in certain cases.
 
 ## [0.1.1]
 
