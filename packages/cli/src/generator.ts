@@ -10,6 +10,7 @@ import type {
   ImportDeclaration,
   Statement,
   System,
+  ExportDeclaration,
 } from 'typescript';
 import typescript from 'typescript';
 
@@ -24,6 +25,8 @@ import { getIdentifierName } from './utils.js';
 
 const {
   factory,
+  isNamedExports,
+  isNamedImports,
   isNamespaceImport,
   isStringLiteral,
   NodeFlags,
@@ -306,6 +309,73 @@ export function getNamedImportNodes(
   );
 
   return [wildcardImport, variableStatement];
+}
+
+/**
+ * Get the import declaration without type-only imports.
+ *
+ * @param node - The import declaration node.
+ * @returns The import declaration without type-only imports. If there are no
+ * type-only imports, the node is returned as is.
+ */
+export function getNonTypeImports(node: ImportDeclaration) {
+  if (
+    !node.importClause?.namedBindings ||
+    !isNamedImports(node.importClause.namedBindings)
+  ) {
+    return node;
+  }
+
+  const elements = node.importClause.namedBindings.elements.filter(
+    (element) => !element.isTypeOnly,
+  );
+
+  if (elements.length === 0) {
+    return undefined;
+  }
+
+  return factory.updateImportDeclaration(
+    node,
+    node.modifiers,
+    factory.updateImportClause(
+      node.importClause,
+      false,
+      node.importClause.name,
+      factory.updateNamedImports(node.importClause.namedBindings, elements),
+    ),
+    node.moduleSpecifier,
+    node.attributes,
+  );
+}
+
+/**
+ * Get the export declaration without type-only exports.
+ *
+ * @param node - The export declaration node.
+ * @returns The export declaration without type-only exports. If there are no
+ * type-only exports, the node is returned as is.
+ */
+export function getNonTypeExports(node: ExportDeclaration) {
+  if (!node.exportClause || !isNamedExports(node.exportClause)) {
+    return node;
+  }
+
+  const elements = node.exportClause.elements.filter(
+    (element) => !element.isTypeOnly,
+  );
+
+  if (elements.length === 0) {
+    return undefined;
+  }
+
+  return factory.updateExportDeclaration(
+    node,
+    node.modifiers,
+    false,
+    factory.updateNamedExports(node.exportClause, elements),
+    node.moduleSpecifier,
+    node.attributes,
+  );
 }
 
 /**
