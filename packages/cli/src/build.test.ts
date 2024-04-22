@@ -809,7 +809,7 @@ describe('build', () => {
       tsconfig: getMockTsConfig({
         compilerOptions: {
           module: 'ES2022',
-          moduleResolution: 'Node10',
+          moduleResolution: 'Node',
         },
       }),
     });
@@ -834,7 +834,7 @@ describe('build', () => {
       tsconfig: getMockTsConfig({
         compilerOptions: {
           module: 'ES2022',
-          moduleResolution: 'Node10',
+          moduleResolution: 'Node',
         },
       }),
     });

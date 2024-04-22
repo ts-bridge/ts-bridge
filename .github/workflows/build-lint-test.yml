@@ -97,3 +97,49 @@ jobs:
             echo "Working tree dirty at end of job"
             exit 1
           fi
+
+  get-supported-versions:
+    name: Get supported TypeScript versions
+    runs-on: ubuntu-latest
+    needs:
+      - prepare
+    outputs:
+      typescript-versions: ${{ steps.get-supported-versions.outputs.typescript-versions }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'yarn'
+      - name: Install Yarn dependencies
+        run: yarn --immutable --immutable-cache
+      - name: Get supported TypeScript versions
+        id: get-supported-versions
+        run: echo "typescript-versions=$(yarn get-typescript-versions)" >> "$GITHUB_OUTPUT"
+
+  compatibility-test:
+    name: Compatibility test
+    runs-on: ubuntu-latest
+    needs:
+      - get-supported-versions
+    strategy:
+      matrix:
+        typescript-version: ${{ fromJson(needs.get-supported-versions.outputs.typescript-versions) }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'yarn'
+      - name: Install Yarn dependencies
+        run: yarn --immutable --immutable-cache
+      - name: Build `@ts-bridge/shims`
+        run: yarn workspace @ts-bridge/shims build
+      - name: Install TypeScript ${{ matrix.typescript-version }}
+        run: yarn workspaces foreach -A add -D typescript@${{ matrix.typescript-version }}
+      - name: Test
+        run: yarn test --coverage false
