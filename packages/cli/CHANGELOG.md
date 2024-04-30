@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.1.3]
 
-### Uncategorized
+### Fixed
 
 - Fix "ENOENT: no such file or directory, mkdir '...'" error when using nested folders ([#14](https://github.com/ts-bridge/ts-bridge/pull/14))
 
