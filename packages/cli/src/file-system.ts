@@ -1,5 +1,5 @@
 import { rmSync } from 'fs';
-import { dirname, sep, resolve, normalize } from 'path';
+import { sep, resolve, normalize } from 'path';
 import type { System, WriteFileCallback } from 'typescript';
 import typescript from 'typescript';
 
@@ -80,17 +80,12 @@ export function getWriteFileFunction(
       declarationExtension,
     );
 
-    const directoryName = dirname(fileNameWithExtension);
     const updatedContent = transformFile(
       fileName,
       content,
       extension,
       declarationExtension,
     );
-
-    if (!system.directoryExists(directoryName)) {
-      system.createDirectory(directoryName);
-    }
 
     system.writeFile(fileNameWithExtension, updatedContent, writeByteOrderMark);
   };
