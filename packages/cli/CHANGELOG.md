@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.1.4]
 
-### Uncategorized
+### Fixed
 
 - Check parent paths for `package.json` file when checking if a module is ESM ([#16](https://github.com/ts-bridge/ts-bridge/pull/16))
 
