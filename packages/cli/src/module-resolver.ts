@@ -1,5 +1,5 @@
 import { isBuiltin, createRequire } from 'module';
-import { dirname, join } from 'path';
+import { dirname, join, sep } from 'path';
 import {
   exports as resolveExports,
   legacy as resolveLegacy,
@@ -42,6 +42,39 @@ function getPackagePaths(packageName: string, baseDirectory: string) {
 }
 
 /**
+ * Get the paths of the parent directories of a package, which can contain a
+ * `package.json` file.
+ *
+ * @param packageName - The name of the package.
+ * @param baseDirectory - The directory to start resolving from.
+ * @param paths - The paths of the parent directories. This is used for
+ * recursion.
+ * @param basePackageName - The base package name. This is used for recursion.
+ * @returns The paths of the parent directories of the package.
+ */
+export function getPackageParentPaths(
+  packageName: string,
+  baseDirectory: string,
+  paths: string[] = [],
+  basePackageName = getPackageName(packageName),
+) {
+  const parentPath = packageName.split(sep).slice(0, -1).join(sep);
+  if (parentPath.length <= basePackageName.length) {
+    return paths;
+  }
+
+  const path = join(baseDirectory, parentPath);
+  return getPackageParentPaths(
+    parentPath,
+    baseDirectory,
+    // Note: The order of paths here is important, since we want to check the
+    // "deepest" directory first.
+    [...paths, path],
+    basePackageName,
+  );
+}
+
+/**
  * Get the `package.json` file for a module.
  *
  * @param packageName - The name of the module.
@@ -62,8 +95,13 @@ export function getPackageJson(
     return null;
   }
 
-  for (const path of paths) {
-    const packagePath = join(path, packageName, 'package.json');
+  const pathsWithPackage = paths.flatMap((path) => [
+    ...getPackageParentPaths(packageName, path),
+    join(path, packageName),
+  ]);
+
+  for (const path of pathsWithPackage) {
+    const packagePath = join(path, 'package.json');
     if (system.fileExists(packagePath)) {
       return readJsonFile(packagePath, system);
     }
