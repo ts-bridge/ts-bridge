@@ -12,6 +12,7 @@ import {
   getPackageEntryPoint,
   getPackageJson,
   getPackageName,
+  getPackageParentPaths,
   getPackagePath,
   isESModule,
 } from './module-resolver.js';
@@ -46,6 +47,30 @@ describe('getPackageName', () => {
     expect(() => getPackageName('')).toThrowError(
       'Invalid package specifier: "".',
     );
+  });
+});
+
+describe('getPackageParentPaths', () => {
+  it('returns the paths of the parent directories of a package', () => {
+    const paths = getPackageParentPaths(
+      'typescript/foo/bar/baz',
+      BASE_DIRECTORY,
+    );
+
+    expect(paths[0]).toBe(resolve(BASE_DIRECTORY, 'typescript/foo/bar'));
+    expect(paths[1]).toBe(resolve(BASE_DIRECTORY, 'typescript/foo'));
+    expect(paths).not.toContain(resolve(BASE_DIRECTORY, 'typescript'));
+  });
+
+  it('returns the paths of the parent directories of a scoped package', () => {
+    const paths = getPackageParentPaths(
+      '@babel/core/foo/bar/baz',
+      BASE_DIRECTORY,
+    );
+
+    expect(paths[0]).toBe(resolve(BASE_DIRECTORY, '@babel/core/foo/bar'));
+    expect(paths[1]).toBe(resolve(BASE_DIRECTORY, '@babel/core/foo'));
+    expect(paths).not.toContain(resolve(BASE_DIRECTORY, '@babel/core'));
   });
 });
 
