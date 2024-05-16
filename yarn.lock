@@ -1164,6 +1164,17 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"@ts-bridge/helpers@workspace:packages/helpers":
+  version: 0.0.0-use.local
+  resolution: "@ts-bridge/helpers@workspace:packages/helpers"
+  dependencies:
+    "@metamask/auto-changelog": "npm:^3.4.4"
+    typescript: "npm:^5.4.5"
+    vite-tsconfig-paths: "npm:^4.3.2"
+    vitest: "npm:^1.5.0"
+  languageName: unknown
+  linkType: soft
+
 "@ts-bridge/import-attributes-fixture@workspace:packages/test-utils/test/fixtures/import-attributes":
   version: 0.0.0-use.local
   resolution: "@ts-bridge/import-attributes-fixture@workspace:packages/test-utils/test/fixtures/import-attributes"
