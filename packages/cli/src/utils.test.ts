@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { isObject, getIdentifierName } from './utils.js';
+import { isObject } from './utils.js';
 
 describe('isObject', () => {
   it('returns `true` if the value is an object', () => {
@@ -17,40 +17,5 @@ describe('isObject', () => {
     expect(isObject(Symbol('symbol'))).toBe(false);
     expect(isObject([])).toBe(false);
     expect(isObject(() => undefined)).toBe(false);
-  });
-});
-
-describe('getIdentifierName', () => {
-  it.each([
-    {
-      value: 'foo-bar',
-      expected: 'foobar',
-    },
-    {
-      value: 'foo bar',
-      expected: 'foobar',
-    },
-    {
-      value: 'foo_bar',
-      expected: 'foo_bar',
-    },
-    {
-      value: '42foo',
-      expected: 'foo',
-    },
-    {
-      value: 'foo42',
-      expected: 'foo',
-    },
-    {
-      value: 'foo',
-      expected: 'foo',
-    },
-    {
-      value: '',
-      expected: '_',
-    },
-  ])('converts "$value" to "$expected"', ({ value, expected }) => {
-    expect(getIdentifierName(value)).toBe(expected);
   });
 });

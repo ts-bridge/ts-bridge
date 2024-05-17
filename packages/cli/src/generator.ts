@@ -8,7 +8,6 @@ import type {
   Symbol,
   SourceFile,
   ImportDeclaration,
-  Statement,
   System,
   ExportDeclaration,
 } from 'typescript';
@@ -21,15 +20,11 @@ import {
   getPackagePath,
   isESModule,
 } from './module-resolver.js';
-import { getIdentifierName } from './utils.js';
 
 const {
   factory,
   isNamedExports,
   isNamedImports,
-  isNamespaceImport,
-  isStringLiteral,
-  NodeFlags,
   resolveModuleName,
   SymbolFlags,
   SyntaxKind,
@@ -203,112 +198,6 @@ export function getUniqueIdentifier(
   }
 
   return getUniqueIdentifier(typeChecker, sourceFile, `_${name}`);
-}
-
-/**
- * Get the named import node(s) for the given import declaration. This function
- * transforms named imports for CommonJS modules to a default import and a
- * variable declaration, so that the named imports can be used in ES modules.
- *
- * For example, the following import from a CommonJS module:
- * ```js
- * import { namedImport1, namedImport2 } from 'some-module';
- * ```
- *
- * will be transformed to:
- * ```js
- * import somemodule from 'some-module';
- * const { namedImport1, namedImport2 } = somemodule;
- * ```
- *
- * @param typeChecker - The type checker to use.
- * @param sourceFile - The source file to use.
- * @param node - The import declaration node.
- * @param baseDirectory - The base directory to start resolving from.
- * @param system - The compiler system to use.
- * @returns The new node(s) for the named import.
- */
-export function getNamedImportNodes(
-  typeChecker: TypeChecker,
-  sourceFile: SourceFile,
-  node: ImportDeclaration,
-  baseDirectory: string,
-  system: System,
-): Statement | Statement[] {
-  // If the import declaration does not have named bindings, return the node
-  // as is.
-  if (!node.importClause?.namedBindings) {
-    return node;
-  }
-
-  const { namedBindings } = node.importClause;
-  // If the named bindings are a namespace import, return the node as is.
-  if (isNamespaceImport(namedBindings)) {
-    return node;
-  }
-
-  // If the module specifier is not a string literal, return the node as is.
-  if (!isStringLiteral(node.moduleSpecifier)) {
-    return node;
-  }
-
-  // If the module specifier is an ES module, return the node as is.
-  if (isESModule(node.moduleSpecifier.text, system, baseDirectory)) {
-    return node;
-  }
-
-  // If the named bindings are a named import, get the import names.
-  const importNames = namedBindings.elements
-    .filter((element) => !element.isTypeOnly)
-    .map((element) => ({
-      name: element.name.text,
-      propertyName: element.propertyName?.text,
-    }));
-
-  if (importNames.length === 0) {
-    return node;
-  }
-
-  const moduleSpecifier = getIdentifierName(node.moduleSpecifier.text);
-  const importIdentifier = getUniqueIdentifier(
-    typeChecker,
-    sourceFile,
-    moduleSpecifier,
-  );
-
-  // Create a new default import node.
-  const wildcardImport = factory.createImportDeclaration(
-    node.modifiers,
-    factory.createImportClause(
-      false,
-      factory.createIdentifier(importIdentifier),
-      undefined,
-    ),
-    node.moduleSpecifier,
-  );
-
-  // Create a variable declaration for the import names.
-  const variableStatement = factory.createVariableStatement(
-    undefined,
-    factory.createVariableDeclarationList(
-      [
-        factory.createVariableDeclaration(
-          factory.createObjectBindingPattern([
-            ...importNames.map(({ propertyName, name }) =>
-              factory.createBindingElement(undefined, propertyName, name),
-            ),
-          ]),
-          undefined,
-          undefined,
-          factory.createIdentifier(importIdentifier),
-        ),
-      ],
-      // eslint-disable-next-line no-bitwise
-      NodeFlags.Const,
-    ),
-  );
-
-  return [wildcardImport, variableStatement];
 }
 
 /**

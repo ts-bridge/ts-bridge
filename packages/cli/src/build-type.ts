@@ -10,7 +10,6 @@ import {
   getRequireTransformer,
   getGlobalsTransformer,
   getImportMetaTransformer,
-  getNamedImportTransformer,
   getTargetTransformer,
 } from './transformers.js';
 
@@ -55,10 +54,7 @@ export const BUILD_TYPES: Record<BuildType, BuildTypeOptions> = {
     extension: '.mjs',
     declarationExtension: '.d.mts',
     target: ModuleKind.ESNext,
-    getTransformers: (options) => [
-      getNamedImportTransformer(options),
-      getTargetTransformer(ModuleKind.ESNext),
-    ],
+    getTransformers: () => [getTargetTransformer(ModuleKind.ESNext)],
     getShimsTransformers: (options) => [
       getGlobalsTransformer(options),
       getRequireTransformer(options),

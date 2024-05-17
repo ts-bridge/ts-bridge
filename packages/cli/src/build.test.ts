@@ -653,40 +653,6 @@ describe('build', () => {
     );
   });
 
-  it('rewrites named imports of CommonJS modules when using the `module` format', async () => {
-    const environment = getVirtualEnvironment({
-      files: {
-        '/index.ts': `
-          import { foo } from 'commonjs-module';
-          export default foo;
-        `,
-        ...getMockNodeModule({
-          name: 'commonjs-module',
-          packageJson: getMockPackageJson({
-            name: 'commonjs-module',
-            main: 'index.cjs',
-          }),
-          files: {
-            'index.cjs': 'exports.foo = "foo";',
-            'index.d.ts': 'export const foo: string;',
-          },
-        }),
-      },
-    });
-
-    const output = compile({
-      format: 'module',
-      environment,
-    });
-
-    expect(output).toMatchInlineSnapshot(`
-      "import $commonjsmodule from "commonjs-module";
-      const { foo } = $commonjsmodule;
-      export default foo;
-      "
-    `);
-  });
-
   it('does not rewrite named imports of ES modules when using the `module` format', () => {
     const output = compile({
       format: 'module',
@@ -982,7 +948,7 @@ describe('getTransformers', () => {
       true,
     );
 
-    expect(transformers).toHaveLength(4);
+    expect(transformers).toHaveLength(3);
   });
 
   it('returns the correct transformers for the `commonjs` format', () => {
@@ -1012,7 +978,7 @@ describe('getTransformers', () => {
       false,
     );
 
-    expect(transformers).toHaveLength(2);
+    expect(transformers).toHaveLength(1);
   });
 
   it('returns the correct transformers for the `commonjs` format without shims', () => {
