@@ -14,7 +14,6 @@ import typescript from 'typescript';
 import {
   getImportMetaUrl,
   getImportPath,
-  getNamedImportNodes,
   getNamespaceImport,
   getNonTypeExports,
   getNonTypeImports,
@@ -470,59 +469,6 @@ export function getImportMetaTransformer({ typeChecker }: TransformerOptions) {
       }
 
       return modifiedSourceFile;
-    };
-  };
-}
-
-/**
- * Get a transformer that updates the named imports. This updates the imports to
- * use a default import, and destructures the imports from the default import.
- *
- * For example, the following import (assuming the module is a CommonJS module):
- * ```ts
- * import { foo, bar } from 'module';
- * ```
- *
- * will be transformed to:
- * ```ts
- * import module from 'module';
- * const { foo, bar } = module;
- * ```
- *
- * @param options - The transformer options.
- * @param options.typeChecker - The type checker to use.
- * @param options.baseDirectory - The base directory to start resolving from.
- * @param options.system - The compiler system to use.
- * @returns The transformer function.
- */
-export function getNamedImportTransformer({
-  typeChecker,
-  baseDirectory,
-  system,
-}: TransformerOptions) {
-  return (context: TransformationContext): Transformer<SourceFile> => {
-    return (sourceFile: SourceFile) => {
-      const visitor = (node: Node): Node | Node[] | undefined => {
-        if (isImportDeclaration(node)) {
-          if (node.importClause?.isTypeOnly) {
-            // If the import is type-only, we need to return `undefined` to
-            // avoid TypeScript 4.x from including the import in the output.
-            return undefined;
-          }
-
-          return getNamedImportNodes(
-            typeChecker,
-            sourceFile,
-            node,
-            baseDirectory,
-            system,
-          );
-        }
-
-        return visitEachChild(node, visitor, context);
-      };
-
-      return visitNode(sourceFile, visitor) as SourceFile;
     };
   };
 }
