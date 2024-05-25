@@ -5,6 +5,12 @@
       "path": "./packages/cli/tsconfig.build.json"
     },
     {
+      "path": "./packages/helpers/tsconfig.build.json"
+    },
+    {
+      "path": "./packages/resolver/tsconfig.build.json"
+    },
+    {
       "path": "./packages/shims/tsconfig.build.json"
     },
     {

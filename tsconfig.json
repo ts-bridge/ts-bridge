@@ -11,6 +11,12 @@
       "path": "./packages/cli"
     },
     {
+      "path": "./packages/helpers"
+    },
+    {
+      "path": "./packages/resolver"
+    },
+    {
       "path": "./packages/shims"
     },
     {

@@ -1,0 +1,66 @@
+{
+  "name": "@ts-bridge/resolver",
+  "version": "0.0.0",
+  "description": "An implementation of the Node.js module resolution algorithm.",
+  "keywords": [
+    "build-tool",
+    "cjs",
+    "commonjs",
+    "development",
+    "esm",
+    "es-modules",
+    "module",
+    "hybrid",
+    "resolver",
+    "module-resolution",
+    "tsc",
+    "tsconfig",
+    "typescript"
+  ],
+  "homepage": "https://github.com/ts-bridge/ts-bridge/tree/main/packages/resolver#readme",
+  "bugs": {
+    "url": "https://github.com/ts-bridge/ts-bridge/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ts-bridge/ts-bridge.git"
+  },
+  "license": "MIT",
+  "author": "Maarten Zuidhoorn <maarten@zuidhoorn.com>",
+  "sideEffects": false,
+  "type": "module",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      }
+    },
+    "./package.json": "./package.json"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "allow-scripts": "yarn workspace @ts-bridge/root allow-scripts",
+    "build": "tsc --project tsconfig.build.json",
+    "lint:changelog": "../../scripts/validate-changelog.sh @ts-bridge/resolver",
+    "test": "vitest"
+  },
+  "devDependencies": {
+    "@metamask/auto-changelog": "^3.4.4",
+    "typescript": "^5.4.5",
+    "vite-tsconfig-paths": "^4.3.2",
+    "vitest": "^1.5.0"
+  },
+  "packageManager": "yarn@4.1.1",
+  "engines": {
+    "node": "^18.18 || >=20"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  }
+}
