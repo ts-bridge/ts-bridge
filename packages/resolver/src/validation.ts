@@ -30,10 +30,7 @@ export function isValidPathSegments(pathSegments: string[]): boolean {
 export function isValidPath(path: string): boolean {
   const lowerCasePath = path.toLowerCase();
 
-  return (
-    isValidPathSegments(lowerCasePath.split('/')) &&
-    isValidPathSegments(lowerCasePath.split('\\'))
-  );
+  return isValidPathSegments(lowerCasePath.split(/[\\/]/u));
 }
 
 /**

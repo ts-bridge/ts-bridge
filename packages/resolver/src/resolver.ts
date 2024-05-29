@@ -1,6 +1,7 @@
 import assert from 'assert';
 import { isBuiltin } from 'module';
 import { resolve as resolvePath, basename, extname } from 'path';
+import { join as joinPosix } from 'path/posix';
 import { fileURLToPath } from 'url';
 
 import { DEFAULT_CONDITIONS } from './constants.js';
@@ -52,6 +53,9 @@ import {
  * @param packageSpecifier - The specifier to resolve.
  * @param parentURL - The URL of the parent module.
  * @param fileSystem - The file system to use for resolution.
+ * @param enableCache - Whether to enable caching of resolved URLs. Defaults to
+ * `true`. When caching is enabled, the function will cache resolved URLs to
+ * improve performance.
  * @returns The resolved file path and format.
  * @throws {InvalidModuleSpecifierError} When the module specifier contains
  * invalid characters.
@@ -75,9 +79,10 @@ function getResolver() {
     packageSpecifier: string,
     parentUrl: string | URL,
     fileSystem: FileSystemInterface = DEFAULT_FILE_SYSTEM,
+    enableCache = true,
   ): Resolution => {
-    const cacheKey = `${packageSpecifier}#${fileURLToPath(parentUrl)}`;
-    if (cache.has(cacheKey)) {
+    const cacheKey = `${packageSpecifier}#${parentUrl.toString()}`;
+    if (enableCache && cache.has(cacheKey)) {
       return cache.get(cacheKey) as Resolution;
     }
 
@@ -124,14 +129,14 @@ function getResolver() {
 
         // https://nodejs.org/api/esm.html#node-imports
         case 'node:': {
-          const path = resolvedSpecifier.slice(5);
           return {
-            path,
+            path: resolvedSpecifier,
             format: 'builtin',
           };
         }
 
         // https://nodejs.org/api/esm.html#data-imports
+        // https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/Data_URLs
         case 'data:': {
           return {
             path: resolvedSpecifier,
@@ -149,7 +154,10 @@ function getResolver() {
     }
 
     const result = doResolve();
-    cache.set(cacheKey, result);
+
+    if (enableCache) {
+      cache.set(cacheKey, result);
+    }
 
     return result;
   };
@@ -177,7 +185,8 @@ function getResolvedUrl(
   }
 
   if (packageSpecifier.startsWith('#')) {
-    return resolvePackageImports(packageSpecifier, parentUrl, fileSystem);
+    const path = resolvePackageImports(packageSpecifier, parentUrl, fileSystem);
+    return new URL(path, parentUrl).href;
   }
 
   const path = resolvePackage(packageSpecifier, parentUrl, fileSystem);
@@ -210,9 +219,7 @@ function getPackageName(packageSpecifier: string): string {
 
   // 4. If packageSpecifier does not start with "@", then
   const [name] = packageSpecifier.split('/');
-  if (!name) {
-    throw new InvalidModuleSpecifierError(packageSpecifier);
-  }
+  assert(name);
 
   // 1. Set packageName to the substring of packageSpecifier until the first "/"
   //    separator or the end of the string.
@@ -270,7 +277,6 @@ function resolveStringPackageTarget(
   // "node_modules" segments after the first "." segment, case insensitive and
   // including percent encoded variants, throw an Invalid Package Target
   // error.
-  // TODO: Validate this slice.
   if (!isValidPath(target.slice(2))) {
     throw new InvalidPackageTargetError(target);
   }
@@ -332,7 +338,7 @@ function resolveObjectPackageTarget(
       const targetValue = target[key] as PackageExports;
 
       // 2. Let resolved be the result of
-      // PACKAGE_TARGET_RESOLVE( packageURL, targetValue, patternMatch, isImports, conditions).
+      // PACKAGE_TARGET_RESOLVE(packageURL, targetValue, patternMatch, isImports, conditions).
       const resolved = resolvePackageTarget(
         packageUrl,
         targetValue,
@@ -499,12 +505,17 @@ function resolvePackageTarget(
  * with the `sort` method to sort pattern keys in descending order of
  * specificity.
  *
+ * This function is implemented as defined in the Node.js specification, but
+ * seems to contain legacy code that is not used in the current implementation,
+ * like support for keys ending with `/`, which is not supported by the current
+ * Node.js version.
+ *
  * @param a - The first pattern key.
  * @param b - The second pattern key.
  * @returns The comparison result, i.e., -1 if `a` is less than `b`, 1 if `a` is
  * greater than `b`, and 0 if `a` is equal to `b`.
  */
-function comparePatternKeys(a: string, b: string): number {
+export function comparePatternKeys(a: string, b: string): number {
   // 1. Assert: keyA ends with "/" or contains only a single "*".
   validatePatternKey(a);
 
@@ -696,9 +707,7 @@ function resolvePackageExports(
         return resolved;
       }
     }
-  }
-
-  if (isRelativeExports(exports)) {
+  } else if (isRelativeExports(exports)) {
     assert(packageSubpath.startsWith('./'));
     const resolved = resolvePackageImportsExports(
       packageSubpath,
@@ -777,7 +786,7 @@ function resolveSelf(
  * @param fileSystem - The file system to use for resolution.
  * @returns The resolved URL.
  */
-export function resolvePackageFromNodeModules(
+function resolvePackageFromNodeModules(
   packageSpecifier: string,
   packageSubpath: string,
   parentUrl: string | URL,
@@ -807,7 +816,7 @@ export function resolvePackageFromNodeModules(
           );
         }
 
-        if (packageJson.main) {
+        if (packageSubpath === '.' && packageJson.main) {
           return resolvePath(packageUrl, packageJson.main);
         }
 
@@ -819,7 +828,7 @@ export function resolvePackageFromNodeModules(
     parent = resolvePath(parent, '..');
   }
 
-  throw new ModuleNotFoundError(packageSpecifier);
+  throw new ModuleNotFoundError(joinPosix(packageSpecifier, packageSubpath));
 }
 
 /**
@@ -912,12 +921,12 @@ function resolvePackageImports(
   }
 
   // 3. Let packageURL be the result of LOOKUP_PACKAGE_SCOPE(parentURL).
-  const packageUrl = getPackageScope(parentUrl, fileSystem);
+  const packagePath = getPackageScope(parentUrl, fileSystem);
 
   // 4. If packageURL is not null, then
-  if (isDefined(packageUrl)) {
+  if (isDefined(packagePath)) {
     // 1. Let pjson be the result of READ_PACKAGE_JSON(packageURL).
-    const packageJson = getPackageJson(packageUrl, fileSystem);
+    const packageJson = getPackageJson(packagePath, fileSystem);
 
     // 2. If pjson.imports is a non-null Object, then
     if (isObject(packageJson?.imports)) {
@@ -926,7 +935,7 @@ function resolvePackageImports(
       const resolved = resolvePackageImportsExports(
         packageSpecifier,
         packageJson.imports,
-        packageUrl,
+        packagePath,
         true,
         DEFAULT_CONDITIONS,
         fileSystem,
@@ -997,6 +1006,10 @@ function getPackageJson(
   }
 
   const packageJsonUrl = resolvePath(packageUrl, 'package.json');
+  if (!fileSystem.isFile(packageJsonUrl)) {
+    return null;
+  }
+
   const packageJsonValue = fileSystem.readFile(packageJsonUrl);
   const packageJson = parseJson<PackageJson>(packageJsonValue);
 
@@ -1064,9 +1077,9 @@ function getPackageFormat(
     // 2. If --experimental-detect-module is enabled and the result of
     //    DETECT_MODULE_SYNTAX(source) is true, then
     // eslint-disable-next-line no-constant-condition
-    if (isFlagEnabled('--experimental-detect-module')) {
-      // TODO: Experimental module detection.
-    }
+    // if (isFlagEnabled('--experimental-detect-module')) {
+    //   TODO: Experimental module detection.
+    // }
 
     return 'commonjs';
   }
@@ -1098,9 +1111,9 @@ function getPackageFormat(
 
     // 3. If --experimental-detect-module is enabled and the result of
     //    DETECT_MODULE_SYNTAX(source) is true, then
-    if (isFlagEnabled('--experimental-detect-module')) {
-      // TODO: Experimental module detection.
-    }
+    // if (isFlagEnabled('--experimental-detect-module')) {
+    //   TODO: Experimental module detection.
+    // }
   }
 
   return null;

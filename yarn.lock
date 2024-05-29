@@ -1110,6 +1110,7 @@ __metadata:
   resolution: "@ts-bridge/resolver@workspace:packages/resolver"
   dependencies:
     "@metamask/auto-changelog": "npm:^3.4.4"
+    "@ts-bridge/test-utils": "workspace:^"
     typescript: "npm:^5.4.5"
     vite-tsconfig-paths: "npm:^4.3.2"
     vitest: "npm:^1.5.0"

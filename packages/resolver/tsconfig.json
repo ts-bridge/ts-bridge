@@ -4,5 +4,10 @@
     "baseUrl": "./",
     "rootDir": "./"
   },
-  "exclude": ["./dist", "./node_modules"]
+  "exclude": ["./dist", "./node_modules"],
+  "references": [
+    {
+      "path": "../test-utils"
+    }
+  ]
 }

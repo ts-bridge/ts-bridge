@@ -51,6 +51,7 @@
   },
   "devDependencies": {
     "@metamask/auto-changelog": "^3.4.4",
+    "@ts-bridge/test-utils": "workspace:^",
     "typescript": "^5.4.5",
     "vite-tsconfig-paths": "^4.3.2",
     "vitest": "^1.5.0"

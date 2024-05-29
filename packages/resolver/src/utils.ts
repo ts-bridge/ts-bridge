@@ -18,7 +18,7 @@ export function isURL(url: string): boolean {
 /**
  * Get the protocol for a URL string.
  *
- * @param url - The URL string.
+ * @param url - The URL string. This function assumes that this URL is valid.
  * @returns The protocol for the URL string.
  */
 export function getProtocol(url: string): string {
@@ -62,7 +62,8 @@ export function isObject(
 }
 
 /**
- * Check if the given exports object is a relative exports object.
+ * Check if the given exports object is a relative exports object, i.e., it
+ * contains keys that start with a dot.
  *
  * @param exports - The exports object to check.
  * @returns `true` if the exports object is a relative exports object, `false`
@@ -88,37 +89,6 @@ export function isDefined<Type>(value: Type | null | undefined): value is Type {
 }
 
 /**
- * Check if the given target is a valid target for a package.
- *
- * @param target - The target to check.
- * @returns `true` if the target is valid, `false` otherwise.
- */
-export function isValidTarget(target: string) {
-  const lowerCaseTarget = target.toLowerCase();
-
-  /**
-   * Check if the given array is a valid target for a package.
-   *
-   * @param targetArray - The array to check.
-   * @returns `true` if the array is a valid target, `false` otherwise.
-   */
-  function isValid(targetArray: string[]) {
-    // TODO: Check percent encoded variants of these characters.
-    return (
-      !targetArray.includes('') &&
-      !targetArray.includes('.') &&
-      !targetArray.includes('..') &&
-      !targetArray.includes('node_modules')
-    );
-  }
-
-  return (
-    isValid(lowerCaseTarget.split('/').slice(1)) &&
-    isValid(lowerCaseTarget.split('\\').slice(1))
-  );
-}
-
-/**
  * Get the number of occurrences of a character in a string.
  *
  * @param value - The string to search.
@@ -133,12 +103,15 @@ export function getCharacterCount(value: string, character: string): number {
  * Check if the given flag is enabled in the current process.
  *
  * @param flag - The flag to check.
+ * @param execArgv - The `process.execArgv` array to check. This is useful for
+ * testing.
  * @returns `true` if the flag is enabled, `false` otherwise.
  */
 export function isFlagEnabled(
   flag: '--experimental-detect-module' | '--experimental-wasm-modules',
+  execArgv = process.execArgv,
 ): boolean {
-  return process.execArgv.includes(flag);
+  return execArgv.includes(flag);
 }
 
 /**
@@ -181,6 +154,7 @@ export function getDataUrlMimeType(url: string): string {
  * @returns The file format of the data URL.
  * @throws {InvalidModuleSpecifierError} If the data URL is not valid or
  * unsupported.
+ * @see https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/Data_URLs
  */
 export function getDataUrlType(url: string): FileFormat {
   const mimeType = getDataUrlMimeType(url);
