@@ -32,6 +32,7 @@ import {
   isObject,
   isPath,
   isRelativeExports,
+  isRoot,
   isURL,
   parseJson,
 } from './utils.js';
@@ -794,7 +795,7 @@ function resolvePackageFromNodeModules(
 ) {
   let parent = fileURLToPath(parentUrl);
 
-  while (parent !== '/') {
+  while (!isRoot(parent)) {
     // 1. Let packageURL be the URL resolution of "node_modules/" concatenated
     // with packageSpecifier, relative to parentURL.
     const packageUrl = resolvePath(parent, 'node_modules', packageSpecifier);
@@ -970,7 +971,7 @@ function getPackageScope(
 
   // 2. While scopeURL is not the file system root,
   // TODO: Check if at file system root on Windows.
-  while (scopeUrl !== '/') {
+  while (!isRoot(scopeUrl)) {
     // 1. Set scopeURL to the parent URL of scopeURL.
     scopeUrl = resolvePath(scopeUrl, '..');
 

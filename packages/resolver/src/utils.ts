@@ -1,3 +1,6 @@
+import { parse as parsePosix } from 'path/posix';
+import { parse as parseWin32 } from 'path/win32';
+
 import { InvalidModuleSpecifierError } from './errors.js';
 import type {
   FileFormat,
@@ -168,4 +171,37 @@ export function getDataUrlType(url: string): FileFormat {
     default:
       throw new InvalidModuleSpecifierError(url);
   }
+}
+
+/**
+ * Check if a path is a Windows root path, such as `C:\` or `\\`.
+ *
+ * @param path - The path to check.
+ * @returns `true` if the path is a Windows root path, `false` otherwise.
+ */
+function isWindowsRoot(path: string): boolean {
+  // TODO: Verify behaviour for network paths.
+  const { root, dir, base } = parseWin32(path);
+  return root === dir && base === '';
+}
+
+/**
+ * Check if a path is a POSIX root path, such as `/`.
+ *
+ * @param path - The path to check.
+ * @returns `true` if the path is a POSIX root path, `false` otherwise.
+ */
+function isPosixRoot(path: string): boolean {
+  const { root, dir, base } = parsePosix(path);
+  return root === dir && base === '';
+}
+
+/**
+ * Check if a path is the root path, with support for Unix and Windows paths.
+ *
+ * @param path - The path to check.
+ * @returns `true` if the path is the root path, `false` otherwise.
+ */
+export function isRoot(path: string): boolean {
+  return isPosixRoot(path) || isWindowsRoot(path);
 }

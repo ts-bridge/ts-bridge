@@ -10,6 +10,7 @@ import {
   isObject,
   isPath,
   isRelativeExports,
+  isRoot,
   isURL,
   parseJson,
 } from './utils.js';
@@ -168,4 +169,20 @@ describe('getDataUrlType', () => {
       'Module specifier is an invalid URL, package name or package subpath specifier: "data:application/unknown,...".',
     );
   });
+});
+
+describe('isRoot', () => {
+  it.each(['/', 'C:\\', 'C:/', 'D:\\', 'D:/', '\\\\'])(
+    'returns `true` for "%s"',
+    (path) => {
+      expect(isRoot(path)).toBe(true);
+    },
+  );
+
+  it.each(['/foo', '/bar', 'C', 'D', 'C:\\example', 'D:/example', '\\\\path'])(
+    'returns `false` for "%s"',
+    (path) => {
+      expect(isRoot(path)).toBe(false);
+    },
+  );
 });
