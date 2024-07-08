@@ -85,6 +85,21 @@ describe('getImportPath', () => {
     ).toBe('module');
   });
 
+  it('returns the import path for a non-JS file as is', () => {
+    expect(
+      getImportPath(
+        {
+          fileName: '/index.ts',
+          importPath: './file.json',
+          compilerOptions: program.getCompilerOptions(),
+          extension: '.js',
+          baseDirectory: '/',
+        },
+        system,
+      ),
+    ).toBe('./file.json');
+  });
+
   it('returns the import path for an unresolved module as is', () => {
     expect(
       getImportPath(

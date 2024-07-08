@@ -1,6 +1,6 @@
 import chalk from 'chalk';
 import { isBuiltin } from 'module';
-import { dirname, relative, resolve } from 'path';
+import { dirname, extname, relative, resolve } from 'path';
 import type {
   CompilerOptions,
   TypeChecker,
@@ -34,6 +34,8 @@ const {
   SymbolFlags,
   SyntaxKind,
 } = typescript;
+
+const JS_EXTENSIONS = ['.js', '.mjs', '.cjs', '.ts'];
 
 /**
  * The options for the `getImportPath` function.
@@ -74,6 +76,16 @@ export function getImportPath(options: GetImportPathOptions, system: System) {
   } = options;
 
   if (isBuiltin(importPath)) {
+    return importPath;
+  }
+
+  // Only update the extension if the resolved file has a `.js` or similar
+  // extension, or no extension. This is to prevent updating the extension for
+  // non-JS files (like `.json` files).
+  if (
+    extname(importPath) !== '' &&
+    !JS_EXTENSIONS.includes(extname(importPath))
+  ) {
     return importPath;
   }
 

@@ -398,6 +398,51 @@ describe('build', () => {
     `);
   });
 
+  it('does not add an extension to `.json` imports and exports', () => {
+    const code = `
+      import { foo } from "./foo.json";
+      export { foo } from "./foo.json";
+    `;
+
+    const environment = getVirtualEnvironment({
+      files: {
+        '/index.ts': code,
+        '/foo.json': `
+          {
+            "foo": "bar"
+          }
+        `,
+      },
+      tsconfig: getMockTsConfig({
+        compilerOptions: {
+          resolveJsonModule: true,
+        },
+      }),
+    });
+
+    const output = compile({
+      format: 'commonjs',
+      code,
+      environment,
+    });
+
+    expect(output).toMatchInlineSnapshot(`
+      ""use strict";
+      Object.defineProperty(exports, "__esModule", { value: true });
+      exports.foo = void 0;
+      const foo_json_1 = require("./foo.json");
+      var foo_json_2 = require("./foo.json");
+      Object.defineProperty(exports, "foo", { enumerable: true, get: function () { return foo_json_2.foo; } });
+      "
+    `);
+
+    const declaration = environment.system.readFile('/index.d.cts');
+    expect(declaration).toMatchInlineSnapshot(`
+      "export { foo } from "./foo.json";
+      //# sourceMappingURL=index.d.cts.map"
+    `);
+  });
+
   it('adds a `__dirname` and `__filename` shim when using the `module` format', async () => {
     const environment = getVirtualEnvironment({
       files: {
