@@ -420,7 +420,6 @@ describe('getTransformers', () => {
         system: sys,
         // @ts-expect-error - The `typeChecker` parameter is invalid.
         typeChecker: {},
-        baseDirectory: '/',
       },
       true,
     );
@@ -435,7 +434,6 @@ describe('getTransformers', () => {
         system: sys,
         // @ts-expect-error - The `typeChecker` parameter is invalid.
         typeChecker: {},
-        baseDirectory: '/',
       },
       true,
     );
@@ -450,7 +448,6 @@ describe('getTransformers', () => {
         system: sys,
         // @ts-expect-error - The `typeChecker` parameter is invalid.
         typeChecker: {},
-        baseDirectory: '/',
       },
       false,
     );
@@ -465,7 +462,6 @@ describe('getTransformers', () => {
         system: sys,
         // @ts-expect-error - The `typeChecker` parameter is invalid.
         typeChecker: {},
-        baseDirectory: '/',
       },
       false,
     );
