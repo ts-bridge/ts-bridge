@@ -1,3 +1,4 @@
+import type { FileFormat } from '@ts-bridge/resolver';
 import type {
   Bundle,
   CustomTransformer,
@@ -20,7 +21,7 @@ import {
   getUniqueIdentifier,
   isGlobal,
 } from './generator.js';
-import { getModulePath } from './module-resolver.js';
+import { getModulePath, getModuleType } from './module-resolver.js';
 import {
   CJS_SHIMS_PACKAGE,
   ESM_REQUIRE_SHIMS_PACKAGE,
@@ -537,6 +538,113 @@ export function getTypeImportExportTransformer(_context: TransformerOptions) {
           }
 
           return getNonTypeExports(node);
+        }
+
+        return visitEachChild(node, visitor, context);
+      };
+
+      return visitNode(sourceFile, visitor) as SourceFile;
+    };
+  };
+}
+
+/**
+ * The options for the {@link getImportAttributeTransformer} function.
+ */
+export type ImportAssertionTransformerOptions = {
+  /**
+   * The type of the module, i.e., CommonJS or ES module, to apply the
+   * transformation to.
+   */
+  moduleType: FileFormat;
+
+  /**
+   * The import assertion type to apply.
+   */
+  type: string;
+};
+
+/**
+ * Get a transformer that adds an import attribute to the given module type with
+ * the given type attribute. This is mainly useful for JSON imports, which
+ * require `with { type: 'json' }` to be added to the import statement.
+ *
+ * @param options - The import attribute options.
+ * @param options.moduleType - The type of the module, i.e., CommonJS or ES
+ * module, to apply the transformation to.
+ * @param options.type - The import assertion type to apply.
+ * @param context - The transformer options.
+ * @param context.system - The compiler system to use.
+ * @returns The transformer function.
+ */
+export function getImportAttributeTransformer(
+  options: ImportAssertionTransformerOptions,
+  { system }: TransformerOptions,
+) {
+  return (context: TransformationContext): Transformer<SourceFile> => {
+    return (sourceFile: SourceFile) => {
+      const visitor = (node: Node): Node | Node[] | undefined => {
+        if (
+          node &&
+          isImportDeclaration(node) &&
+          isStringLiteral(node.moduleSpecifier)
+        ) {
+          const type = getModuleType(
+            node.moduleSpecifier.text,
+            system,
+            sourceFile.fileName,
+          );
+
+          if (type === options.moduleType) {
+            return factory.updateImportDeclaration(
+              node,
+              node.modifiers,
+              node.importClause,
+              node.moduleSpecifier,
+              factory.createImportAttributes(
+                factory.createNodeArray([
+                  factory.createImportAttribute(
+                    factory.createIdentifier('type'),
+                    factory.createStringLiteral(options.type),
+                  ),
+                ]),
+              ),
+            );
+          }
+        }
+
+        return visitEachChild(node, visitor, context);
+      };
+
+      return visitNode(sourceFile, visitor) as SourceFile;
+    };
+  };
+}
+
+/**
+ * Get a transformer that removes any import attributes from the import
+ * declarations.
+ *
+ * This is useful in CommonJS environments where import attributes are not
+ * supported.
+ *
+ * @param _context - The transformer options. This is not used.
+ * @returns The transformer function.
+ */
+export function getRemoveImportAttributeTransformer(
+  _context: TransformerOptions,
+) {
+  return (context: TransformationContext): Transformer<SourceFile> => {
+    return (sourceFile: SourceFile) => {
+      const visitor = (node: Node): Node | Node[] | undefined => {
+        if (node && isImportDeclaration(node) && node.attributes) {
+          return factory.updateImportDeclaration(
+            node,
+            node.modifiers,
+            node.importClause,
+            node.moduleSpecifier,
+            undefined,
+          );
         }
 
         return visitEachChild(node, visitor, context);

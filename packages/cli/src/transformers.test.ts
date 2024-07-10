@@ -16,9 +16,11 @@ import { getTypeScriptConfig } from './config.js';
 import {
   getExportExtensionTransformer,
   getGlobalsTransformer,
+  getImportAttributeTransformer,
   getImportExtensionTransformer,
   getImportMetaTransformer,
   getNamedImportTransformer,
+  getRemoveImportAttributeTransformer,
   getRequireExtensionTransformer,
   getRequireTransformer,
   getTargetTransformer,
@@ -747,6 +749,69 @@ describe('getTypeImportExportTransformer', () => {
         "import { bar } from './dummy';
         export { bar } from './dummy';
         console.log(bar);
+        "
+      `);
+    });
+  });
+});
+
+describe('getImportAttributesTransformer', () => {
+  describe('when targeting `module`', () => {
+    let files: Record<string, string>;
+
+    beforeAll(() => {
+      const compiler = createCompiler(getFixture('import-attributes'));
+      files = compiler(
+        'module',
+        getImportAttributeTransformer(
+          {
+            moduleType: 'json',
+            type: 'json',
+          },
+          {
+            typeChecker: compiler.typeChecker,
+            system: sys,
+          },
+        ),
+      );
+    });
+
+    it('adds an import attribute to JSON imports', async () => {
+      expect(files['json.js']).toMatchInlineSnapshot(`
+        "import './data.json' with { type: "json" };
+        "
+      `);
+    });
+
+    it('overrides existing import attributes', async () => {
+      expect(files['override.js']).toMatchInlineSnapshot(`
+        "import './data.json' with { type: "json" };
+        "
+      `);
+    });
+  });
+});
+
+describe('getRemoveImportAttributeTransformer', () => {
+  describe('when targeting `commonjs`', () => {
+    let files: Record<string, string>;
+
+    beforeAll(() => {
+      const compiler = createCompiler(getFixture('import-attributes'));
+      files = compiler(
+        'commonjs',
+        getRemoveImportAttributeTransformer({
+          typeChecker: compiler.typeChecker,
+          system: sys,
+        }),
+      );
+    });
+
+    it('removes import attributes', async () => {
+      expect(files['preset.js']).toMatchInlineSnapshot(`
+        ""use strict";
+        Object.defineProperty(exports, "__esModule", { value: true });
+        require("./data.json");
         "
       `);
     });

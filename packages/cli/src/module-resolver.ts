@@ -233,6 +233,28 @@ export function getFileSystemFromTypeScript(
 }
 
 /**
+ * Get the module type for a given package specifier.
+ *
+ * @param packageSpecifier - The specifier for the package.
+ * @param system - The TypeScript system.
+ * @param parentUrl - The URL of the parent module.
+ * @returns The module type for the package.
+ */
+export function getModuleType(
+  packageSpecifier: string,
+  system: System,
+  parentUrl: string,
+) {
+  const { format } = resolve(
+    packageSpecifier,
+    pathToFileURL(parentUrl),
+    getFileSystemFromTypeScript(system),
+  );
+
+  return format;
+}
+
+/**
  * Check if a package specifier is a CommonJS package.
  *
  * @param packageSpecifier - The specifier for the package.
@@ -249,11 +271,5 @@ export function isCommonJs(
     return false;
   }
 
-  const { format } = resolve(
-    packageSpecifier,
-    pathToFileURL(parentUrl),
-    getFileSystemFromTypeScript(system),
-  );
-
-  return format === 'commonjs';
+  return getModuleType(packageSpecifier, system, parentUrl) === 'commonjs';
 }

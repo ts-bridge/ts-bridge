@@ -7,6 +7,8 @@ import typescript from 'typescript';
 
 import type { TransformerOptions } from './transformers.js';
 import {
+  getRemoveImportAttributeTransformer,
+  getImportAttributeTransformer,
   getRequireTransformer,
   getGlobalsTransformer,
   getImportMetaTransformer,
@@ -57,6 +59,13 @@ export const BUILD_TYPES: Record<BuildType, BuildTypeOptions> = {
     target: ModuleKind.ESNext,
     getTransformers: (options) => [
       getNamedImportTransformer(options),
+      getImportAttributeTransformer(
+        {
+          moduleType: 'json',
+          type: 'json',
+        },
+        options,
+      ),
       getTargetTransformer(ModuleKind.ESNext),
     ],
     getShimsTransformers: (options) => [
@@ -69,7 +78,10 @@ export const BUILD_TYPES: Record<BuildType, BuildTypeOptions> = {
     extension: '.cjs',
     declarationExtension: '.d.cts',
     target: ModuleKind.CommonJS,
-    getTransformers: () => [getTargetTransformer(ModuleKind.CommonJS)],
+    getTransformers: (options) => [
+      getRemoveImportAttributeTransformer(options),
+      getTargetTransformer(ModuleKind.CommonJS),
+    ],
     getShimsTransformers: (options) => [getImportMetaTransformer(options)],
   },
 };
