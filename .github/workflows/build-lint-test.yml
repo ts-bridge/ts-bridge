@@ -140,6 +140,6 @@ jobs:
       - name: Build `@ts-bridge/shims`
         run: yarn workspace @ts-bridge/shims build
       - name: Install TypeScript ${{ matrix.typescript-version }}
-        run: yarn workspaces foreach -A --no-private add -D typescript@${{ matrix.typescript-version }}
+        run: yarn workspaces foreach -A add -D typescript@${{ matrix.typescript-version }}
       - name: Test
         run: yarn test --coverage false
