@@ -5,7 +5,7 @@
     "esModuleInterop": true,
     "lib": ["ES2022"],
     "module": "ES2022",
-    "moduleResolution": "Node10",
+    "moduleResolution": "Node",
     "outDir": "dist",
     "skipLibCheck": true,
     "sourceMap": true,
