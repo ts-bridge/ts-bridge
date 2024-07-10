@@ -13,7 +13,6 @@ import typescript from 'typescript';
 
 import {
   getImportMetaUrl,
-  getImportPath,
   getNamedImportNodes,
   getNamespaceImport,
   getNonTypeExports,
@@ -21,6 +20,7 @@ import {
   getUniqueIdentifier,
   isGlobal,
 } from './generator.js';
+import { getModulePath } from './module-resolver.js';
 import {
   CJS_SHIMS_PACKAGE,
   ESM_REQUIRE_SHIMS_PACKAGE,
@@ -54,7 +54,6 @@ const {
 export type TransformerOptions = {
   typeChecker: TypeChecker;
   system: System;
-  baseDirectory: string;
   verbose?: boolean;
 };
 
@@ -75,13 +74,12 @@ export type TransformerOptions = {
  * @param extension - The extension to append to import paths.
  * @param options - The transformer options.
  * @param options.system - The compiler system to use.
- * @param options.baseDirectory - The base directory to start resolving from.
  * @param options.verbose - Whether to enable verbose logging.
  * @returns The transformer function.
  */
 export function getImportExtensionTransformer(
   extension: string,
-  { system, baseDirectory, verbose }: TransformerOptions,
+  { system, verbose }: TransformerOptions,
 ) {
   return (context: TransformationContext): CustomTransformer => {
     // This returns a custom transformer instead of a transformer factory, as
@@ -95,17 +93,13 @@ export function getImportExtensionTransformer(
             isStringLiteral(node) &&
             isImportDeclaration(node.parent)
           ) {
-            const importPath = getImportPath(
-              {
-                fileName: sourceFile.fileName,
-                importPath: node.text,
-                compilerOptions: context.getCompilerOptions(),
-                extension,
-                baseDirectory,
-                verbose,
-              },
+            const importPath = getModulePath({
+              packageSpecifier: node.text,
+              parentUrl: sourceFile.fileName,
+              extension,
               system,
-            );
+              verbose,
+            });
 
             return factory.createStringLiteral(importPath);
           }
@@ -142,13 +136,12 @@ export function getImportExtensionTransformer(
  * @param options - The transformer options.
  * @param options.typeChecker - The type checker to use.
  * @param options.system - The compiler system to use.
- * @param options.baseDirectory - The base directory to start resolving from.
  * @param options.verbose - Whether to enable verbose logging.
  * @returns The transformer function.
  */
 export function getRequireExtensionTransformer(
   extension: string,
-  { typeChecker, system, baseDirectory, verbose }: TransformerOptions,
+  { typeChecker, system, verbose }: TransformerOptions,
 ) {
   return (context: TransformationContext): Transformer<SourceFile> => {
     return (sourceFile: SourceFile) => {
@@ -161,17 +154,13 @@ export function getRequireExtensionTransformer(
           node.parent.expression.text === 'require' &&
           isGlobal(typeChecker, node, 'require')
         ) {
-          const importPath = getImportPath(
-            {
-              fileName: sourceFile.fileName,
-              importPath: node.text,
-              compilerOptions: context.getCompilerOptions(),
-              extension,
-              baseDirectory,
-              verbose,
-            },
+          const importPath = getModulePath({
+            packageSpecifier: node.text,
+            parentUrl: sourceFile.fileName,
+            extension,
             system,
-          );
+            verbose,
+          });
 
           return factory.createStringLiteral(importPath);
         }
@@ -201,13 +190,12 @@ export function getRequireExtensionTransformer(
  * @param extension - The extension to append to export paths.
  * @param options - The transformer options.
  * @param options.system - The compiler system to use.
- * @param options.baseDirectory - The base directory to start resolving from.
  * @param options.verbose - Whether to enable verbose logging.
  * @returns The transformer function.
  */
 export function getExportExtensionTransformer(
   extension: string,
-  { system, baseDirectory, verbose }: TransformerOptions,
+  { system, verbose }: TransformerOptions,
 ) {
   return (context: TransformationContext): CustomTransformer => {
     // This returns a custom transformer instead of a transformer factory, as
@@ -221,17 +209,13 @@ export function getExportExtensionTransformer(
             isStringLiteral(node) &&
             isExportDeclaration(node.parent)
           ) {
-            const importPath = getImportPath(
-              {
-                fileName: sourceFile.fileName,
-                importPath: node.text,
-                compilerOptions: context.getCompilerOptions(),
-                extension,
-                baseDirectory,
-                verbose,
-              },
+            const importPath = getModulePath({
+              packageSpecifier: node.text,
+              parentUrl: sourceFile.fileName,
+              extension,
               system,
-            );
+              verbose,
+            });
 
             return factory.createStringLiteral(importPath);
           }
@@ -491,13 +475,11 @@ export function getImportMetaTransformer({ typeChecker }: TransformerOptions) {
  *
  * @param options - The transformer options.
  * @param options.typeChecker - The type checker to use.
- * @param options.baseDirectory - The base directory to start resolving from.
  * @param options.system - The compiler system to use.
  * @returns The transformer function.
  */
 export function getNamedImportTransformer({
   typeChecker,
-  baseDirectory,
   system,
 }: TransformerOptions) {
   return (context: TransformationContext): Transformer<SourceFile> => {
@@ -510,13 +492,7 @@ export function getNamedImportTransformer({
             return undefined;
           }
 
-          return getNamedImportNodes(
-            typeChecker,
-            sourceFile,
-            node,
-            baseDirectory,
-            system,
-          );
+          return getNamedImportNodes(typeChecker, sourceFile, node, system);
         }
 
         return visitEachChild(node, visitor, context);

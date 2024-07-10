@@ -45,6 +45,7 @@
     "test": "NODE_OPTIONS=\"--experimental-vm-modules\" vitest"
   },
   "dependencies": {
+    "@ts-bridge/resolver": "workspace:^",
     "chalk": "^5.3.0",
     "resolve.exports": "^2.0.2",
     "yargs": "^17.7.2"

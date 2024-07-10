@@ -1,37 +1,21 @@
-import {
-  evaluate,
-  getMockNodeModule,
-  getMockPackageJson,
-  getMockTsConfig,
-  getVirtualEnvironment,
-  noOp,
-} from '@ts-bridge/test-utils';
+import { getFixture, noOp, parseJson } from '@ts-bridge/test-utils';
+import { join, relative } from 'path';
+import type { System } from 'typescript';
 import typescript from 'typescript';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeAll, describe, expect, it, vi } from 'vitest';
 
 import type { BuildType } from './build-type.js';
-import { getBuildTypeOptions } from './build-type.js';
-import { build, buildHandler, getFiles, getTransformers } from './build.js';
+import type { BuildHandlerOptions } from './build.js';
+import { getFiles, getTransformers, buildHandler } from './build.js';
 import { removeDirectory } from './file-system.js';
 
 const { sys } = typescript;
 
-vi.mock('./shims', async (importOriginal) => ({
+vi.mock('./shims.js', async (importOriginal) => ({
   // eslint-disable-next-line @typescript-eslint/consistent-type-imports
   ...(await importOriginal<typeof import('./shims.js')>()),
   isShimsPackageInstalled: vi.fn(() => true),
 }));
-
-type CompileOptions = {
-  format: BuildType;
-  code?: string;
-  extraFiles?: Record<string, string>;
-  tsconfig?: Record<string, any>;
-  clean?: boolean;
-  environment?: ReturnType<typeof getVirtualEnvironment>;
-  outputPath?: string;
-  files?: string[];
-};
 
 vi.mock('./file-system.js', async (importOriginal) => ({
   // eslint-disable-next-line @typescript-eslint/consistent-type-imports
@@ -40,912 +24,371 @@ vi.mock('./file-system.js', async (importOriginal) => ({
 }));
 
 /**
- * Compile code using the virtual environment, and return the compiled code.
+ * Compile a TypeScript project.
  *
- * @param options - The options to use.
- * @param options.format - The format to compile the code to.
- * @param options.code - The code to compile.
- * @param options.extraFiles - Extra files to include in the virtual
- * environment.
- * @param options.tsconfig - The `tsconfig.json` options to use.
- * @param options.clean - Whether to clean the output directory before building.
- * @param options.environment - The virtual environment to use.
- * @param options.outputPath - The output path to read the compiled code from.
- * @param options.files - The files to include in the project.
- * @returns The compiled code.
+ * @param projectPath - The path to the project.
+ * @param formats - The build formats.
+ * @param options - Options to pass to the build handler.
+ * @returns The compiled files.
  */
-function compile({
-  format,
-  code,
-  extraFiles = {},
-  tsconfig,
-  clean = false,
-  environment = getVirtualEnvironment({
-    files: {
-      '/index.ts': code ?? '',
-      ...extraFiles,
+function compile(
+  projectPath: string,
+  formats: BuildType[],
+  options: Partial<BuildHandlerOptions> = {},
+) {
+  const files: Record<string, string> = {};
+
+  const system: System = {
+    ...sys,
+    writeFile(path: string, data: string) {
+      files[relative(projectPath, path)] = data;
     },
-    tsconfig,
-  }),
-  outputPath = '/index',
-  files = [
-    '/index.ts',
-    '/lib.d.ts',
-    '/lib.es2022.d.ts',
-    '/node_modules/@types/node/index.d.ts',
-  ],
-}: CompileOptions) {
-  const { host, system } = environment;
+  };
 
   buildHandler({
-    project: '/tsconfig.json',
-    files,
-    format: [format],
-    clean,
-    host,
+    project: `${projectPath}/tsconfig.json`,
+    format: formats,
+    clean: false,
     system,
+    ...options,
   });
 
-  const { extension } = getBuildTypeOptions(format);
-  const output = system.readFile(`${outputPath}${extension}`);
-
-  if (output === undefined) {
-    throw new Error('The output is undefined.');
-  }
-
-  return output;
+  return files;
 }
 
 describe('build', () => {
-  it('adds a `.mjs` extension to imports when using the `module` format', async () => {
-    const environment = getVirtualEnvironment({
-      files: {
-        '/index.ts': `
-          import { foo } from "./foo";
-          import { bar } from "./bar";
+  describe('node 10', () => {
+    describe('when targeting `module`', () => {
+      let files: Record<string, string>;
 
-          export { foo, bar };
-        `,
-        '/foo.ts': 'export const foo = "foo";',
-        '/bar.ts': 'export const bar = "bar";',
-      },
-    });
-
-    const output = compile({
-      format: 'module',
-      environment,
-    });
-
-    expect(output).toMatchInlineSnapshot(`
-      "import { foo } from "./foo.mjs";
-      import { bar } from "./bar.mjs";
-      export { foo, bar };
-      "
-    `);
-
-    expect(await evaluate(output, environment.fileSystem))
-      .toMatchInlineSnapshot(`
-        {
-          "bar": "bar",
-          "foo": "foo",
-        }
-    `);
-  });
-
-  it('adds a `.cjs` extension to imports when using the `commonjs` format', async () => {
-    const environment = getVirtualEnvironment({
-      files: {
-        '/index.ts': `
-          import { foo } from "./foo";
-          import { bar } from "./bar";
-
-          export { foo, bar };
-        `,
-        '/foo.ts': 'export const foo = "foo";',
-        '/bar.ts': 'export const bar = "bar";',
-      },
-    });
-
-    const output = compile({
-      format: 'commonjs',
-      environment,
-    });
-
-    expect(output).toMatchInlineSnapshot(`
-      ""use strict";
-      Object.defineProperty(exports, "__esModule", { value: true });
-      exports.bar = exports.foo = void 0;
-      const foo_1 = require("./foo.cjs");
-      Object.defineProperty(exports, "foo", { enumerable: true, get: function () { return foo_1.foo; } });
-      const bar_1 = require("./bar.cjs");
-      Object.defineProperty(exports, "bar", { enumerable: true, get: function () { return bar_1.bar; } });
-      "
-    `);
-
-    expect(await evaluate(output, environment.fileSystem))
-      .toMatchInlineSnapshot(`
-      {
-        "bar": "bar",
-        "foo": "foo",
-      }
-    `);
-  });
-
-  it('adds a `.mjs` extension to exports when using the `module` format', async () => {
-    const environment = getVirtualEnvironment({
-      files: {
-        '/index.ts': `
-          export * from "./foo";
-          export * from "./bar";
-        `,
-        '/foo.ts': 'export const foo = "foo";',
-        '/bar.ts': 'export const bar = "bar";',
-      },
-    });
-
-    const output = compile({
-      format: 'module',
-      environment,
-    });
-
-    expect(output).toMatchInlineSnapshot(`
-      "export * from "./foo.mjs";
-      export * from "./bar.mjs";
-      "
-    `);
-
-    expect(await evaluate(output, environment.fileSystem))
-      .toMatchInlineSnapshot(`
-      {
-        "bar": "bar",
-        "foo": "foo",
-      }
-    `);
-  });
-
-  it('adds a `.cjs` extension to exports when using the `commonjs` format', async () => {
-    const environment = getVirtualEnvironment({
-      files: {
-        '/index.ts': `
-          export * from "./foo";
-          export * from "./bar";
-        `,
-        '/foo.ts': 'export const foo = "foo";',
-        '/bar.ts': 'export const bar = "bar";',
-      },
-    });
-
-    const output = compile({
-      format: 'commonjs',
-      environment,
-    });
-
-    expect(output).toMatchInlineSnapshot(`
-      ""use strict";
-      var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
-          if (k2 === undefined) k2 = k;
-          var desc = Object.getOwnPropertyDescriptor(m, k);
-          if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
-            desc = { enumerable: true, get: function() { return m[k]; } };
-          }
-          Object.defineProperty(o, k2, desc);
-      }) : (function(o, m, k, k2) {
-          if (k2 === undefined) k2 = k;
-          o[k2] = m[k];
-      }));
-      var __exportStar = (this && this.__exportStar) || function(m, exports) {
-          for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports, p)) __createBinding(exports, m, p);
-      };
-      Object.defineProperty(exports, "__esModule", { value: true });
-      __exportStar(require("./foo.cjs"), exports);
-      __exportStar(require("./bar.cjs"), exports);
-      "
-    `);
-
-    expect(await evaluate(output, environment.fileSystem))
-      .toMatchInlineSnapshot(`
-      {
-        "bar": "bar",
-        "foo": "foo",
-      }
-    `);
-  });
-
-  it('adds a `.mjs` extension to imports in declarations when using the `module` format', () => {
-    const code = `
-      import type { Foo } from "./foo";
-
-      export function hello(): Foo {
-        return 'foo';
-      }
-    `;
-
-    const environment = getVirtualEnvironment({
-      files: {
-        '/index.ts': code,
-        '/foo.ts': `
-          export type Foo = string;
-        `,
-      },
-    });
-
-    const output = compile({
-      format: 'module',
-      code,
-      environment,
-    });
-
-    expect(output).toMatchInlineSnapshot(`
-      "export function hello() {
-          return 'foo';
-      }
-      "
-    `);
-
-    const declaration = environment.system.readFile('/index.d.mts');
-    expect(declaration).toMatchInlineSnapshot(`
-      "import type { Foo } from "./foo.mjs";
-      export declare function hello(): Foo;
-      //# sourceMappingURL=index.d.mts.map"
-    `);
-  });
-
-  it('adds a `.cjs` extension to imports in declarations when using the `commonjs` format', () => {
-    const code = `
-      import type { Foo } from "./foo";
-
-      export function hello(): Foo {
-        return 'foo';
-      }
-    `;
-
-    const environment = getVirtualEnvironment({
-      files: {
-        '/index.ts': code,
-        '/foo.ts': `
-          export type Foo = string;
-        `,
-      },
-    });
-
-    const output = compile({
-      format: 'commonjs',
-      code,
-      environment,
-    });
-
-    expect(output).toMatchInlineSnapshot(`
-      ""use strict";
-      Object.defineProperty(exports, "__esModule", { value: true });
-      exports.hello = void 0;
-      function hello() {
-          return 'foo';
-      }
-      exports.hello = hello;
-      "
-    `);
-
-    const declaration = environment.system.readFile('/index.d.cts');
-    expect(declaration).toMatchInlineSnapshot(`
-      "import type { Foo } from "./foo.cjs";
-      export declare function hello(): Foo;
-      //# sourceMappingURL=index.d.cts.map"
-    `);
-  });
-
-  it('adds a `.mjs` extension to exports in declarations when using the `module` format', () => {
-    const code = `
-      export type { Foo } from "./foo";
-    `;
-
-    const environment = getVirtualEnvironment({
-      files: {
-        '/index.ts': code,
-        '/foo.ts': `
-          export type Foo = string;
-        `,
-      },
-    });
-
-    const output = compile({
-      format: 'module',
-      code,
-      environment,
-    });
-
-    expect(output).toMatchInlineSnapshot(`
-      "export {};
-      "
-    `);
-
-    const declaration = environment.system.readFile('/index.d.mts');
-    expect(declaration).toMatchInlineSnapshot(`
-      "export type { Foo } from "./foo.mjs";
-      //# sourceMappingURL=index.d.mts.map"
-    `);
-  });
-
-  it('adds a `.cjs` extension to exports in declarations when using the `commonjs` format', () => {
-    const code = `
-      export type { Foo } from "./foo";
-    `;
-
-    const environment = getVirtualEnvironment({
-      files: {
-        '/index.ts': code,
-        '/foo.ts': `
-          export type Foo = string;
-        `,
-      },
-    });
-
-    const output = compile({
-      format: 'commonjs',
-      code,
-      environment,
-    });
-
-    expect(output).toMatchInlineSnapshot(`
-      ""use strict";
-      Object.defineProperty(exports, "__esModule", { value: true });
-      "
-    `);
-
-    const declaration = environment.system.readFile('/index.d.cts');
-    expect(declaration).toMatchInlineSnapshot(`
-      "export type { Foo } from "./foo.cjs";
-      //# sourceMappingURL=index.d.cts.map"
-    `);
-  });
-
-  it('adds a `__dirname` and `__filename` shim when using the `module` format', async () => {
-    const environment = getVirtualEnvironment({
-      files: {
-        '/index.ts': `
-          export default {
-            dirname: __dirname,
-            filename: __filename,
-          };
-        `,
-      },
-    });
-
-    const output = compile({
-      format: 'module',
-      environment,
-    });
-
-    expect(output).toMatchInlineSnapshot(`
-      "import * as $shims from "@ts-bridge/shims/esm";
-      export default {
-          dirname: $shims.__dirname(import.meta.url),
-          filename: $shims.__filename(import.meta.url),
-      };
-      "
-    `);
-
-    expect(await evaluate(output, environment.fileSystem))
-      .toMatchInlineSnapshot(`
-        {
-          "default": {
-            "dirname": "/",
-            "filename": "/index.mjs",
-          },
-        }
-      `);
-  });
-
-  it('does not add a `__dirname` and `__filename` shim when using the `commonjs` format', async () => {
-    const environment = getVirtualEnvironment({
-      files: {
-        '/index.ts': `
-          export default {
-            dirname: __dirname,
-            filename: __filename,
-          };
-        `,
-      },
-    });
-
-    const output = compile({
-      format: 'commonjs',
-      environment,
-    });
-
-    expect(output).toMatchInlineSnapshot(`
-      ""use strict";
-      Object.defineProperty(exports, "__esModule", { value: true });
-      exports.default = {
-          dirname: __dirname,
-          filename: __filename,
-      };
-      "
-    `);
-
-    expect(await evaluate(output, environment.fileSystem))
-      .toMatchInlineSnapshot(`
-      {
-        "default": {
-          "dirname": "/",
-          "filename": "/index.cjs",
-        },
-      }
-    `);
-  });
-
-  it('adds a import.meta.url shim when using the `commonjs` format', async () => {
-    const environment = getVirtualEnvironment({
-      files: {
-        '/index.ts': `
-          export default {
-            // @ts-expect-error - The 'import.meta' meta-property is not allowed.
-            url: import.meta.url,
-          };
-        `,
-      },
-    });
-
-    const output = compile({
-      format: 'commonjs',
-      environment,
-    });
-
-    expect(output).toMatchInlineSnapshot(`
-      ""use strict";
-      var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
-          if (k2 === undefined) k2 = k;
-          var desc = Object.getOwnPropertyDescriptor(m, k);
-          if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
-            desc = { enumerable: true, get: function() { return m[k]; } };
-          }
-          Object.defineProperty(o, k2, desc);
-      }) : (function(o, m, k, k2) {
-          if (k2 === undefined) k2 = k;
-          o[k2] = m[k];
-      }));
-      var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
-          Object.defineProperty(o, "default", { enumerable: true, value: v });
-      }) : function(o, v) {
-          o["default"] = v;
+      beforeAll(() => {
+        files = compile(getFixture('node-10'), ['module']);
       });
-      var __importStar = (this && this.__importStar) || function (mod) {
-          if (mod && mod.__esModule) return mod;
-          var result = {};
-          if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
-          __setModuleDefault(result, mod);
-          return result;
-      };
-      Object.defineProperty(exports, "__esModule", { value: true });
-      const $shims = __importStar(require("@ts-bridge/shims"));
-      exports.default = {
-          // @ts-expect-error - The 'import.meta' meta-property is not allowed.
-          url: $shims.getImportMetaUrl(__filename),
-      };
-      "
-    `);
 
-    expect(await evaluate(output, environment.fileSystem))
-      .toMatchInlineSnapshot(`
-        {
-          "default": {
-            "url": "file:///index.cjs",
-          },
-        }
-      `);
+      it('outputs the files with the `.mjs` extension', () => {
+        expect(Object.keys(files)).toStrictEqual([
+          'dist/file-1.mjs.map',
+          'dist/file-1.mjs',
+          'dist/file-1.d.mts.map',
+          'dist/file-1.d.mts',
+          'dist/file-2.mjs.map',
+          'dist/file-2.mjs',
+          'dist/file-2.d.mts.map',
+          'dist/file-2.d.mts',
+          'dist/index.mjs.map',
+          'dist/index.mjs',
+          'dist/index.d.mts.map',
+          'dist/index.d.mts',
+        ]);
+      });
+
+      it('compiles the files with the correct format', () => {
+        expect(files['dist/index.mjs']).toMatchInlineSnapshot(`
+          "import { foo } from "./file-1.mjs";
+          import { bar } from "./file-2.mjs";
+          export { foo, bar };
+          //# sourceMappingURL=index.mjs.map"
+        `);
+      });
+
+      it('updates the source maps with the correct file path', () => {
+        expect(files['dist/index.mjs']).toContain(
+          '//# sourceMappingURL=index.mjs.map',
+        );
+
+        const sourceMap = parseJson(files['dist/index.mjs.map']);
+        expect(sourceMap.file).toBe('index.mjs');
+        expect(sourceMap.sources).toStrictEqual(['../src/index.ts']);
+
+        expect(files['dist/index.d.mts']).toContain(
+          '//# sourceMappingURL=index.d.mts.map',
+        );
+
+        const declarationSourceMap = parseJson(files['dist/index.d.mts.map']);
+        expect(declarationSourceMap.file).toBe('index.d.mts');
+        expect(declarationSourceMap.sources).toStrictEqual(['../src/index.ts']);
+      });
+    });
+
+    describe('when targeting `commonjs`', () => {
+      let files: Record<string, string>;
+
+      beforeAll(() => {
+        files = compile(getFixture('node-10'), ['commonjs']);
+      });
+
+      it('outputs the files with the `.cjs` extension', () => {
+        expect(Object.keys(files)).toStrictEqual([
+          'dist/file-1.cjs.map',
+          'dist/file-1.cjs',
+          'dist/file-1.d.cts.map',
+          'dist/file-1.d.cts',
+          'dist/file-2.cjs.map',
+          'dist/file-2.cjs',
+          'dist/file-2.d.cts.map',
+          'dist/file-2.d.cts',
+          'dist/index.cjs.map',
+          'dist/index.cjs',
+          'dist/index.d.cts.map',
+          'dist/index.d.cts',
+        ]);
+      });
+
+      it('compiles the files with the correct format', () => {
+        expect(files['dist/index.cjs']).toMatchInlineSnapshot(`
+          ""use strict";
+          Object.defineProperty(exports, "__esModule", { value: true });
+          exports.bar = exports.foo = void 0;
+          const file_1_1 = require("./file-1.cjs");
+          Object.defineProperty(exports, "foo", { enumerable: true, get: function () { return file_1_1.foo; } });
+          const file_2_1 = require("./file-2.cjs");
+          Object.defineProperty(exports, "bar", { enumerable: true, get: function () { return file_2_1.bar; } });
+          //# sourceMappingURL=index.cjs.map"
+        `);
+      });
+
+      it('updates the source maps with the correct file path', () => {
+        expect(files['dist/index.cjs']).toContain(
+          '//# sourceMappingURL=index.cjs.map',
+        );
+
+        const sourceMap = parseJson(files['dist/index.cjs.map']);
+        expect(sourceMap.file).toBe('index.cjs');
+        expect(sourceMap.sources).toStrictEqual(['../src/index.ts']);
+
+        expect(files['dist/index.d.cts']).toContain(
+          '//# sourceMappingURL=index.d.cts.map',
+        );
+
+        const declarationSourceMap = parseJson(files['dist/index.d.cts.map']);
+        expect(declarationSourceMap.file).toBe('index.d.cts');
+        expect(declarationSourceMap.sources).toStrictEqual(['../src/index.ts']);
+      });
+    });
+
+    describe('when targeting both', () => {
+      let files: Record<string, string>;
+
+      beforeAll(() => {
+        files = compile(getFixture('node-10'), ['commonjs', 'module']);
+      });
+
+      it('outputs the files with both the `.cjs` and `.mjs` extension', () => {
+        expect(Object.keys(files)).toStrictEqual([
+          'dist/file-1.mjs.map',
+          'dist/file-1.mjs',
+          'dist/file-1.d.mts.map',
+          'dist/file-1.d.mts',
+          'dist/file-2.mjs.map',
+          'dist/file-2.mjs',
+          'dist/file-2.d.mts.map',
+          'dist/file-2.d.mts',
+          'dist/index.mjs.map',
+          'dist/index.mjs',
+          'dist/index.d.mts.map',
+          'dist/index.d.mts',
+          'dist/file-1.cjs.map',
+          'dist/file-1.cjs',
+          'dist/file-1.d.cts.map',
+          'dist/file-1.d.cts',
+          'dist/file-2.cjs.map',
+          'dist/file-2.cjs',
+          'dist/file-2.d.cts.map',
+          'dist/file-2.d.cts',
+          'dist/index.cjs.map',
+          'dist/index.cjs',
+          'dist/index.d.cts.map',
+          'dist/index.d.cts',
+        ]);
+      });
+    });
   });
 
-  it('does not add a import.meta.url shim when using the `module` format', async () => {
-    const environment = getVirtualEnvironment({
-      files: {
-        '/index.ts': `
-          export default {
-            // @ts-expect-error - The 'import.meta' meta-property is not allowed.
-            url: import.meta.url,
-          };
-        `,
-      },
+  describe('node 16', () => {
+    describe('when targeting `module`', () => {
+      let files: Record<string, string>;
+
+      beforeAll(() => {
+        files = compile(getFixture('node-16'), ['module']);
+      });
+
+      it('outputs the files with the `.mjs` extension', () => {
+        expect(Object.keys(files)).toStrictEqual([
+          'dist/file-1.mjs.map',
+          'dist/file-1.mjs',
+          'dist/file-1.d.mts.map',
+          'dist/file-1.d.mts',
+          'dist/file-2.mjs.map',
+          'dist/file-2.mjs',
+          'dist/file-2.d.mts.map',
+          'dist/file-2.d.mts',
+          'dist/index.mjs.map',
+          'dist/index.mjs',
+          'dist/index.d.mts.map',
+          'dist/index.d.mts',
+        ]);
+      });
+
+      it('compiles the files with the correct format', () => {
+        expect(files['dist/index.mjs']).toMatchInlineSnapshot(`
+          "import { foo } from "./file-1.mjs";
+          import { bar } from "./file-2.mjs";
+          export { foo, bar };
+          //# sourceMappingURL=index.mjs.map"
+        `);
+      });
+
+      it('updates the source maps with the correct file path', () => {
+        expect(files['dist/index.mjs']).toContain(
+          '//# sourceMappingURL=index.mjs.map',
+        );
+
+        const sourceMap = parseJson(files['dist/index.mjs.map']);
+        expect(sourceMap.file).toBe('index.mjs');
+        expect(sourceMap.sources).toStrictEqual(['../src/index.ts']);
+
+        expect(files['dist/index.d.mts']).toContain(
+          '//# sourceMappingURL=index.d.mts.map',
+        );
+
+        const declarationSourceMap = parseJson(files['dist/index.d.mts.map']);
+        expect(declarationSourceMap.file).toBe('index.d.mts');
+        expect(declarationSourceMap.sources).toStrictEqual(['../src/index.ts']);
+      });
     });
 
-    const output = compile({
-      format: 'module',
-      environment,
+    describe('when targeting `commonjs`', () => {
+      let files: Record<string, string>;
+
+      beforeAll(() => {
+        files = compile(getFixture('node-16'), ['commonjs']);
+      });
+
+      it('outputs the files with the `.cjs` extension', () => {
+        expect(Object.keys(files)).toStrictEqual([
+          'dist/file-1.cjs.map',
+          'dist/file-1.cjs',
+          'dist/file-1.d.cts.map',
+          'dist/file-1.d.cts',
+          'dist/file-2.cjs.map',
+          'dist/file-2.cjs',
+          'dist/file-2.d.cts.map',
+          'dist/file-2.d.cts',
+          'dist/index.cjs.map',
+          'dist/index.cjs',
+          'dist/index.d.cts.map',
+          'dist/index.d.cts',
+        ]);
+      });
+
+      it('compiles the files with the correct format', () => {
+        expect(files['dist/index.cjs']).toMatchInlineSnapshot(`
+          ""use strict";
+          Object.defineProperty(exports, "__esModule", { value: true });
+          exports.bar = exports.foo = void 0;
+          const file_1_1 = require("./file-1.cjs");
+          Object.defineProperty(exports, "foo", { enumerable: true, get: function () { return file_1_1.foo; } });
+          const file_2_1 = require("./file-2.cjs");
+          Object.defineProperty(exports, "bar", { enumerable: true, get: function () { return file_2_1.bar; } });
+          //# sourceMappingURL=index.cjs.map"
+        `);
+      });
+
+      it('updates the source maps with the correct file path', () => {
+        expect(files['dist/index.cjs']).toContain(
+          '//# sourceMappingURL=index.cjs.map',
+        );
+
+        const sourceMap = parseJson(files['dist/index.cjs.map']);
+        expect(sourceMap.file).toBe('index.cjs');
+        expect(sourceMap.sources).toStrictEqual(['../src/index.ts']);
+
+        expect(files['dist/index.d.cts']).toContain(
+          '//# sourceMappingURL=index.d.cts.map',
+        );
+
+        const declarationSourceMap = parseJson(files['dist/index.d.cts.map']);
+        expect(declarationSourceMap.file).toBe('index.d.cts');
+        expect(declarationSourceMap.sources).toStrictEqual(['../src/index.ts']);
+      });
     });
 
-    expect(output).toMatchInlineSnapshot(`
-      "export default {
-          // @ts-expect-error - The 'import.meta' meta-property is not allowed.
-          url: import.meta.url,
-      };
-      "
-    `);
+    describe('when targeting both', () => {
+      let files: Record<string, string>;
 
-    expect(await evaluate(output, environment.fileSystem))
-      .toMatchInlineSnapshot(`
-      {
-        "default": {
-          "url": "file:///index.mjs",
-        },
-      }
-    `);
-  });
+      beforeAll(() => {
+        files = compile(getFixture('node-16'), ['commonjs', 'module']);
+      });
 
-  it('updates source maps with the correct file paths when using `module`', () => {
-    const code = `
-      export function hello() {
-        return 'Hello, world!';
-      }
-    `;
-
-    const tsconfig = getMockTsConfig({
-      compilerOptions: {
-        sourceMap: true,
-      },
+      it('outputs the files with both the `.cjs` and `.mjs` extension', () => {
+        expect(Object.keys(files)).toStrictEqual([
+          'dist/file-1.mjs.map',
+          'dist/file-1.mjs',
+          'dist/file-1.d.mts.map',
+          'dist/file-1.d.mts',
+          'dist/file-2.mjs.map',
+          'dist/file-2.mjs',
+          'dist/file-2.d.mts.map',
+          'dist/file-2.d.mts',
+          'dist/index.mjs.map',
+          'dist/index.mjs',
+          'dist/index.d.mts.map',
+          'dist/index.d.mts',
+          'dist/file-1.cjs.map',
+          'dist/file-1.cjs',
+          'dist/file-1.d.cts.map',
+          'dist/file-1.d.cts',
+          'dist/file-2.cjs.map',
+          'dist/file-2.cjs',
+          'dist/file-2.d.cts.map',
+          'dist/file-2.d.cts',
+          'dist/index.cjs.map',
+          'dist/index.cjs',
+          'dist/index.d.cts.map',
+          'dist/index.d.cts',
+        ]);
+      });
     });
-
-    const environment = getVirtualEnvironment({
-      files: {
-        '/index.ts': code,
-      },
-      tsconfig,
-    });
-
-    const output = compile({
-      format: 'module',
-      code,
-      tsconfig,
-      environment,
-    });
-
-    expect(output).toMatchInlineSnapshot(`
-      "export function hello() {
-          return 'Hello, world!';
-      }
-      //# sourceMappingURL=index.mjs.map"
-    `);
-
-    const sourceMap = environment.system.readFile('/index.mjs.map');
-    expect(sourceMap).toMatchInlineSnapshot(
-      `"{"version":3,"file":"index.mjs","sourceRoot":"","sources":["index.ts"],"names":[],"mappings":"AACM,MAAM,UAAU,KAAK;IACnB,OAAO,eAAe,CAAC;AACzB,CAAC"}"`,
-    );
-  });
-
-  it('updates source maps with the correct file paths when using `commonjs`', () => {
-    const code = `
-      export function hello() {
-        return 'Hello, world!';
-      }
-    `;
-
-    const tsconfig = getMockTsConfig({
-      compilerOptions: {
-        sourceMap: true,
-      },
-    });
-
-    const environment = getVirtualEnvironment({
-      files: {
-        '/index.ts': code,
-      },
-      tsconfig,
-    });
-
-    const output = compile({
-      format: 'commonjs',
-      code,
-      tsconfig,
-      environment,
-    });
-
-    expect(output).toMatchInlineSnapshot(`
-      ""use strict";
-      Object.defineProperty(exports, "__esModule", { value: true });
-      exports.hello = void 0;
-      function hello() {
-          return 'Hello, world!';
-      }
-      exports.hello = hello;
-      //# sourceMappingURL=index.cjs.map"
-    `);
-
-    const sourceMap = environment.system.readFile('/index.cjs.map');
-    expect(sourceMap).toMatchInlineSnapshot(
-      `"{"version":3,"file":"index.cjs","sourceRoot":"","sources":["index.ts"],"names":[],"mappings":";;;AACM,SAAgB,KAAK;IACnB,OAAO,eAAe,CAAC;AACzB,CAAC;AAFD,sBAEC"}"`,
-    );
-  });
-
-  it('rewrites named imports of CommonJS modules when using the `module` format', async () => {
-    const environment = getVirtualEnvironment({
-      files: {
-        '/index.ts': `
-          import { foo } from 'commonjs-module';
-          export default foo;
-        `,
-        ...getMockNodeModule({
-          name: 'commonjs-module',
-          packageJson: getMockPackageJson({
-            name: 'commonjs-module',
-            main: 'index.cjs',
-          }),
-          files: {
-            'index.cjs': 'exports.foo = "foo";',
-            'index.d.ts': 'export const foo: string;',
-          },
-        }),
-      },
-    });
-
-    const output = compile({
-      format: 'module',
-      environment,
-    });
-
-    expect(output).toMatchInlineSnapshot(`
-      "import $commonjsmodule from "commonjs-module";
-      const { foo } = $commonjsmodule;
-      export default foo;
-      "
-    `);
-  });
-
-  it('does not rewrite named imports of ES modules when using the `module` format', () => {
-    const output = compile({
-      format: 'module',
-      code: `
-        import { foo } from 'es-module';
-        console.log(foo);
-      `,
-      extraFiles: {
-        ...getMockNodeModule({
-          name: 'es-module',
-          files: {
-            'index.mjs': 'exports.foo = "foo";',
-            'index.d.mts': 'export const foo: string;',
-          },
-          packageJson: getMockPackageJson({
-            name: 'es-module',
-            main: 'index.mjs',
-          }),
-        }),
-      },
-    });
-
-    expect(output).toMatchInlineSnapshot(`
-      "import { foo } from "es-module";
-      console.log(foo);
-      "
-    `);
-  });
-
-  it('does not rewrite named imports of CommonJS modules when using the `commonjs` format', () => {
-    const output = compile({
-      format: 'commonjs',
-      code: `
-        import { foo } from 'commonjs-module';
-        console.log(foo);
-      `,
-      extraFiles: {
-        ...getMockNodeModule({
-          name: 'commonjs-module',
-          files: {
-            'index.js': 'exports.foo = "foo";',
-            'index.d.ts': 'export const foo: string;',
-          },
-        }),
-      },
-    });
-
-    expect(output).toMatchInlineSnapshot(`
-      ""use strict";
-      Object.defineProperty(exports, "__esModule", { value: true });
-      const commonjs_module_1 = require("commonjs-module");
-      console.log(commonjs_module_1.foo);
-      "
-    `);
-  });
-
-  it('creates a require function when using the `module` format', () => {
-    const output = compile({
-      format: 'module',
-      code: `
-        const { foo } = require('commonjs-module');
-        console.log(foo);
-      `,
-      extraFiles: {
-        ...getMockNodeModule({
-          name: 'commonjs-module',
-          files: {
-            'index.js': 'exports.foo = "foo";',
-            'index.d.ts': 'export const foo: string;',
-          },
-        }),
-      },
-    });
-
-    expect(output).toMatchInlineSnapshot(`
-      ""use strict";
-      import * as $nodeShims from "@ts-bridge/shims/esm/require";
-      const { foo } = $nodeShims.require("commonjs-module", import.meta.url);
-      console.log(foo);
-      "
-    `);
-  });
-
-  it('does not create a require function when using the `commonjs` format', () => {
-    const output = compile({
-      format: 'commonjs',
-      code: `
-        const { foo } = require('commonjs-module');
-        console.log(foo);
-      `,
-      extraFiles: {
-        ...getMockNodeModule({
-          name: 'commonjs-module',
-          files: {
-            'index.js': 'exports.foo = "foo";',
-            'index.d.ts': 'export const foo: string;',
-          },
-        }),
-      },
-    });
-
-    expect(output).toMatchInlineSnapshot(`
-      ""use strict";
-      const { foo } = require("commonjs-module");
-      console.log(foo);
-      "
-    `);
-  });
-
-  it('builds a project using Node10 module resolution when using the `module` format', () => {
-    const output = compile({
-      format: 'module',
-      code: `
-        import { foo } from './foo';
-        console.log(foo);
-      `,
-      extraFiles: {
-        '/foo.ts': 'export const foo = "foo";',
-      },
-      tsconfig: getMockTsConfig({
-        compilerOptions: {
-          module: 'ES2022',
-          moduleResolution: 'Node',
-        },
-      }),
-    });
-
-    expect(output).toMatchInlineSnapshot(`
-      "import { foo } from "./foo.mjs";
-      console.log(foo);
-      "
-    `);
-  });
-
-  it('builds a project using Node10 module resolution when using the `commonjs` format', () => {
-    const output = compile({
-      format: 'commonjs',
-      code: `
-        import { foo } from './foo';
-        console.log(foo);
-      `,
-      extraFiles: {
-        '/foo.ts': 'export const foo = "foo";',
-      },
-      tsconfig: getMockTsConfig({
-        compilerOptions: {
-          module: 'ES2022',
-          moduleResolution: 'Node',
-        },
-      }),
-    });
-
-    expect(output).toMatchInlineSnapshot(`
-      ""use strict";
-      Object.defineProperty(exports, "__esModule", { value: true });
-      const foo_1 = require("./foo.cjs");
-      console.log(foo_1.foo);
-      "
-    `);
-  });
-
-  it('uses files from the `tsconfig.json`', () => {
-    const environment = getVirtualEnvironment({
-      files: {
-        '/index.ts': '// no-op',
-      },
-      tsconfig: getMockTsConfig({
-        include: ['/index.ts'],
-      }),
-    });
-
-    const output = compile({
-      format: 'module',
-      environment,
-    });
-
-    expect(output).toMatchInlineSnapshot(`
-      ""use strict";
-      // no-op
-      "
-    `);
   });
 
   it('removes the output directory if `clean` is enabled', () => {
-    const environment = getVirtualEnvironment({
-      files: {
-        '/index.ts': '// no-op',
-      },
-      tsconfig: {
-        compilerOptions: {
-          outDir: '/non-existent',
-        },
-      },
-    });
+    const path = getFixture('node-16');
+    const dist = join(path, 'dist');
 
-    compile({
-      format: 'module',
-      environment: {
-        ...environment,
-        system: {
-          ...environment.system,
-          createDirectory: noOp,
-        },
-      },
+    compile(path, ['module'], {
       clean: true,
-      outputPath: '/non-existent/index',
     });
 
-    expect(removeDirectory).toHaveBeenCalledWith('/non-existent', '/');
+    expect(vi.mocked(removeDirectory)).toHaveBeenCalledWith(dist, path);
   });
 
   it('throws an error if the project fails to initialise', () => {
-    const environment = getVirtualEnvironment({
-      files: {
-        '/index.ts': 'import { foo } from "./foo";',
-      },
-      checkDiagnostic: false,
-    });
-
-    expect(() =>
-      compile({
-        format: 'module',
-        environment,
-      }),
-    ).toThrow(
-      "Cannot find module './foo' or its corresponding type declarations.",
+    expect(() => compile(getFixture('invalid'), ['module'])).toThrow(
+      'Failed to initialise the project.',
     );
   });
 
-  it('throws an error if the project fails to build', () => {
-    const { program, system } = getVirtualEnvironment({
-      files: {
-        '/index.ts': 'import { foo } from "./foo";',
+  it('logs an error if the project fails to build', () => {
+    const error = vi.spyOn(console, 'error').mockImplementation(noOp);
+    const system: System = {
+      ...sys,
+      writeFile() {
+        throw new Error('Failed to write file.');
       },
-      checkDiagnostic: false,
+    };
+
+    buildHandler({
+      // ESLint doesn't seem to be able to infer the type of `getFixture` here.
+      // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
+      project: `${getFixture('node-16')}/tsconfig.json`,
+      format: ['module'],
+      clean: false,
+      system,
     });
 
-    program.emit = () => ({
-      emitSkipped: true,
-      diagnostics: [
-        {
-          category: 1,
-          code: 2307,
-          messageText: "Cannot find module './foo'.",
-          file: undefined,
-          start: undefined,
-          length: undefined,
-        },
-      ],
-    });
-
-    expect(() =>
-      build({
-        program,
-        system,
-        type: 'module',
-        baseDirectory: '/',
-      }),
-    ).toThrow('Failed to build ES module files.');
+    expect(error).toHaveBeenCalledWith(
+      expect.stringContaining('Failed to write file.'),
+    );
   });
 });
 

@@ -970,7 +970,6 @@ function getPackageScope(
   let scopeUrl = fileURLToPath(resolvedSpecifier);
 
   // 2. While scopeURL is not the file system root,
-  // TODO: Check if at file system root on Windows.
   while (!isRoot(scopeUrl)) {
     // 1. Set scopeURL to the parent URL of scopeURL.
     scopeUrl = resolvePath(scopeUrl, '..');

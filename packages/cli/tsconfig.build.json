@@ -10,6 +10,9 @@
   "include": ["src"],
   "references": [
     {
+      "path": "../resolver/tsconfig.build.json"
+    },
+    {
       "path": "../test-utils/tsconfig.build.json"
     }
   ]

@@ -1,16 +1,18 @@
-import {
-  getMockNodeModule,
-  getVirtualEnvironment,
-} from '@ts-bridge/test-utils';
+import { getFixture } from '@ts-bridge/test-utils';
+import { basename } from 'path';
 import type {
   CustomTransformerFactory,
+  Program,
   SourceFile,
   TransformerFactory,
+  TypeChecker,
 } from 'typescript';
-import { describe, expect, it } from 'vitest';
+import { createProgram, sys } from 'typescript';
+import { beforeAll, describe, expect, it } from 'vitest';
 
 import type { BuildType } from './build-type.js';
 import { getBuildTypeOptions } from './build-type.js';
+import { getTypeScriptConfig } from './config.js';
 import {
   getExportExtensionTransformer,
   getGlobalsTransformer,
@@ -24,12 +26,9 @@ import {
 } from './transformers.js';
 
 type CompileOptions = {
+  program: Program;
   format: BuildType;
-  code?: string;
   transformer: TransformerFactory<SourceFile> | CustomTransformerFactory;
-  extraFiles?: Record<string, string>;
-  tsconfig?: Record<string, any>;
-  environment?: ReturnType<typeof getVirtualEnvironment>;
 };
 
 /**
@@ -37,1253 +36,719 @@ type CompileOptions = {
  * code.
  *
  * @param options - Options bag.
+ * @param options.program - The TypeScript program to compile.
  * @param options.format - The format to compile the code to.
  * @param options.transformer - The transformer to use.
- * @param options.code - The code to compile.
- * @param options.extraFiles - Extra files to include in the virtual
- * environment.
- * @param options.tsconfig - The TypeScript configuration to use.
- * @param options.environment - The virtual environment to use.
  * @returns The compiled code.
  */
-async function compile({
-  format,
-  transformer,
-  code,
-  extraFiles = {},
-  tsconfig,
-  environment = getVirtualEnvironment({
-    files: {
-      '/index.ts': code ?? '',
-      ...extraFiles,
-    },
-    tsconfig,
-  }),
-}: CompileOptions) {
-  const { program, system } = environment;
+function compile({ program, format, transformer }: CompileOptions) {
   const { target } = getBuildTypeOptions(format);
+  const files: Record<string, string> = {};
 
-  program.emit(undefined, undefined, undefined, undefined, {
-    before: [transformer, getTargetTransformer(target)],
+  program.emit(
+    undefined,
+    (fileName, text) => {
+      files[basename(fileName)] = text;
+    },
+    undefined,
+    undefined,
+    {
+      before: [transformer, getTargetTransformer(target)],
+    },
+  );
+
+  return files;
+}
+
+type Compiler = ((
+  format: BuildType,
+  transformer: TransformerFactory<SourceFile> | CustomTransformerFactory,
+) => Record<string, string>) & {
+  typeChecker: TypeChecker;
+};
+
+/**
+ * Create a TypeScript compiler for a project.
+ *
+ * @param projectPath - The path to the project.
+ * @returns The compiler.
+ */
+function createCompiler(projectPath: string) {
+  const { fileNames, options } = getTypeScriptConfig(
+    `${projectPath}/tsconfig.json`,
+    sys,
+  );
+
+  const program = createProgram({
+    rootNames: fileNames,
+    options,
   });
 
-  return system.readFile('/index.js');
+  const fn: Compiler = (
+    format: BuildType,
+    transformer: TransformerFactory<SourceFile> | CustomTransformerFactory,
+  ) => {
+    return compile({ program, format, transformer });
+  };
+
+  fn.typeChecker = program.getTypeChecker();
+  return fn;
 }
 
 describe('getImportExtensionTransformer', () => {
-  it('adds the `.mjs` extension to the import statement', async () => {
-    const environment = getVirtualEnvironment({
-      files: {
-        '/index.ts': `
-          import { foo } from './foo';
-          foo;
-        `,
-        '/foo.ts': 'export const foo = "bar";',
-      },
+  describe('when targeting `module`', () => {
+    let files: Record<string, string>;
+
+    beforeAll(() => {
+      const compiler = createCompiler(getFixture('import-resolver'));
+      files = compiler(
+        'module',
+        getImportExtensionTransformer('.mjs', {
+          typeChecker: compiler.typeChecker,
+          system: sys,
+        }),
+      );
     });
 
-    expect(
-      await compile({
-        format: 'module',
-        environment,
-        transformer: getImportExtensionTransformer('.mjs', {
-          typeChecker: environment.typeChecker,
-          system: environment.system,
-          baseDirectory: '/',
-        }),
-      }),
-    ).toMatchInlineSnapshot(`
-      "import { foo } from "./foo.mjs";
-      foo;
-      "
-    `);
+    it('adds the `.mjs` extension to the import statement', async () => {
+      expect(files['add.js']).toMatchInlineSnapshot(`
+        "import { foo } from "./dummy.mjs";
+        foo;
+        "
+      `);
+    });
+
+    it('rewrites the import to `index.mjs` when importing from a directory', async () => {
+      expect(files['import-folder.js']).toMatchInlineSnapshot(`
+        "import { foo } from "./folder/index.mjs";
+        foo;
+        "
+      `);
+    });
+
+    it('overrides an existing extension', async () => {
+      expect(files['override.js']).toMatchInlineSnapshot(`
+        "import { foo } from "./dummy.mjs";
+        foo;
+        "
+      `);
+    });
+
+    it('resolves external imports with paths', async () => {
+      expect(files['external.js']).toMatchInlineSnapshot(`
+        "import { compare } from "semver";
+        import { compareLoose } from "semver/preload.js";
+        compare;
+        compareLoose;
+        "
+      `);
+    });
+
+    it('does not add an extension if the module fails to resolve', async () => {
+      expect(files['unresolved.js']).toMatchInlineSnapshot(`
+        "import "./unresolved-module";
+        "
+      `);
+    });
+
+    it('does not add an extension if the module specifier is invalid', async () => {
+      expect(files['invalid.js']).toMatchInlineSnapshot(`
+        "// @ts-expect-error - Invalid module specifier.
+        import { foo } from bar;
+        foo;
+        "
+      `);
+    });
   });
 
-  it('adds the `.cjs` extension to the import statement', async () => {
-    const environment = getVirtualEnvironment({
-      files: {
-        '/index.ts': `
-          import { foo } from './foo';
-          foo;
-        `,
-        '/foo.ts': 'export const foo = "bar";',
-      },
+  describe('when targeting `commonjs`', () => {
+    let files: Record<string, string>;
+
+    beforeAll(() => {
+      const compiler = createCompiler(getFixture('import-resolver'));
+      files = compiler(
+        'commonjs',
+        getImportExtensionTransformer('.cjs', {
+          typeChecker: compiler.typeChecker,
+          system: sys,
+        }),
+      );
     });
 
-    expect(
-      await compile({
-        format: 'commonjs',
-        environment,
-        transformer: getImportExtensionTransformer('.cjs', {
-          typeChecker: environment.typeChecker,
-          system: environment.system,
-          baseDirectory: '/',
-        }),
-      }),
-    ).toMatchInlineSnapshot(`
-      ""use strict";
-      Object.defineProperty(exports, "__esModule", { value: true });
-      const foo_1 = require("./foo.cjs");
-      foo_1.foo;
-      "
-    `);
-  });
-
-  it('overrides an existing extension', async () => {
-    const environment = getVirtualEnvironment({
-      files: {
-        '/index.ts': `
-          import { foo } from './foo.js';
-          foo;
-        `,
-        '/foo.ts': 'export const foo = "bar";',
-      },
+    it('adds the `.cjs` extension to the import statement', async () => {
+      expect(files['add.js']).toMatchInlineSnapshot(`
+        ""use strict";
+        Object.defineProperty(exports, "__esModule", { value: true });
+        const dummy_1 = require("./dummy.cjs");
+        dummy_1.foo;
+        "
+      `);
     });
 
-    expect(
-      await compile({
-        format: 'module',
-        environment,
-        transformer: getImportExtensionTransformer('.mjs', {
-          typeChecker: environment.typeChecker,
-          system: environment.system,
-          baseDirectory: '/',
-        }),
-      }),
-    ).toMatchInlineSnapshot(`
-      "import { foo } from "./foo.mjs";
-      foo;
-      "
-    `);
-  });
-
-  it('does not add an extension to external imports', async () => {
-    const environment = getVirtualEnvironment({
-      files: {
-        '/index.ts': `
-          import { createRequire } from 'module';
-          createRequire;
-        `,
-      },
+    it('rewrites the import to `index.cjs` when importing from a directory', async () => {
+      expect(files['import-folder.js']).toMatchInlineSnapshot(`
+        ""use strict";
+        Object.defineProperty(exports, "__esModule", { value: true });
+        const folder_1 = require("./folder/index.cjs");
+        folder_1.foo;
+        "
+      `);
     });
 
-    expect(
-      await compile({
-        format: 'module',
-        environment,
-        transformer: getImportExtensionTransformer('.mjs', {
-          typeChecker: environment.typeChecker,
-          system: environment.system,
-          baseDirectory: '/',
-        }),
-      }),
-    ).toMatchInlineSnapshot(`
-      "import { createRequire } from "module";
-      createRequire;
-      "
-    `);
-  });
-
-  it('does not add an extension if the module fails to resolve', async () => {
-    const environment = getVirtualEnvironment({
-      files: {
-        '/index.ts': `
-          // @ts-expect-error - Cannot find module.
-          import { foo } from './bar';
-          foo;
-        `,
-      },
+    it('overrides an existing extension', async () => {
+      expect(files['override.js']).toMatchInlineSnapshot(`
+        ""use strict";
+        Object.defineProperty(exports, "__esModule", { value: true });
+        const dummy_js_1 = require("./dummy.cjs");
+        dummy_js_1.foo;
+        "
+      `);
     });
 
-    expect(
-      await compile({
-        format: 'module',
-        environment,
-        transformer: getImportExtensionTransformer('.mjs', {
-          typeChecker: environment.typeChecker,
-          system: environment.system,
-          baseDirectory: '/',
-        }),
-      }),
-    ).toMatchInlineSnapshot(`
-      "// @ts-expect-error - Cannot find module.
-      import { foo } from "./bar";
-      foo;
-      "
-    `);
-  });
-
-  it('does not add an extension if the module specifier is invalid', async () => {
-    const environment = getVirtualEnvironment({
-      files: {
-        '/index.ts': `
-          // @ts-expect-error - Invalid module specifier.
-          import { foo } from bar;
-          foo;
-        `,
-      },
+    it('resolves external imports with paths', async () => {
+      expect(files['external.js']).toMatchInlineSnapshot(`
+        ""use strict";
+        Object.defineProperty(exports, "__esModule", { value: true });
+        const semver_1 = require("semver");
+        const preload_1 = require("semver/preload.js");
+        semver_1.compare;
+        preload_1.compareLoose;
+        "
+      `);
     });
 
-    expect(
-      await compile({
-        format: 'module',
-        environment,
-        transformer: getImportExtensionTransformer('.mjs', {
-          typeChecker: environment.typeChecker,
-          system: environment.system,
-          baseDirectory: '/',
-        }),
-      }),
-    ).toMatchInlineSnapshot(`
-      "// @ts-expect-error - Invalid module specifier.
-      import { foo } from bar;
-      foo;
-      "
-    `);
-  });
-
-  it('returns the original code when not using `import`', async () => {
-    const environment = getVirtualEnvironment({
-      files: {
-        '/index.ts': `
-          const foo = 'bar';
-        `,
-      },
+    it('does not add an extension if the module fails to resolve', async () => {
+      expect(files['unresolved.js']).toMatchInlineSnapshot(`
+        ""use strict";
+        Object.defineProperty(exports, "__esModule", { value: true });
+        require("./unresolved-module");
+        "
+      `);
     });
 
-    expect(
-      await compile({
-        format: 'module',
-        environment,
-        transformer: getImportExtensionTransformer('.mjs', {
-          typeChecker: environment.typeChecker,
-          system: environment.system,
-          baseDirectory: '/',
-        }),
-      }),
-    ).toMatchInlineSnapshot(`
-      ""use strict";
-      const foo = 'bar';
-      "
-    `);
+    it('does not add an extension if the module specifier is invalid', async () => {
+      expect(files['invalid.js']).toMatchInlineSnapshot(`
+        ""use strict";
+        Object.defineProperty(exports, "__esModule", { value: true });
+        // @ts-expect-error - Invalid module specifier.
+        const module_1 = require();
+        module_1.foo;
+        "
+      `);
+    });
   });
 });
 
 describe('getRequireExtensionTransformer', () => {
-  it('adds the `.mjs` extension to the require statement', async () => {
-    const environment = getVirtualEnvironment({
-      files: {
-        '/index.ts': `
-          const { foo } = require('./foo');
-          foo;
-        `,
-        '/foo.ts': 'export const foo = "bar";',
-      },
+  describe('when targeting `module`', () => {
+    let files: Record<string, string>;
+
+    beforeAll(() => {
+      const compiler = createCompiler(getFixture('require-resolver'));
+      files = compiler(
+        'module',
+        getRequireExtensionTransformer('.mjs', {
+          typeChecker: compiler.typeChecker,
+          system: sys,
+        }),
+      );
     });
 
-    expect(
-      await compile({
-        format: 'module',
-        environment,
-        transformer: getRequireExtensionTransformer('.mjs', {
-          typeChecker: environment.typeChecker,
-          system: environment.system,
-          baseDirectory: '/',
-        }),
-      }),
-    ).toMatchInlineSnapshot(`
-      ""use strict";
-      const { foo } = require("./foo.mjs");
-      foo;
-      "
-    `);
+    it('adds the `.mjs` extension to the require statement', () => {
+      expect(files['add.js']).toMatchInlineSnapshot(`
+        "const { foo } = require("./dummy.mjs");
+        foo;
+        export {};
+        "
+      `);
+    });
+
+    it('overrides an existing extension', () => {
+      expect(files['override.js']).toMatchInlineSnapshot(`
+        "const { foo } = require("./dummy.mjs");
+        foo;
+        export {};
+        "
+      `);
+    });
+
+    it('resolves external imports with paths', async () => {
+      expect(files['external.js']).toMatchInlineSnapshot(`
+        "const { compare } = require("semver");
+        const { compareLoose } = require("semver/preload.js");
+        compare;
+        compareLoose;
+        export {};
+        "
+      `);
+    });
+
+    it('does not add an extension if the module fails to resolve', async () => {
+      expect(files['unresolved.js']).toMatchInlineSnapshot(`
+        "require("./unresolved-module");
+        export {};
+        "
+      `);
+    });
+
+    it('does not add an extension if the module specifier is invalid', async () => {
+      expect(files['invalid.js']).toMatchInlineSnapshot(`
+        "// @ts-expect-error - Invalid module specifier.
+        require(bar);
+        export {};
+        "
+      `);
+    });
   });
 
-  it('adds the `.cjs` extension to the require statement', async () => {
-    const environment = getVirtualEnvironment({
-      files: {
-        '/index.ts': `
-          const { foo } = require('./foo');
-          foo;
-        `,
-        '/foo.ts': 'export const foo = "bar";',
-      },
+  describe('when targeting `commonjs`', () => {
+    let files: Record<string, string>;
+
+    beforeAll(() => {
+      const compiler = createCompiler(getFixture('require-resolver'));
+      files = compiler(
+        'commonjs',
+        getRequireExtensionTransformer('.cjs', {
+          typeChecker: compiler.typeChecker,
+          system: sys,
+        }),
+      );
     });
 
-    expect(
-      await compile({
-        format: 'commonjs',
-        environment,
-        transformer: getRequireExtensionTransformer('.cjs', {
-          typeChecker: environment.typeChecker,
-          system: environment.system,
-          baseDirectory: '/',
-        }),
-      }),
-    ).toMatchInlineSnapshot(`
-      ""use strict";
-      const { foo } = require("./foo.cjs");
-      foo;
-      "
-    `);
-  });
-
-  it('overrides an existing extension', async () => {
-    const environment = getVirtualEnvironment({
-      files: {
-        '/index.ts': `
-          const { foo } = require('./foo.js');
-          foo;
-        `,
-        '/foo.ts': 'export const foo = "bar";',
-      },
+    it('adds the `.mjs` extension to the require statement', () => {
+      expect(files['add.js']).toMatchInlineSnapshot(`
+        ""use strict";
+        Object.defineProperty(exports, "__esModule", { value: true });
+        const { foo } = require("./dummy.cjs");
+        foo;
+        "
+      `);
     });
 
-    expect(
-      await compile({
-        format: 'module',
-        environment,
-        transformer: getRequireExtensionTransformer('.mjs', {
-          typeChecker: environment.typeChecker,
-          system: environment.system,
-          baseDirectory: '/',
-        }),
-      }),
-    ).toMatchInlineSnapshot(`
-      ""use strict";
-      const { foo } = require("./foo.mjs");
-      foo;
-      "
-    `);
-  });
-
-  it('does not add an extension to external requires', async () => {
-    const environment = getVirtualEnvironment({
-      files: {
-        '/index.ts': `
-          const { foo } = require('module');
-          foo;
-        `,
-      },
+    it('overrides an existing extension', () => {
+      expect(files['override.js']).toMatchInlineSnapshot(`
+        ""use strict";
+        Object.defineProperty(exports, "__esModule", { value: true });
+        const { foo } = require("./dummy.cjs");
+        foo;
+        "
+      `);
     });
 
-    expect(
-      await compile({
-        format: 'module',
-        environment,
-        transformer: getRequireExtensionTransformer('.mjs', {
-          typeChecker: environment.typeChecker,
-          system: environment.system,
-          baseDirectory: '/',
-        }),
-      }),
-    ).toMatchInlineSnapshot(`
-      ""use strict";
-      const { foo } = require("module");
-      foo;
-      "
-    `);
-  });
-
-  it('does not add an extension if the module fails to resolve', async () => {
-    const environment = getVirtualEnvironment({
-      files: {
-        '/index.ts': `
-          const { foo } = require('./bar');
-          foo;
-        `,
-      },
+    it('resolves external imports with paths', async () => {
+      expect(files['external.js']).toMatchInlineSnapshot(`
+        ""use strict";
+        Object.defineProperty(exports, "__esModule", { value: true });
+        const { compare } = require("semver");
+        const { compareLoose } = require("semver/preload.js");
+        compare;
+        compareLoose;
+        "
+      `);
     });
 
-    expect(
-      await compile({
-        format: 'module',
-        environment,
-        transformer: getRequireExtensionTransformer('.mjs', {
-          typeChecker: environment.typeChecker,
-          system: environment.system,
-          baseDirectory: '/',
-        }),
-      }),
-    ).toMatchInlineSnapshot(`
-      ""use strict";
-      const { foo } = require("./bar");
-      foo;
-      "
-    `);
-  });
-
-  it('does not add an extension if the module specifier is invalid', async () => {
-    const environment = getVirtualEnvironment({
-      files: {
-        '/index.ts': `
-          // @ts-expect-error - Invalid module specifier.
-          const { foo } = require(bar);
-          foo;
-        `,
-      },
+    it('does not add an extension if the module fails to resolve', async () => {
+      expect(files['unresolved.js']).toMatchInlineSnapshot(`
+        ""use strict";
+        Object.defineProperty(exports, "__esModule", { value: true });
+        require("./unresolved-module");
+        "
+      `);
     });
 
-    expect(
-      await compile({
-        format: 'module',
-        environment,
-        transformer: getRequireExtensionTransformer('.mjs', {
-          typeChecker: environment.typeChecker,
-          system: environment.system,
-          baseDirectory: '/',
-        }),
-      }),
-    ).toMatchInlineSnapshot(`
-      ""use strict";
-      // @ts-expect-error - Invalid module specifier.
-      const { foo } = require(bar);
-      foo;
-      "
-    `);
-  });
-
-  it('returns the original code when not using `require`', async () => {
-    const environment = getVirtualEnvironment({
-      files: {
-        '/index.ts': `
-          const foo = 'bar';
-        `,
-      },
+    it('does not add an extension if the module specifier is invalid', async () => {
+      expect(files['invalid.js']).toMatchInlineSnapshot(`
+        ""use strict";
+        Object.defineProperty(exports, "__esModule", { value: true });
+        // @ts-expect-error - Invalid module specifier.
+        require(bar);
+        "
+      `);
     });
-
-    expect(
-      await compile({
-        format: 'module',
-        environment,
-        transformer: getRequireExtensionTransformer('.mjs', {
-          typeChecker: environment.typeChecker,
-          system: environment.system,
-          baseDirectory: '/',
-        }),
-      }),
-    ).toMatchInlineSnapshot(`
-      ""use strict";
-      const foo = 'bar';
-      "
-    `);
   });
 });
 
 describe('getExportExtensionTransformer', () => {
-  it('adds the `.mjs` extension to the export statement', async () => {
-    const code = `
-      export { foo } from './foo';
-    `;
+  describe('when targeting `module`', () => {
+    let files: Record<string, string>;
 
-    const environment = getVirtualEnvironment({
-      files: {
-        '/index.ts': code,
-        '/foo.ts': 'export const foo = "bar";',
-      },
+    beforeAll(() => {
+      const compiler = createCompiler(getFixture('export-resolver'));
+      files = compiler(
+        'module',
+        getExportExtensionTransformer('.mjs', {
+          typeChecker: compiler.typeChecker,
+          system: sys,
+        }),
+      );
     });
 
-    expect(
-      await compile({
-        format: 'module',
-        environment,
-        transformer: getExportExtensionTransformer('.mjs', {
-          typeChecker: environment.typeChecker,
-          system: environment.system,
-          baseDirectory: '/',
-        }),
-      }),
-    ).toMatchInlineSnapshot(`
-      "export { foo } from "./foo.mjs";
-      "
-    `);
+    it('adds the `.mjs` extension to the export statement', async () => {
+      expect(files['add.js']).toMatchInlineSnapshot(`
+        "export { foo } from "./dummy.mjs";
+        "
+      `);
+    });
+
+    it('rewrites the export to `index.mjs` when exporting from a directory', async () => {
+      expect(files['export-folder.js']).toMatchInlineSnapshot(`
+        "export { foo } from "./folder/index.mjs";
+        "
+      `);
+    });
+
+    it('overrides an existing extension', async () => {
+      expect(files['override.js']).toMatchInlineSnapshot(`
+        "export { foo } from "./dummy.mjs";
+        "
+      `);
+    });
+
+    it('resolves external exports with paths', async () => {
+      expect(files['external.js']).toMatchInlineSnapshot(`
+        "export { compare } from "semver";
+        export { compareLoose } from "semver/preload.js";
+        "
+      `);
+    });
+
+    it('does not add an extension if the module fails to resolve', async () => {
+      expect(files['unresolved.js']).toMatchInlineSnapshot(`
+        "// @ts-expect-error - Unresolved module.
+        export { foo } from "./unresolved-module";
+        "
+      `);
+    });
+
+    it('does not add an extension if the module specifier is invalid', async () => {
+      expect(files['invalid.js']).toMatchInlineSnapshot(`
+        "// @ts-expect-error - Invalid module specifier.
+        export { foo } from bar;
+        "
+      `);
+    });
   });
 
-  it('adds the `.cjs` extension to the export statement', async () => {
-    const code = `
-      export { foo } from './foo';
-    `;
+  describe('when targeting `commonjs`', () => {
+    let files: Record<string, string>;
 
-    const environment = getVirtualEnvironment({
-      files: {
-        '/index.ts': code,
-        '/foo.ts': 'export const foo = "bar";',
-      },
+    beforeAll(() => {
+      const compiler = createCompiler(getFixture('export-resolver'));
+      files = compiler(
+        'commonjs',
+        getExportExtensionTransformer('.cjs', {
+          typeChecker: compiler.typeChecker,
+          system: sys,
+        }),
+      );
     });
 
-    expect(
-      await compile({
-        format: 'commonjs',
-        environment,
-        transformer: getExportExtensionTransformer('.cjs', {
-          typeChecker: environment.typeChecker,
-          system: environment.system,
-          baseDirectory: '/',
-        }),
-      }),
-    ).toMatchInlineSnapshot(`
-      ""use strict";
-      Object.defineProperty(exports, "__esModule", { value: true });
-      exports.foo = void 0;
-      var foo_1 = require("./foo.cjs");
-      Object.defineProperty(exports, "foo", { enumerable: true, get: function () { return foo_1.foo; } });
-      "
-    `);
-  });
-
-  it('overrides an existing extension', async () => {
-    const code = `
-      export { foo } from './foo.js';
-    `;
-
-    const environment = getVirtualEnvironment({
-      files: {
-        '/index.ts': code,
-        '/foo.ts': 'export const foo = "bar";',
-      },
+    it('adds the `.cjs` extension to the import statement', async () => {
+      expect(files['add.js']).toMatchInlineSnapshot(`
+        ""use strict";
+        Object.defineProperty(exports, "__esModule", { value: true });
+        exports.foo = void 0;
+        var dummy_1 = require("./dummy.cjs");
+        Object.defineProperty(exports, "foo", { enumerable: true, get: function () { return dummy_1.foo; } });
+        "
+      `);
     });
 
-    expect(
-      await compile({
-        format: 'module',
-        environment,
-        transformer: getExportExtensionTransformer('.mjs', {
-          typeChecker: environment.typeChecker,
-          system: environment.system,
-          baseDirectory: '/',
-        }),
-      }),
-    ).toMatchInlineSnapshot(`
-      "export { foo } from "./foo.mjs";
-      "
-    `);
-  });
-
-  it('does not add an extension to external exports', async () => {
-    const code = `
-      export { createRequire } from 'module';
-    `;
-
-    const environment = getVirtualEnvironment({
-      files: {
-        '/index.ts': code,
-      },
+    it('rewrites the export to `index.cjs` when exporting from a directory', async () => {
+      expect(files['export-folder.js']).toMatchInlineSnapshot(`
+        ""use strict";
+        Object.defineProperty(exports, "__esModule", { value: true });
+        exports.foo = void 0;
+        var folder_1 = require("./folder/index.cjs");
+        Object.defineProperty(exports, "foo", { enumerable: true, get: function () { return folder_1.foo; } });
+        "
+      `);
     });
 
-    expect(
-      await compile({
-        format: 'module',
-        environment,
-        transformer: getExportExtensionTransformer('.mjs', {
-          typeChecker: environment.typeChecker,
-          system: environment.system,
-          baseDirectory: '/',
-        }),
-      }),
-    ).toMatchInlineSnapshot(`
-      "export { createRequire } from "module";
-      "
-    `);
-  });
-
-  it('does not add an extension if the module fails to resolve', async () => {
-    const code = `
-      // @ts-expect-error - Cannot find module.
-      export { foo } from './bar';
-    `;
-
-    const environment = getVirtualEnvironment({
-      files: {
-        '/index.ts': code,
-      },
+    it('overrides an existing extension', async () => {
+      expect(files['override.js']).toMatchInlineSnapshot(`
+        ""use strict";
+        Object.defineProperty(exports, "__esModule", { value: true });
+        exports.foo = void 0;
+        var dummy_js_1 = require("./dummy.cjs");
+        Object.defineProperty(exports, "foo", { enumerable: true, get: function () { return dummy_js_1.foo; } });
+        "
+      `);
     });
 
-    expect(
-      await compile({
-        format: 'module',
-        environment,
-        transformer: getExportExtensionTransformer('.mjs', {
-          typeChecker: environment.typeChecker,
-          system: environment.system,
-          baseDirectory: '/',
-        }),
-      }),
-    ).toMatchInlineSnapshot(`
-      "// @ts-expect-error - Cannot find module.
-      export { foo } from "./bar";
-      "
-    `);
-  });
-
-  it('does not add an extension if the module specifier is invalid', async () => {
-    const code = `
-      // @ts-expect-error - Invalid module specifier.
-      export { foo } from bar;
-    `;
-
-    const environment = getVirtualEnvironment({
-      files: {
-        '/index.ts': code,
-      },
+    it('resolves external exports with paths', async () => {
+      expect(files['external.js']).toMatchInlineSnapshot(`
+        ""use strict";
+        Object.defineProperty(exports, "__esModule", { value: true });
+        exports.compareLoose = exports.compare = void 0;
+        var semver_1 = require("semver");
+        Object.defineProperty(exports, "compare", { enumerable: true, get: function () { return semver_1.compare; } });
+        var preload_1 = require("semver/preload.js");
+        Object.defineProperty(exports, "compareLoose", { enumerable: true, get: function () { return preload_1.compareLoose; } });
+        "
+      `);
     });
 
-    expect(
-      await compile({
-        format: 'module',
-        environment,
-        transformer: getExportExtensionTransformer('.mjs', {
-          typeChecker: environment.typeChecker,
-          system: environment.system,
-          baseDirectory: '/',
-        }),
-      }),
-    ).toMatchInlineSnapshot(`
-      "// @ts-expect-error - Invalid module specifier.
-      export { foo } from bar;
-      "
-    `);
-  });
-
-  it('returns the original code when not using `export`', async () => {
-    const code = `
-      const foo = 'bar';
-    `;
-
-    const environment = getVirtualEnvironment({
-      files: {
-        '/index.ts': code,
-      },
+    it('does not add an extension if the module fails to resolve', async () => {
+      expect(files['unresolved.js']).toMatchInlineSnapshot(`
+        ""use strict";
+        Object.defineProperty(exports, "__esModule", { value: true });
+        exports.foo = void 0;
+        // @ts-expect-error - Unresolved module.
+        var unresolved_module_1 = require("./unresolved-module");
+        Object.defineProperty(exports, "foo", { enumerable: true, get: function () { return unresolved_module_1.foo; } });
+        "
+      `);
     });
 
-    expect(
-      await compile({
-        format: 'module',
-        environment,
-        transformer: getExportExtensionTransformer('.mjs', {
-          typeChecker: environment.typeChecker,
-          system: environment.system,
-          baseDirectory: '/',
-        }),
-      }),
-    ).toMatchInlineSnapshot(`
-      ""use strict";
-      const foo = 'bar';
-      "
-    `);
+    it('does not add an extension if the module specifier is invalid', async () => {
+      expect(files['invalid.js']).toMatchInlineSnapshot(`
+        ""use strict";
+        Object.defineProperty(exports, "__esModule", { value: true });
+        exports.foo = void 0;
+        // @ts-expect-error - Invalid module specifier.
+        var module_1 = require();
+        Object.defineProperty(exports, "foo", { enumerable: true, get: function () { return module_1.foo; } });
+        "
+      `);
+    });
   });
 });
 
 describe('getGlobalsTransformer', () => {
-  it('adds a shim when using `__filename`', async () => {
-    const environment = getVirtualEnvironment({
-      files: {
-        '/index.ts': `
-          console.log(__filename);
-        `,
-      },
+  describe('when targeting `module`', () => {
+    let files: Record<string, string>;
+
+    beforeAll(() => {
+      const compiler = createCompiler(getFixture('globals'));
+      files = compiler(
+        'module',
+        getGlobalsTransformer({
+          typeChecker: compiler.typeChecker,
+          system: sys,
+        }),
+      );
     });
 
-    expect(
-      await compile({
-        format: 'module',
-        environment,
-        transformer: getGlobalsTransformer({
-          typeChecker: environment.typeChecker,
-          system: environment.system,
-          baseDirectory: '/',
-        }),
-      }),
-    ).toMatchInlineSnapshot(`
-      ""use strict";
-      import * as $shims from "@ts-bridge/shims/esm";
-      console.log($shims.__filename(import.meta.url));
-      "
-    `);
-  });
-
-  it('adds a shim when using `__dirname`', async () => {
-    const environment = getVirtualEnvironment({
-      files: {
-        '/index.ts': `
-          console.log(__dirname);
-        `,
-      },
+    it('adds a shim when using `__filename`', async () => {
+      expect(files['filename.js']).toMatchInlineSnapshot(`
+        "import * as $shims from "@ts-bridge/shims/esm";
+        console.log($shims.__filename(import.meta.url));
+        "
+      `);
     });
 
-    expect(
-      await compile({
-        format: 'module',
-        environment,
-        transformer: getGlobalsTransformer({
-          typeChecker: environment.typeChecker,
-          system: environment.system,
-          baseDirectory: '/',
-        }),
-      }),
-    ).toMatchInlineSnapshot(`
-      ""use strict";
-      import * as $shims from "@ts-bridge/shims/esm";
-      console.log($shims.__dirname(import.meta.url));
-      "
-    `);
-  });
-
-  it('adds a shim when using both `__filename` and `__dirname`', async () => {
-    const environment = getVirtualEnvironment({
-      files: {
-        '/index.ts': `
-          console.log(__filename);
-          console.log(__dirname);
-        `,
-      },
+    it('adds a shim when using `__dirname`', async () => {
+      expect(files['dirname.js']).toMatchInlineSnapshot(`
+        "import * as $shims from "@ts-bridge/shims/esm";
+        console.log($shims.__dirname(import.meta.url));
+        "
+      `);
     });
 
-    expect(
-      await compile({
-        format: 'module',
-        environment,
-        transformer: getGlobalsTransformer({
-          typeChecker: environment.typeChecker,
-          system: environment.system,
-          baseDirectory: '/',
-        }),
-      }),
-    ).toMatchInlineSnapshot(`
-      ""use strict";
-      import * as $shims from "@ts-bridge/shims/esm";
-      console.log($shims.__filename(import.meta.url));
-      console.log($shims.__dirname(import.meta.url));
-      "
-    `);
-  });
-
-  it('renames the shim when the name is already used in the scope', async () => {
-    const environment = getVirtualEnvironment({
-      files: {
-        '/index.ts': `
-          const shims = 'foo';
-          console.log(__filename);
-        `,
-      },
+    it('adds a shim when using both `__filename` and `__dirname`', async () => {
+      expect(files['multiple.js']).toMatchInlineSnapshot(`
+        "import * as $shims from "@ts-bridge/shims/esm";
+        console.log($shims.__dirname(import.meta.url), $shims.__filename(import.meta.url));
+        "
+      `);
     });
 
-    expect(
-      await compile({
-        format: 'module',
-        environment,
-        transformer: getGlobalsTransformer({
-          typeChecker: environment.typeChecker,
-          system: environment.system,
-          baseDirectory: '/',
-        }),
-      }),
-    ).toMatchInlineSnapshot(`
-      ""use strict";
-      import * as $shims from "@ts-bridge/shims/esm";
-      const shims = 'foo';
-      console.log($shims.__filename(import.meta.url));
-      "
-    `);
-  });
-
-  it('does not add a shim when `__filename` refers to a variable in scope', async () => {
-    const environment = getVirtualEnvironment({
-      files: {
-        '/index.ts': `
-          // @ts-expect-error - Cannot redeclare block-scoped variable.
-          const __filename = 'foo';
-          console.log(__filename);
-        `,
-      },
+    it('renames the shim when the name is already used in the scope', async () => {
+      expect(files['rename.js']).toMatchInlineSnapshot(`
+        "import * as $_shims from "@ts-bridge/shims/esm";
+        const $shims = 'foo';
+        console.log($shims, $_shims.__filename(import.meta.url));
+        "
+      `);
     });
 
-    expect(
-      await compile({
-        format: 'module',
-        environment,
-        transformer: getGlobalsTransformer({
-          typeChecker: environment.typeChecker,
-          system: environment.system,
-          baseDirectory: '/',
-        }),
-      }),
-    ).toMatchInlineSnapshot(`
-      ""use strict";
-      // @ts-expect-error - Cannot redeclare block-scoped variable.
-      const __filename = 'foo';
-      console.log(__filename);
-      "
-    `);
-  });
-
-  it('returns the original code when not using `__filename` or `__dirname`', async () => {
-    const environment = getVirtualEnvironment({
-      files: {
-        '/index.ts': `
-          const foo = 'bar';
-        `,
-      },
+    it('does not add a shim when `__filename` refers to a variable in scope', async () => {
+      expect(files['in-scope.js']).toMatchInlineSnapshot(`
+        "const __filename = 'foo';
+        console.log(__filename);
+        export {};
+        "
+      `);
     });
-
-    expect(
-      await compile({
-        format: 'module',
-        environment,
-        transformer: getGlobalsTransformer({
-          typeChecker: environment.typeChecker,
-          system: environment.system,
-          baseDirectory: '/',
-        }),
-      }),
-    ).toMatchInlineSnapshot(`
-      ""use strict";
-      const foo = 'bar';
-      "
-    `);
   });
 });
 
 describe('getRequireTransformer', () => {
-  it('adds a shim when using `require`', async () => {
-    const environment = getVirtualEnvironment({
-      files: {
-        '/index.ts': `
-          const foo = require('module');
-          console.log(foo);
-        `,
-      },
+  describe('when targeting `module`', () => {
+    let files: Record<string, string>;
+
+    beforeAll(() => {
+      const compiler = createCompiler(getFixture('globals'));
+      files = compiler(
+        'module',
+        getRequireTransformer({
+          typeChecker: compiler.typeChecker,
+          system: sys,
+        }),
+      );
     });
 
-    expect(
-      await compile({
-        format: 'module',
-        environment,
-        transformer: getRequireTransformer({
-          typeChecker: environment.typeChecker,
-          system: environment.system,
-          baseDirectory: '/',
-        }),
-      }),
-    ).toMatchInlineSnapshot(`
-      ""use strict";
-      import * as $nodeShims from "@ts-bridge/shims/esm/require";
-      const foo = $nodeShims.require('module', import.meta.url);
-      console.log(foo);
-      "
-    `);
-  });
-
-  it('does not add a shim when `require` refers to a variable in scope', async () => {
-    const environment = getVirtualEnvironment({
-      files: {
-        '/index.ts': `
-          // @ts-expect-error - Cannot redeclare block-scoped variable.
-          const require = 'foo';
-          console.log(require);
-        `,
-      },
+    it('adds a shim when using `require`', async () => {
+      expect(files['require.js']).toMatchInlineSnapshot(`
+        "import * as $nodeShims from "@ts-bridge/shims/esm/require";
+        const { builtinModules } = $nodeShims.require('module', import.meta.url);
+        console.log(builtinModules);
+        "
+      `);
     });
 
-    expect(
-      await compile({
-        format: 'module',
-        environment,
-        transformer: getRequireTransformer({
-          typeChecker: environment.typeChecker,
-          system: environment.system,
-          baseDirectory: '/',
-        }),
-      }),
-    ).toMatchInlineSnapshot(`
-      ""use strict";
-      // @ts-expect-error - Cannot redeclare block-scoped variable.
-      const require = 'foo';
-      console.log(require);
-      "
-    `);
-  });
-
-  it('returns the original code when not using `require`', async () => {
-    const environment = getVirtualEnvironment({
-      files: {
-        '/index.ts': `
-          const foo = 'bar';
-        `,
-      },
+    it('does not add a shim when `require` refers to a variable in scope', async () => {
+      expect(files['require-in-scope.js']).toMatchInlineSnapshot(`
+        "// @ts-expect-error - \`require\` is an existing global.
+        const require = (_module) => undefined;
+        require('module');
+        export {};
+        "
+      `);
     });
-
-    expect(
-      await compile({
-        format: 'module',
-        environment,
-        transformer: getRequireTransformer({
-          typeChecker: environment.typeChecker,
-          system: environment.system,
-          baseDirectory: '/',
-        }),
-      }),
-    ).toMatchInlineSnapshot(`
-      ""use strict";
-      const foo = 'bar';
-      "
-    `);
   });
 });
 
 describe('getImportMetaTransformer', () => {
-  it('adds a shim when using `import.meta.url`', async () => {
-    const environment = getVirtualEnvironment({
-      files: {
-        '/index.ts': `
-          // @ts-expect-error - 'import.meta' is not allowed.
-          console.log(import.meta.url);
-        `,
-      },
+  describe('when targeting `commonjs`', () => {
+    let files: Record<string, string>;
+
+    beforeAll(() => {
+      const compiler = createCompiler(getFixture('globals'));
+      files = compiler(
+        'commonjs',
+        getImportMetaTransformer({
+          typeChecker: compiler.typeChecker,
+          system: sys,
+        }),
+      );
     });
 
-    expect(
-      await compile({
-        format: 'module',
-        environment,
-        transformer: getImportMetaTransformer({
-          typeChecker: environment.typeChecker,
-          system: environment.system,
-          baseDirectory: '/',
-        }),
-      }),
-    ).toMatchInlineSnapshot(`
-      "import * as $shims from "@ts-bridge/shims";
-      // @ts-expect-error - 'import.meta' is not allowed.
-      console.log($shims.getImportMetaUrl(__filename));
-      "
-    `);
-  });
-
-  it('returns the original code when not using `import.meta.url`', async () => {
-    const environment = getVirtualEnvironment({
-      files: {
-        '/index.ts': `
-          const foo = 'bar';
-        `,
-      },
+    it('adds a shim when using `import.meta.url`', async () => {
+      expect(files['import-meta.js']).toMatchInlineSnapshot(`
+        ""use strict";
+        var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+            if (k2 === undefined) k2 = k;
+            var desc = Object.getOwnPropertyDescriptor(m, k);
+            if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+              desc = { enumerable: true, get: function() { return m[k]; } };
+            }
+            Object.defineProperty(o, k2, desc);
+        }) : (function(o, m, k, k2) {
+            if (k2 === undefined) k2 = k;
+            o[k2] = m[k];
+        }));
+        var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+            Object.defineProperty(o, "default", { enumerable: true, value: v });
+        }) : function(o, v) {
+            o["default"] = v;
+        });
+        var __importStar = (this && this.__importStar) || function (mod) {
+            if (mod && mod.__esModule) return mod;
+            var result = {};
+            if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+            __setModuleDefault(result, mod);
+            return result;
+        };
+        Object.defineProperty(exports, "__esModule", { value: true });
+        const $shims = __importStar(require("@ts-bridge/shims"));
+        // @ts-expect-error - \`import.meta.url\` isn't allowed here.
+        console.log($shims.getImportMetaUrl(__filename));
+        "
+      `);
     });
-
-    expect(
-      await compile({
-        format: 'module',
-        environment,
-        transformer: getImportMetaTransformer({
-          typeChecker: environment.typeChecker,
-          system: environment.system,
-          baseDirectory: '/',
-        }),
-      }),
-    ).toMatchInlineSnapshot(`
-      ""use strict";
-      const foo = 'bar';
-      "
-    `);
   });
 });
 
 describe('getNamedImportTransformer', () => {
-  it('rewrites the import when using a named import for a CommonJS module', async () => {
-    const environment = getVirtualEnvironment({
-      files: {
-        '/index.ts': `
-          import { foo } from 'commonjs-module';
-          console.log(foo);
-        `,
-        ...getMockNodeModule({
-          name: 'commonjs-module',
-          files: {
-            'index.js': 'exports.foo = "bar";',
-            'index.d.ts': 'export const foo: string;',
-          },
+  describe('when targeting `module`', () => {
+    let files: Record<string, string>;
+
+    beforeAll(() => {
+      const compiler = createCompiler(getFixture('named-imports'));
+      files = compiler(
+        'module',
+        getNamedImportTransformer({
+          typeChecker: compiler.typeChecker,
+          system: sys,
         }),
-      },
+      );
     });
 
-    expect(
-      await compile({
-        format: 'module',
-        environment,
-        transformer: getNamedImportTransformer({
-          typeChecker: environment.typeChecker,
-          system: environment.system,
-          baseDirectory: '/',
-        }),
-      }),
-    ).toMatchInlineSnapshot(`
-      "import $commonjsmodule from 'commonjs-module';
-      const { foo } = $commonjsmodule;
-      console.log(foo);
-      "
-    `);
-  });
-
-  it('rewrites the import when using a named import for a scoped CommonJS module', async () => {
-    const environment = getVirtualEnvironment({
-      files: {
-        '/index.ts': `
-          import { foo } from '@commonjs/module';
-          console.log(foo);
-        `,
-        ...getMockNodeModule({
-          name: '@commonjs/module',
-          files: {
-            'index.js': 'exports.foo = "bar";',
-            'index.d.ts': 'export const foo: string;',
-          },
-        }),
-      },
+    it('rewrites a named import for a CommonJS module', async () => {
+      expect(files['rewrite.js']).toMatchInlineSnapshot(`
+        "import $commonjsmodule from 'commonjs-module';
+        const { foo } = $commonjsmodule;
+        console.log(foo);
+        "
+      `);
     });
 
-    expect(
-      await compile({
-        format: 'module',
-        environment,
-        transformer: getNamedImportTransformer({
-          typeChecker: environment.typeChecker,
-          system: environment.system,
-          baseDirectory: '/',
-        }),
-      }),
-    ).toMatchInlineSnapshot(`
-      "import $commonjsmodule from '@commonjs/module';
-      const { foo } = $commonjsmodule;
-      console.log(foo);
-      "
-    `);
-  });
-
-  it('renames the import when the name is already used in the scope', async () => {
-    const environment = getVirtualEnvironment({
-      files: {
-        '/index.ts': `
-          const commonjsmodule = 'foo';
-          import { foo } from 'commonjs-module';
-          console.log(foo);
-        `,
-        ...getMockNodeModule({
-          name: 'commonjs-module',
-          files: {
-            'index.js': 'exports.foo = "bar";',
-            'index.d.ts': 'export const foo: string;',
-          },
-        }),
-      },
+    it('renames the import when the name is already used in the scope', () => {
+      expect(files['rename.js']).toMatchInlineSnapshot(`
+        "import $_commonjsmodule from 'commonjs-module';
+        const { foo } = $_commonjsmodule;
+        const $commonjsmodule = 'foo';
+        console.log($commonjsmodule, foo);
+        "
+      `);
     });
 
-    expect(
-      await compile({
-        format: 'module',
-        environment,
-        transformer: getNamedImportTransformer({
-          typeChecker: environment.typeChecker,
-          system: environment.system,
-          baseDirectory: '/',
-        }),
-      }),
-    ).toMatchInlineSnapshot(`
-      "const commonjsmodule = 'foo';
-      import $commonjsmodule from 'commonjs-module';
-      const { foo } = $commonjsmodule;
-      console.log(foo);
-      "
-    `);
-  });
-
-  it('does not rewrite the import when using a default import', async () => {
-    const environment = getVirtualEnvironment({
-      files: {
-        '/index.ts': `
-          import module from 'commonjs-module';
-          console.log(module);
-        `,
-        ...getMockNodeModule({
-          name: 'commonjs-module',
-          files: {
-            'index.js': 'module.exports = "bar";',
-            'index.d.ts': 'declare const module: string; export {};',
-          },
-        }),
-      },
+    it('does not rewrite the import when using a default import', () => {
+      expect(files['default-import.js']).toMatchInlineSnapshot(`
+        "import foo from 'commonjs-module';
+        console.log(foo);
+        "
+      `);
     });
 
-    expect(
-      await compile({
-        format: 'module',
-        environment,
-        transformer: getNamedImportTransformer({
-          typeChecker: environment.typeChecker,
-          system: environment.system,
-          baseDirectory: '/',
-        }),
-      }),
-    ).toMatchInlineSnapshot(`
-      "import module from 'commonjs-module';
-      console.log(module);
-      "
-    `);
-  });
-
-  it('does not rewrite the import when using a namespace import', async () => {
-    const environment = getVirtualEnvironment({
-      files: {
-        '/index.ts': `
-          import * as module from 'commonjs-module';
-          console.log(module);
-        `,
-        ...getMockNodeModule({
-          name: 'commonjs-module',
-          files: {
-            'index.js': 'module.exports = "bar";',
-            'index.d.ts': 'declare const module: string; export {};',
-          },
-        }),
-      },
+    it('does not rewrite the import when using a namespace import', () => {
+      expect(files['namespace-import.js']).toMatchInlineSnapshot(`
+        "import * as foo from 'commonjs-module';
+        console.log(foo);
+        "
+      `);
     });
 
-    expect(
-      await compile({
-        format: 'module',
-        environment,
-        transformer: getNamedImportTransformer({
-          typeChecker: environment.typeChecker,
-          system: environment.system,
-          baseDirectory: '/',
-        }),
-      }),
-    ).toMatchInlineSnapshot(`
-      "import * as module from 'commonjs-module';
-      console.log(module);
-      "
-    `);
-  });
-
-  it('does not rewrite type imports', async () => {
-    const environment = getVirtualEnvironment({
-      files: {
-        '/index.ts': `
-          import type { foo } from 'commonjs-module';
-          import { type foo as _foo, bar } from 'commonjs-module';
-          import { type foo as __foo } from 'commonjs-module';
-
-          type Foo = typeof foo;
-          type Bar = typeof bar;
-          type Baz = typeof __foo;
-
-          console.log(bar);
-        `,
-        ...getMockNodeModule({
-          name: 'commonjs-module',
-          files: {
-            'index.js': 'exports.foo = "bar";',
-            'index.d.ts': 'export const foo: string; export const bar: string;',
-          },
-        }),
-      },
+    it('does not rewrite type imports', () => {
+      expect(files['type-import.js']).toMatchInlineSnapshot(`
+        "export {};
+        "
+      `);
     });
-
-    expect(
-      await compile({
-        format: 'module',
-        environment,
-        transformer: getNamedImportTransformer({
-          typeChecker: environment.typeChecker,
-          system: environment.system,
-          baseDirectory: '/',
-        }),
-      }),
-    ).toMatchInlineSnapshot(`
-      "import $commonjsmodule from 'commonjs-module';
-      const { bar } = $commonjsmodule;
-      console.log(bar);
-      "
-    `);
-  });
-
-  it('returns the original code when not using `import`', async () => {
-    const environment = getVirtualEnvironment({
-      files: {
-        '/index.ts': `
-          const foo = 'bar';
-        `,
-      },
-    });
-
-    expect(
-      await compile({
-        format: 'module',
-        environment,
-        transformer: getNamedImportTransformer({
-          typeChecker: environment.typeChecker,
-          system: environment.system,
-          baseDirectory: '/',
-        }),
-      }),
-    ).toMatchInlineSnapshot(`
-      ""use strict";
-      const foo = 'bar';
-      "
-    `);
   });
 });
 
 describe('getTypeImportExportTransformer', () => {
-  it('removes type imports and exports', async () => {
-    const environment = getVirtualEnvironment({
-      files: {
-        '/index.ts': `
-          import type { foo } from './foo';
-          export type { foo } from './foo';
-        `,
-        '/foo.ts': 'export type foo = "bar";',
-      },
+  describe('when targeting `module`', () => {
+    let files: Record<string, string>;
+
+    beforeAll(() => {
+      const compiler = createCompiler(getFixture('type-imports'));
+      files = compiler(
+        'module',
+        getTypeImportExportTransformer({
+          typeChecker: compiler.typeChecker,
+          system: sys,
+        }),
+      );
     });
 
-    expect(
-      await compile({
-        format: 'module',
-        environment,
-        transformer: getTypeImportExportTransformer({
-          typeChecker: environment.typeChecker,
-          system: environment.system,
-          baseDirectory: '/',
-        }),
-      }),
-    ).toMatchInlineSnapshot(`
-      "export {};
-      "
-    `);
-  });
-
-  it('removes named type imports and exports', async () => {
-    const environment = getVirtualEnvironment({
-      files: {
-        '/index.ts': `
-          import { type foo } from './foo';
-          import type { bar } from './foo';
-          export { type foo, bar } from './foo';
-        `,
-        '/foo.ts': 'export type foo = "bar"; export const bar = "baz";',
-      },
+    it('removes type imports and exports', async () => {
+      expect(files['type-imports.js']).toMatchInlineSnapshot(`
+        "export {};
+        "
+      `);
     });
 
-    expect(
-      await compile({
-        format: 'module',
-        environment,
-        transformer: getTypeImportExportTransformer({
-          typeChecker: environment.typeChecker,
-          system: environment.system,
-          baseDirectory: '/',
-        }),
-      }),
-    ).toMatchInlineSnapshot(`
-      "export { bar } from './foo';
-      "
-    `);
+    it('only removes type imports and exports when mixed with regular imports', async () => {
+      expect(files['mixed-type-imports.js']).toMatchInlineSnapshot(`
+        "import { bar } from './dummy';
+        export { bar } from './dummy';
+        console.log(bar);
+        "
+      `);
+    });
   });
 });

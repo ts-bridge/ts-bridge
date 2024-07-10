@@ -168,7 +168,7 @@ export function buildHandler(options: BuildHandlerOptions) {
     return;
   }
 
-  buildNode16(program, format, system, baseDirectory);
+  buildNode16(program, format, system);
 }
 
 type BuildNode10Options = {
@@ -195,7 +195,6 @@ type BuildNode10Options = {
  * @param options.files - The files to include in the program.
  * @param options.system - The file system to use.
  * @param options.host - The compiler host to use.
- * @param options.baseDirectory - The base directory for the project.
  * @param options.verbose - Whether to enable verbose logging.
  */
 export function buildNode10({
@@ -205,7 +204,6 @@ export function buildNode10({
   files,
   system,
   host,
-  baseDirectory,
   verbose,
 }: BuildNode10Options) {
   const buildSteps: Steps<Record<string, never>> = [
@@ -231,7 +229,6 @@ export function buildNode10({
           program: newProgram,
           type: 'module',
           system,
-          baseDirectory,
           verbose,
         });
       },
@@ -258,7 +255,6 @@ export function buildNode10({
           program: newProgram,
           type: 'commonjs',
           system,
-          baseDirectory,
           verbose,
         });
       },
@@ -274,14 +270,12 @@ export function buildNode10({
  * @param program - The TypeScript program to build.
  * @param formats - The formats to build.
  * @param system - The file system to use.
- * @param baseDirectory - The base directory for the project.
  * @param verbose - Whether to enable verbose logging.
  */
 export function buildNode16(
   program: Program,
   formats: string[],
   system: System,
-  baseDirectory: string,
   verbose?: boolean,
 ) {
   const buildSteps: Steps<Record<string, never>> = [
@@ -289,14 +283,14 @@ export function buildNode16(
       name: 'Building ES module.',
       condition: () => formats.includes('module'),
       task: () => {
-        build({ program, type: 'module', system, baseDirectory });
+        build({ program, type: 'module', system });
       },
     },
     {
       name: 'Building CommonJS module.',
       condition: () => formats.includes('commonjs'),
       task: () => {
-        build({ program, type: 'commonjs', system, baseDirectory });
+        build({ program, type: 'commonjs', system });
       },
     },
   ];
@@ -319,7 +313,7 @@ export function getTransformers(
   type: BuildType,
   options: TransformerOptions,
   useShims = isShimsPackageInstalled(
-    pathToFileURL(join(options.baseDirectory, 'dummy.js')).href,
+    pathToFileURL(join(process.cwd(), 'dummy.js')).href,
   ),
 ) {
   const { getTransformers: getBaseTransformers, getShimsTransformers } =
@@ -338,7 +332,6 @@ type BuildOptions = {
   program: Program;
   type: BuildType;
   system: System;
-  baseDirectory: string;
   verbose?: boolean;
 };
 
@@ -350,7 +343,6 @@ type BuildOptions = {
  * @param options.program - The TypeScript program to build.
  * @param options.type - The build type to use.
  * @param options.system - The file system to use.
- * @param options.baseDirectory - The base directory for the project.
  * @param options.verbose - Whether to enable verbose logging.
  * @returns A promise that resolves when the build is complete.
  */
@@ -358,7 +350,6 @@ export function build({
   program,
   type,
   system,
-  baseDirectory,
   verbose,
 }: BuildOptions): Program {
   const { name, extension } = getBuildTypeOptions(type);
@@ -366,7 +357,6 @@ export function build({
   const options: TransformerOptions = {
     typeChecker: program.getTypeChecker(),
     system,
-    baseDirectory,
   };
 
   const { diagnostics } = program.emit(
@@ -390,6 +380,7 @@ export function build({
     },
   );
 
+  /* istanbul ignore if -- @preserve */
   if (diagnostics.length > 0) {
     throw new TypeScriptError(`Failed to build ${name} files.`, diagnostics);
   }

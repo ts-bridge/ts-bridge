@@ -1083,6 +1083,7 @@ __metadata:
   resolution: "@ts-bridge/cli@workspace:packages/cli"
   dependencies:
     "@metamask/auto-changelog": "npm:^3.4.4"
+    "@ts-bridge/resolver": "workspace:^"
     "@ts-bridge/test-utils": "workspace:^"
     "@types/node": "npm:^20.12.7"
     "@types/yargs": "npm:^17.0.32"
@@ -1105,7 +1106,63 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@ts-bridge/resolver@workspace:packages/resolver":
+"@ts-bridge/export-resolver-fixture@workspace:packages/test-utils/test/fixtures/export-resolver":
+  version: 0.0.0-use.local
+  resolution: "@ts-bridge/export-resolver-fixture@workspace:packages/test-utils/test/fixtures/export-resolver"
+  dependencies:
+    semver: "npm:^7.6.2"
+  languageName: unknown
+  linkType: soft
+
+"@ts-bridge/globals-fixture@workspace:packages/test-utils/test/fixtures/globals":
+  version: 0.0.0-use.local
+  resolution: "@ts-bridge/globals-fixture@workspace:packages/test-utils/test/fixtures/globals"
+  languageName: unknown
+  linkType: soft
+
+"@ts-bridge/import-resolver-fixture@workspace:packages/test-utils/test/fixtures/import-resolver":
+  version: 0.0.0-use.local
+  resolution: "@ts-bridge/import-resolver-fixture@workspace:packages/test-utils/test/fixtures/import-resolver"
+  dependencies:
+    semver: "npm:^7.6.2"
+  languageName: unknown
+  linkType: soft
+
+"@ts-bridge/invalid-fixture@workspace:packages/test-utils/test/fixtures/invalid":
+  version: 0.0.0-use.local
+  resolution: "@ts-bridge/invalid-fixture@workspace:packages/test-utils/test/fixtures/invalid"
+  languageName: unknown
+  linkType: soft
+
+"@ts-bridge/named-imports-fixture@workspace:packages/test-utils/test/fixtures/named-imports":
+  version: 0.0.0-use.local
+  resolution: "@ts-bridge/named-imports-fixture@workspace:packages/test-utils/test/fixtures/named-imports"
+  dependencies:
+    commonjs-module: "workspace:^"
+  languageName: unknown
+  linkType: soft
+
+"@ts-bridge/node-10-fixture@workspace:packages/test-utils/test/fixtures/node-10":
+  version: 0.0.0-use.local
+  resolution: "@ts-bridge/node-10-fixture@workspace:packages/test-utils/test/fixtures/node-10"
+  languageName: unknown
+  linkType: soft
+
+"@ts-bridge/node-16-fixture@workspace:packages/test-utils/test/fixtures/node-16":
+  version: 0.0.0-use.local
+  resolution: "@ts-bridge/node-16-fixture@workspace:packages/test-utils/test/fixtures/node-16"
+  languageName: unknown
+  linkType: soft
+
+"@ts-bridge/require-resolver-fixture@workspace:packages/test-utils/test/fixtures/require-resolver":
+  version: 0.0.0-use.local
+  resolution: "@ts-bridge/require-resolver-fixture@workspace:packages/test-utils/test/fixtures/require-resolver"
+  dependencies:
+    semver: "npm:^7.6.2"
+  languageName: unknown
+  linkType: soft
+
+"@ts-bridge/resolver@workspace:^, @ts-bridge/resolver@workspace:packages/resolver":
   version: 0.0.0-use.local
   resolution: "@ts-bridge/resolver@workspace:packages/resolver"
   dependencies:
@@ -1171,6 +1228,12 @@ __metadata:
     "@typescript/vfs": "npm:^1.5.0"
     typescript: "npm:^5.4.5"
     vitest: "npm:^1.5.0"
+  languageName: unknown
+  linkType: soft
+
+"@ts-bridge/type-imports-fixture@workspace:packages/test-utils/test/fixtures/type-imports":
+  version: 0.0.0-use.local
+  resolution: "@ts-bridge/type-imports-fixture@workspace:packages/test-utils/test/fixtures/type-imports"
   languageName: unknown
   linkType: soft
 
@@ -2040,6 +2103,12 @@ __metadata:
   checksum: 10c0/848b3bbcf2eeb780831a8dd5a4cc52f914dd8c321c610403539237324c507040ea8fdca7bd1f8edb0a477e7c90138f54c4d05328a9d87fe6d651d5a2822cb14b
   languageName: node
   linkType: hard
+
+"commonjs-module@workspace:^, commonjs-module@workspace:packages/test-utils/test/fixtures/named-imports/packages/commonjs-module":
+  version: 0.0.0-use.local
+  resolution: "commonjs-module@workspace:packages/test-utils/test/fixtures/named-imports/packages/commonjs-module"
+  languageName: unknown
+  linkType: soft
 
 "concat-map@npm:0.0.1":
   version: 0.0.1
@@ -4710,6 +4779,15 @@ __metadata:
   bin:
     semver: bin/semver.js
   checksum: 10c0/fbfe717094ace0aa8d6332d7ef5ce727259815bd8d8815700853f4faf23aacbd7192522f0dc5af6df52ef4fa85a355ebd2f5d39f554bd028200d6cf481ab9b53
+  languageName: node
+  linkType: hard
+
+"semver@npm:^7.6.2":
+  version: 7.6.2
+  resolution: "semver@npm:7.6.2"
+  bin:
+    semver: bin/semver.js
+  checksum: 10c0/97d3441e97ace8be4b1976433d1c32658f6afaff09f143e52c593bae7eef33de19e3e369c88bd985ce1042c6f441c80c6803078d1de2a9988080b66684cbb30c
   languageName: node
   linkType: hard
 
