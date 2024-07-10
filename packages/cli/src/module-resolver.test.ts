@@ -7,6 +7,7 @@ import { describe, expect, it, vi } from 'vitest';
 import {
   getFileSystemFromTypeScript,
   getModulePath,
+  getModuleType,
   resolvePackageSpecifier,
   resolveRelativePackageSpecifier,
 } from './module-resolver.js';
@@ -29,34 +30,40 @@ describe('resolvePackageSpecifier', () => {
   it('resolves a package specifier', () => {
     const packageSpecifier = resolvePackageSpecifier(
       'typescript',
-      '.mjs',
       PARENT_URL,
       sys,
     );
 
-    expect(packageSpecifier).toBe('typescript');
+    expect(packageSpecifier).toStrictEqual({
+      specifier: 'typescript',
+      format: 'commonjs',
+    });
   });
 
   it('resolves a package specifier for a package without a `main` field', () => {
     const packageSpecifier = resolvePackageSpecifier(
       'is-stream',
-      '.mjs',
       PARENT_URL,
       sys,
     );
 
-    expect(packageSpecifier).toBe('is-stream/index.js');
+    expect(packageSpecifier).toStrictEqual({
+      specifier: 'is-stream/index.js',
+      format: 'commonjs',
+    });
   });
 
   it('resolves a package specifier with an extension', () => {
     const packageSpecifier = resolvePackageSpecifier(
       'semver/preload',
-      '.mjs',
       PARENT_URL,
       sys,
     );
 
-    expect(packageSpecifier).toBe('semver/preload.js');
+    expect(packageSpecifier).toStrictEqual({
+      specifier: 'semver/preload.js',
+      format: 'commonjs',
+    });
   });
 });
 
@@ -64,45 +71,27 @@ describe('resolveRelativePackageSpecifier', () => {
   it('resolves a relative package specifier', () => {
     const packageSpecifier = resolveRelativePackageSpecifier(
       './dummy',
-      '.mjs',
       PARENT_URL,
       sys,
     );
 
-    expect(packageSpecifier).toBe('./dummy.mjs');
+    expect(packageSpecifier).toStrictEqual({
+      specifier: './dummy.ts',
+      format: null,
+    });
   });
 
-  it('resolves to `index.mjs` when the imported path is a folder', () => {
+  it('resolves with `directory` as format when the imported path is a folder', () => {
     const packageSpecifier = resolveRelativePackageSpecifier(
       './folder',
-      '.mjs',
       PARENT_URL,
       sys,
     );
 
-    expect(packageSpecifier).toBe('./folder/index.mjs');
-  });
-
-  it('replaces an extension with `.mjs` when the imported path is a file', () => {
-    const packageSpecifier = resolveRelativePackageSpecifier(
-      './dummy.js',
-      '.mjs',
-      PARENT_URL,
-      sys,
-    );
-
-    expect(packageSpecifier).toBe('./dummy.mjs');
-  });
-
-  it('does not replace non-JS extensions', () => {
-    const packageSpecifier = resolveRelativePackageSpecifier(
-      './data.json',
-      '.mjs',
-      PARENT_URL,
-      sys,
-    );
-
-    expect(packageSpecifier).toBe('./data.json');
+    expect(packageSpecifier).toStrictEqual({
+      specifier: './folder',
+      format: 'directory',
+    });
   });
 });
 
@@ -196,6 +185,28 @@ describe('getModulePath', () => {
     ).toBe('non-existing');
   });
 
+  it('replaces the extension for relative paths', () => {
+    expect(
+      getModulePath({
+        packageSpecifier: './dummy.js',
+        extension: '.mjs',
+        parentUrl: PARENT_URL,
+        system: sys,
+      }),
+    ).toBe('./dummy.mjs');
+  });
+
+  it('returns the path for a directory', () => {
+    expect(
+      getModulePath({
+        packageSpecifier: './folder',
+        extension: '.mjs',
+        parentUrl: PARENT_URL,
+        system: sys,
+      }),
+    ).toBe('./folder/index.mjs');
+  });
+
   it('logs a warning if the package specifier cannot be resolved', () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(noOp);
 
@@ -210,6 +221,20 @@ describe('getModulePath', () => {
     expect(warn).toHaveBeenCalledWith(
       expect.stringContaining('Could not resolve module:'),
     );
+  });
+});
+
+describe('getModuleType', () => {
+  it('returns the type for a package specifier', () => {
+    expect(getModuleType('typescript', sys, PARENT_URL)).toBe('commonjs');
+    expect(getModuleType('is-stream', sys, PARENT_URL)).toBe('commonjs');
+    expect(getModuleType('semver/preload', sys, PARENT_URL)).toBe('commonjs');
+
+    expect(getModuleType('fs', sys, PARENT_URL)).toBe('builtin');
+    expect(getModuleType('chalk', sys, PARENT_URL)).toBe('module');
+
+    expect(getModuleType('./dummy', sys, PARENT_URL)).toBe(null);
+    expect(getModuleType('./folder', sys, PARENT_URL)).toBe('directory');
   });
 });
 

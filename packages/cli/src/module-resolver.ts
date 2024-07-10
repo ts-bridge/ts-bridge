@@ -1,8 +1,7 @@
 import { resolve } from '@ts-bridge/resolver';
-import type { FileSystemInterface } from '@ts-bridge/resolver';
+import type { FileSystemInterface, FileFormat } from '@ts-bridge/resolver';
 import chalk from 'chalk';
 import { resolve as resolvePath, extname } from 'path';
-import { join as joinPosix } from 'path/posix';
 import type { System } from 'typescript';
 import { pathToFileURL } from 'url';
 
@@ -24,13 +23,23 @@ export function isRelative(specifier: string) {
   return specifier.startsWith('.');
 }
 
+export type ResolvedModule = {
+  /**
+   * The specifier for the module.
+   */
+  specifier: string;
+
+  /**
+   * The type of the module.
+   */
+  format: FileFormat | 'directory' | null;
+};
+
 /**
  * Resolve a package specifier to a file in a package. This function will try to
  * resolve the package specifier to a file in the package's directory.
  *
  * @param packageSpecifier - The specifier for the package.
- * @param _extension - The extension to use for relative source paths. This is
- * unused for this function.
  * @param parentUrl - The URL of the parent module.
  * @param system - The TypeScript system.
  * @param extensions - The extensions to use for resolving the package.
@@ -39,23 +48,25 @@ export function isRelative(specifier: string) {
  */
 export function resolvePackageSpecifier(
   packageSpecifier: string,
-  _extension: string,
   parentUrl: string,
   system: System,
   extensions = DEFAULT_EXTENSIONS,
-): string | null {
+): ResolvedModule | null {
   // We check for `/index.js` as well, to support packages without a `main`
   // entry in their `package.json`.
   for (const specifier of [packageSpecifier, `${packageSpecifier}/index`]) {
     for (const extension of extensions) {
       try {
-        resolve(
+        const { format } = resolve(
           `${specifier}${extension}`,
           pathToFileURL(parentUrl),
           getFileSystemFromTypeScript(system),
         );
 
-        return `${specifier}${extension}`;
+        return {
+          specifier: `${specifier}${extension}`,
+          format,
+        };
       } catch {
         // no-op
       }
@@ -71,7 +82,6 @@ export function resolvePackageSpecifier(
  * directory.
  *
  * @param packageSpecifier - The specifier for the package.
- * @param extension - The extension to use for relative source paths.
  * @param parentUrl - The URL of the parent module.
  * @param system - The TypeScript system.
  * @param extensions - The extensions to use for resolving the package.
@@ -80,26 +90,16 @@ export function resolvePackageSpecifier(
  */
 export function resolveRelativePackageSpecifier(
   packageSpecifier: string,
-  extension: string,
   parentUrl: string,
   system: System,
   extensions = TYPESCRIPT_EXTENSIONS,
-): string | null {
+): ResolvedModule | null {
   const basePath = resolvePath(parentUrl, '..', packageSpecifier);
   if (system.directoryExists(basePath)) {
-    return `./${joinPosix(packageSpecifier, `index${extension}`)}`;
-  }
-
-  const resolution = resolvePackageSpecifier(
-    packageSpecifier,
-    extension,
-    parentUrl,
-    system,
-    [...extensions, ...DEFAULT_EXTENSIONS],
-  );
-
-  if (resolution) {
-    return resolution.replace(SOURCE_EXTENSIONS_REGEX, extension);
+    return {
+      specifier: packageSpecifier,
+      format: 'directory',
+    };
   }
 
   const packageSpecifierWithoutExtension = packageSpecifier.replace(
@@ -107,22 +107,41 @@ export function resolveRelativePackageSpecifier(
     '',
   );
 
-  const resolutionWithoutExtension = resolvePackageSpecifier(
+  for (const specifier of [
+    packageSpecifier,
     packageSpecifierWithoutExtension,
-    extension,
-    parentUrl,
-    system,
-    [...extensions, ...DEFAULT_EXTENSIONS],
-  );
+  ]) {
+    const resolution = resolvePackageSpecifier(specifier, parentUrl, system, [
+      ...extensions,
+      ...DEFAULT_EXTENSIONS,
+    ]);
 
-  if (resolutionWithoutExtension) {
-    return resolutionWithoutExtension.replace(
-      SOURCE_EXTENSIONS_REGEX,
-      extension,
-    );
+    if (resolution) {
+      return resolution;
+    }
   }
 
   return null;
+}
+
+/**
+ * Resolve a module.
+ *
+ * @param packageSpecifier - The specifier for the module.
+ * @param parentUrl - The URL of the parent module.
+ * @param system - The TypeScript system.
+ * @returns The resolved module, or `null` if the module could not be resolved.
+ */
+function resolveModule(
+  packageSpecifier: string,
+  parentUrl: string,
+  system: System,
+): ResolvedModule | null {
+  if (isRelative(packageSpecifier)) {
+    return resolveRelativePackageSpecifier(packageSpecifier, parentUrl, system);
+  }
+
+  return resolvePackageSpecifier(packageSpecifier, parentUrl, system);
 }
 
 export type GetModulePathOptions = {
@@ -170,12 +189,8 @@ export function getModulePath({
   parentUrl,
   system,
   verbose,
-}: GetModulePathOptions) {
-  const resolver = isRelative(packageSpecifier)
-    ? resolveRelativePackageSpecifier
-    : resolvePackageSpecifier;
-
-  const resolution = resolver(packageSpecifier, extension, parentUrl, system);
+}: GetModulePathOptions): string {
+  const resolution = resolveModule(packageSpecifier, parentUrl, system);
   if (!resolution) {
     verbose &&
       warn(
@@ -187,7 +202,15 @@ export function getModulePath({
     return packageSpecifier;
   }
 
-  return resolution;
+  if (isRelative(packageSpecifier)) {
+    if (resolution.format === 'directory') {
+      return `${resolution.specifier}/index${extension}`;
+    }
+
+    return resolution.specifier.replace(SOURCE_EXTENSIONS_REGEX, extension);
+  }
+
+  return resolution.specifier;
 }
 
 /**
@@ -245,13 +268,8 @@ export function getModuleType(
   system: System,
   parentUrl: string,
 ) {
-  const { format } = resolve(
-    packageSpecifier,
-    pathToFileURL(parentUrl),
-    getFileSystemFromTypeScript(system),
-  );
-
-  return format;
+  const resolution = resolveModule(packageSpecifier, parentUrl, system);
+  return resolution?.format ?? null;
 }
 
 /**
