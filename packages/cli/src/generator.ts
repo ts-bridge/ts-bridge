@@ -306,6 +306,16 @@ export function getImportMetaUrl() {
 }
 
 /**
+ * Check if the TypeScript version supports import attributes.
+ *
+ * @returns `true` if the TypeScript version supports import attributes, or
+ * `false` otherwise.
+ */
+export function hasImportAttributes() {
+  return 'createImportAttributes' in factory;
+}
+
+/**
  * Get the import attributes for the given name and value.
  *
  * This function supports older versions of TypeScript by using import
@@ -318,7 +328,8 @@ export function getImportMetaUrl() {
  * @returns The import attributes.
  */
 export function getImportAttribute(name: string, value: string) {
-  if (factory.createImportAttributes) {
+  /* istanbul ignore next if -- @preserve */
+  if (hasImportAttributes()) {
     return factory.createImportAttributes(
       factory.createNodeArray([
         factory.createImportAttribute(
@@ -329,6 +340,7 @@ export function getImportAttribute(name: string, value: string) {
     );
   }
 
+  /* istanbul ignore next -- @preserve */
   return factory.createAssertClause(
     factory.createNodeArray([
       factory.createAssertEntry(
