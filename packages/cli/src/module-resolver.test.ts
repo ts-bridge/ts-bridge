@@ -37,6 +37,17 @@ describe('resolvePackageSpecifier', () => {
     expect(packageSpecifier).toBe('typescript');
   });
 
+  it('resolves a package specifier for a package without a `main` field', () => {
+    const packageSpecifier = resolvePackageSpecifier(
+      'is-stream',
+      '.mjs',
+      PARENT_URL,
+      sys,
+    );
+
+    expect(packageSpecifier).toBe('is-stream/index.js');
+  });
+
   it('resolves a package specifier with an extension', () => {
     const packageSpecifier = resolvePackageSpecifier(
       'semver/preload',

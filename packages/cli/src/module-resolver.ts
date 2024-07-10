@@ -44,17 +44,21 @@ export function resolvePackageSpecifier(
   system: System,
   extensions = DEFAULT_EXTENSIONS,
 ): string | null {
-  for (const extension of extensions) {
-    try {
-      resolve(
-        `${packageSpecifier}${extension}`,
-        pathToFileURL(parentUrl),
-        getFileSystemFromTypeScript(system),
-      );
+  // We check for `/index.js` as well, to support packages without a `main`
+  // entry in their `package.json`.
+  for (const specifier of [packageSpecifier, `${packageSpecifier}/index`]) {
+    for (const extension of extensions) {
+      try {
+        resolve(
+          `${specifier}${extension}`,
+          pathToFileURL(parentUrl),
+          getFileSystemFromTypeScript(system),
+        );
 
-      return `${packageSpecifier}${extension}`;
-    } catch {
-      // no-op
+        return `${specifier}${extension}`;
+      } catch {
+        // no-op
+      }
     }
   }
 
