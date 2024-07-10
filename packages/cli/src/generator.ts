@@ -304,3 +304,37 @@ export function getImportMetaUrl() {
     factory.createIdentifier('url'),
   );
 }
+
+/**
+ * Get the import attributes for the given name and value.
+ *
+ * This function supports older versions of TypeScript by using import
+ * assertions rather than import attributes, if necessary. Import assertions are
+ * deprecated though, so it is recommended to use a recent version of TypeScript
+ * that supports import attributes.
+ *
+ * @param name - The name of the attribute.
+ * @param value - The value of the attribute.
+ * @returns The import attributes.
+ */
+export function getImportAttribute(name: string, value: string) {
+  if (factory.createImportAttributes) {
+    return factory.createImportAttributes(
+      factory.createNodeArray([
+        factory.createImportAttribute(
+          factory.createIdentifier(name),
+          factory.createStringLiteral(value),
+        ),
+      ]),
+    );
+  }
+
+  return factory.createAssertClause(
+    factory.createNodeArray([
+      factory.createAssertEntry(
+        factory.createIdentifier(name),
+        factory.createStringLiteral(value),
+      ),
+    ]),
+  );
+}

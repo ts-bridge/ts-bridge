@@ -755,7 +755,7 @@ describe('getTypeImportExportTransformer', () => {
   });
 });
 
-describe('getImportAttributesTransformer', () => {
+describe('getImportAttributeTransformer', () => {
   describe('when targeting `module`', () => {
     let files: Record<string, string>;
 
@@ -777,17 +777,19 @@ describe('getImportAttributesTransformer', () => {
     });
 
     it('adds an import attribute to JSON imports', async () => {
-      expect(files['json.js']).toMatchInlineSnapshot(`
-        "import './data.json' with { type: "json" };
-        "
-      `);
+      // This is written this way since the file contains either `with` or
+      // `assert` depending on the TypeScript version.
+      expect(files['json.js']).toMatch(
+        /import '\.\/data\.json' (?:with|assert) \{ type: "json" \};/u,
+      );
     });
 
     it('overrides existing import attributes', async () => {
-      expect(files['override.js']).toMatchInlineSnapshot(`
-        "import './data.json' with { type: "json" };
-        "
-      `);
+      // This is written this way since the file contains either `with` or
+      // `assert` depending on the TypeScript version.
+      expect(files['override.js']).toMatch(
+        /import '\.\/data\.json' (?:with|assert) \{ type: "json" \};/u,
+      );
     });
   });
 });

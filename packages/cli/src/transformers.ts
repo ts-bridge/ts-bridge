@@ -13,6 +13,7 @@ import type {
 import typescript from 'typescript';
 
 import {
+  getImportAttribute,
   getImportMetaUrl,
   getNamedImportNodes,
   getNamespaceImport,
@@ -601,14 +602,7 @@ export function getImportAttributeTransformer(
               node.modifiers,
               node.importClause,
               node.moduleSpecifier,
-              factory.createImportAttributes(
-                factory.createNodeArray([
-                  factory.createImportAttribute(
-                    factory.createIdentifier('type'),
-                    factory.createStringLiteral(options.type),
-                  ),
-                ]),
-              ),
+              getImportAttribute('type', options.type),
             );
           }
         }
@@ -637,7 +631,11 @@ export function getRemoveImportAttributeTransformer(
   return (context: TransformationContext): Transformer<SourceFile> => {
     return (sourceFile: SourceFile) => {
       const visitor = (node: Node): Node | Node[] | undefined => {
-        if (node && isImportDeclaration(node) && node.attributes) {
+        if (
+          node &&
+          isImportDeclaration(node) &&
+          (node.attributes || node.assertClause)
+        ) {
           return factory.updateImportDeclaration(
             node,
             node.modifiers,
