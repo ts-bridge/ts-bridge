@@ -1083,7 +1083,7 @@ __metadata:
   resolution: "@ts-bridge/cli@workspace:packages/cli"
   dependencies:
     "@metamask/auto-changelog": "npm:^3.4.4"
-    "@ts-bridge/resolver": "npm:^0.0.0"
+    "@ts-bridge/resolver": "workspace:^"
     "@ts-bridge/test-utils": "workspace:^"
     "@types/node": "npm:^20.12.7"
     "@types/yargs": "npm:^17.0.32"
@@ -1161,7 +1161,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@ts-bridge/resolver@npm:^0.0.0, @ts-bridge/resolver@workspace:packages/resolver":
+"@ts-bridge/resolver@workspace:^, @ts-bridge/resolver@workspace:packages/resolver":
   version: 0.0.0-use.local
   resolution: "@ts-bridge/resolver@workspace:packages/resolver"
   dependencies:
