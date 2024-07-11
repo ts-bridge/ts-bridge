@@ -1,7 +1,23 @@
 import { noOp } from '@ts-bridge/test-utils';
 import { describe, expect, it, vi } from 'vitest';
 
-import { getLoggingTransformer } from './logging.js';
+import { getErrorMessage, getLoggingTransformer } from './logging.js';
+
+describe('getErrorMessage', () => {
+  it('returns the error message when the error is an instance of Error', () => {
+    const error = new Error('message');
+    expect(getErrorMessage(error)).toBe(error.message);
+  });
+
+  it('returns the error stack when verbose is enabled', () => {
+    const error = new Error('message');
+    expect(getErrorMessage(error, true)).toBe(error.stack);
+  });
+
+  it('returns the string representation of the error when it is not an instance of Error', () => {
+    expect(getErrorMessage('error')).toBe('error');
+  });
+});
 
 describe('getLoggingTransformer', () => {
   it('logs the current file when verbose is enabled', () => {

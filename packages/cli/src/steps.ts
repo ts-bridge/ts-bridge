@@ -42,7 +42,7 @@ export function executeSteps<Context extends Record<string, unknown>>(
       step.task(context);
     }
   } catch (_error) {
-    error(_error);
+    error(_error, verbose);
     process.exitCode = 1;
   }
 }

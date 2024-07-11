@@ -1,9 +1,4 @@
-import {
-  getMockNodeModule,
-  getMockPackageJson,
-  getVirtualEnvironment,
-  noOp,
-} from '@ts-bridge/test-utils';
+import { getVirtualEnvironment } from '@ts-bridge/test-utils';
 import type {
   ExportDeclaration,
   ImportDeclaration,
@@ -15,13 +10,20 @@ import { describe, expect, it, vi } from 'vitest';
 
 import {
   getImportMetaUrl,
-  getImportPath,
   getNamedImportNodes,
   getNamespaceImport,
   getNonTypeExports,
   getNonTypeImports,
   getUniqueIdentifier,
 } from './generator.js';
+
+// TODO: Change these tests to use the real file system, to avoid the need for
+// mocking the resolver.
+vi.mock('@ts-bridge/resolver', () => ({
+  resolve: vi.fn().mockImplementation(() => ({
+    format: 'commonjs',
+  })),
+}));
 
 const { factory } = typescript;
 
@@ -54,233 +56,6 @@ function compile(node: Statement | Statement[]) {
 
   return system.readFile('/index.js');
 }
-
-describe('getImportPath', () => {
-  const { program, system } = getVirtualEnvironment({
-    files: {
-      '/index.ts': '// no-op',
-      '/foo.ts': '// no-op',
-      '/bar/index.ts': '// no-op',
-      ...getMockNodeModule({
-        name: 'globals',
-        files: {
-          'index.js': '// no-op',
-        },
-      }),
-    },
-  });
-
-  it('returns the import path for a built-in module as is', () => {
-    expect(
-      getImportPath(
-        {
-          fileName: '/index.ts',
-          importPath: 'module',
-          compilerOptions: program.getCompilerOptions(),
-          extension: '.js',
-          baseDirectory: '/',
-        },
-        system,
-      ),
-    ).toBe('module');
-  });
-
-  it('returns the import path for an unresolved module as is', () => {
-    expect(
-      getImportPath(
-        {
-          fileName: '/index.ts',
-          importPath: 'foo-module',
-          compilerOptions: program.getCompilerOptions(),
-          extension: '.js',
-          baseDirectory: '/',
-        },
-        system,
-      ),
-    ).toBe('foo-module');
-  });
-
-  it('returns the import path for an external module as is', () => {
-    expect(
-      getImportPath(
-        {
-          fileName: '/index.ts',
-          // `@types/semver` is included by `getVirtualEnvironment`.
-          importPath: 'semver',
-          compilerOptions: program.getCompilerOptions(),
-          extension: '.js',
-          baseDirectory: '/',
-        },
-        system,
-      ),
-    ).toBe('semver');
-  });
-
-  it('returns the import path for an external module with a file specifier', () => {
-    expect(
-      getImportPath(
-        {
-          fileName: '/index.ts',
-          importPath: 'globals/index',
-          compilerOptions: program.getCompilerOptions(),
-          extension: '.js',
-          baseDirectory: '/',
-        },
-        system,
-      ),
-    ).toBe('globals/index.js');
-  });
-
-  it('returns the import path for an external module with a file specifier, and the `package.json` has exports', () => {
-    const environment = getVirtualEnvironment({
-      files: {
-        '/index.ts': '// no-op',
-        '/foo.ts': '// no-op',
-        ...getMockNodeModule({
-          name: 'globals',
-          packageJson: getMockPackageJson({
-            name: 'globals',
-            exports: {
-              './index': {
-                types: './index.d.ts',
-                default: './index.js',
-              },
-            },
-          }),
-          files: {
-            'index.js': '// no-op',
-            'index.d.ts': '// no-op',
-          },
-        }),
-      },
-    });
-
-    expect(
-      getImportPath(
-        {
-          fileName: '/index.ts',
-          importPath: 'globals/index',
-          compilerOptions: environment.program.getCompilerOptions(),
-          extension: '.js',
-          baseDirectory: '/',
-        },
-        environment.system,
-      ),
-    ).toBe('globals/index');
-  });
-
-  it('returns the import path for a local file with the new extension', () => {
-    expect(
-      getImportPath(
-        {
-          fileName: '/index.ts',
-          importPath: './foo.js',
-          compilerOptions: program.getCompilerOptions(),
-          extension: '.mjs',
-          baseDirectory: '/',
-        },
-        system,
-      ),
-    ).toBe('./foo.mjs');
-  });
-
-  it('returns the import path for a local directory and appends the index file', () => {
-    expect(
-      getImportPath(
-        {
-          fileName: '/index.ts',
-          importPath: './bar',
-          compilerOptions: program.getCompilerOptions(),
-          extension: '.mjs',
-          baseDirectory: '/',
-        },
-        system,
-      ),
-    ).toBe('./bar/index.mjs');
-  });
-
-  it('returns the import path for a local directory one level down and appends the index file', () => {
-    expect(
-      getImportPath(
-        {
-          fileName: '/foo/index.ts',
-          importPath: '../bar',
-          compilerOptions: program.getCompilerOptions(),
-          extension: '.mjs',
-          baseDirectory: '/',
-        },
-        system,
-      ),
-    ).toBe('../bar/index.mjs');
-  });
-
-  it('returns the import path for a local file and adds an extension', () => {
-    expect(
-      getImportPath(
-        {
-          fileName: '/index.ts',
-          importPath: './foo',
-          compilerOptions: program.getCompilerOptions(),
-          extension: '.mjs',
-          baseDirectory: '/',
-        },
-        system,
-      ),
-    ).toBe('./foo.mjs');
-  });
-
-  it('returns the import path for the local index file and adds an extension', () => {
-    expect(
-      getImportPath(
-        {
-          fileName: '/index.ts',
-          importPath: '.',
-          compilerOptions: program.getCompilerOptions(),
-          extension: '.mjs',
-          baseDirectory: '/',
-        },
-        system,
-      ),
-    ).toBe('./index.mjs');
-  });
-
-  it('returns the import path for the local index file with a slash and adds an extension', () => {
-    expect(
-      getImportPath(
-        {
-          fileName: '/index.ts',
-          importPath: './',
-          compilerOptions: program.getCompilerOptions(),
-          extension: '.mjs',
-          baseDirectory: '/',
-        },
-        system,
-      ),
-    ).toBe('./index.mjs');
-  });
-
-  it('logs a warning if the import path fails to resolve, and `verbose` is enabled', () => {
-    const warn = vi.spyOn(console, 'warn').mockImplementation(noOp);
-
-    expect(
-      getImportPath(
-        {
-          fileName: '/index.ts',
-          importPath: 'foo-module',
-          compilerOptions: program.getCompilerOptions(),
-          extension: '.js',
-          baseDirectory: '/',
-          verbose: true,
-        },
-        system,
-      ),
-    ).toBe('foo-module');
-
-    expect(warn).toHaveBeenCalledWith(
-      expect.stringContaining('Could not resolve module'),
-    );
-  });
-});
 
 describe('getUniqueIdentifier', () => {
   const { program, typeChecker } = getVirtualEnvironment({
@@ -348,7 +123,6 @@ describe('getNamedImportNodes', () => {
       typeChecker,
       sourceFile,
       importDeclaration,
-      '/',
       system,
     );
 
@@ -394,7 +168,6 @@ describe('getNamedImportNodes', () => {
       typeChecker,
       sourceFile,
       importDeclaration,
-      '/',
       system,
     );
 
@@ -435,7 +208,6 @@ describe('getNamedImportNodes', () => {
       typeChecker,
       sourceFile,
       importDeclaration,
-      '/',
       system,
     );
 
@@ -476,7 +248,6 @@ describe('getNamedImportNodes', () => {
       typeChecker,
       sourceFile,
       importDeclaration,
-      '/',
       system,
     );
 
@@ -512,7 +283,6 @@ describe('getNamedImportNodes', () => {
       typeChecker,
       sourceFile,
       importDeclaration,
-      '/',
       system,
     );
 
@@ -541,7 +311,6 @@ describe('getNamedImportNodes', () => {
       typeChecker,
       sourceFile,
       importDeclaration,
-      '/',
       system,
     );
 
@@ -566,7 +335,6 @@ describe('getNamedImportNodes', () => {
       typeChecker,
       sourceFile,
       importDeclaration,
-      '/',
       system,
     );
 
@@ -596,7 +364,6 @@ describe('getNamedImportNodes', () => {
       typeChecker,
       sourceFile,
       importDeclaration,
-      '/',
       system,
     );
 
@@ -625,7 +392,6 @@ describe('getNamedImportNodes', () => {
       typeChecker,
       sourceFile,
       importDeclaration,
-      '/',
       system,
     );
 

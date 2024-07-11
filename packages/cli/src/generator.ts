@@ -1,8 +1,4 @@
-import chalk from 'chalk';
-import { isBuiltin } from 'module';
-import { dirname, relative, resolve } from 'path';
 import type {
-  CompilerOptions,
   TypeChecker,
   Node,
   Symbol,
@@ -14,13 +10,7 @@ import type {
 } from 'typescript';
 import typescript from 'typescript';
 
-import { warn } from './logging.js';
-import {
-  getPackageJson,
-  getPackageName,
-  getPackagePath,
-  isESModule,
-} from './module-resolver.js';
+import { isCommonJs } from './module-resolver.js';
 import { getIdentifierName } from './utils.js';
 
 const {
@@ -30,110 +20,9 @@ const {
   isNamespaceImport,
   isStringLiteral,
   NodeFlags,
-  resolveModuleName,
   SymbolFlags,
   SyntaxKind,
 } = typescript;
-
-/**
- * The options for the `getImportPath` function.
- *
- * @property fileName - The file name of the source file.
- * @property importPath - The path to the file or module that is being imported.
- * @property compilerOptions - The compiler options for the TypeScript program.
- * @property extension - The new extension for source files.
- */
-export type GetImportPathOptions = {
-  fileName: string;
-  importPath: string;
-  compilerOptions: CompilerOptions;
-  extension: string;
-  baseDirectory: string;
-  verbose?: boolean;
-};
-
-/**
- * Get the new import path for the given file and import path. This function
- * determines the new import path based on whether the module is an ECMAScript
- * module, whether the package has an `exports` field, or whether the given file
- * exists.
- *
- * @param options - The options for the function. See
- * {@link GetImportPathOptions}.
- * @param system - The compiler system to use.
- * @returns The new import path.
- */
-export function getImportPath(options: GetImportPathOptions, system: System) {
-  const {
-    fileName,
-    importPath,
-    compilerOptions,
-    extension,
-    baseDirectory,
-    verbose,
-  } = options;
-
-  if (isBuiltin(importPath)) {
-    return importPath;
-  }
-
-  if (relative(importPath, '.') === '') {
-    return `./index${extension}`;
-  }
-
-  const { resolvedModule } = resolveModuleName(
-    importPath,
-    fileName,
-    compilerOptions,
-    system,
-  );
-
-  // If the module is not resolved, return the import path as is.
-  if (!resolvedModule) {
-    verbose &&
-      warn(
-        `Could not resolve module: ${chalk.bold(
-          `"${importPath}"`,
-        )}. This means that TS Bridge will not update the import path, and the module may not be resolved correctly in some cases.`,
-      );
-    return importPath;
-  }
-
-  // If the import path is an external module, check if it is an ES module.
-  if (resolvedModule.isExternalLibraryImport) {
-    if (isESModule(importPath, system, baseDirectory)) {
-      return importPath;
-    }
-
-    // If the `package.json` file has exports, we assume the import path can be
-    // resolved as is.
-    const packageName = getPackageName(importPath);
-    const packageJson = getPackageJson(packageName, system, baseDirectory);
-    if (packageJson?.exports) {
-      return importPath;
-    }
-
-    const filePath = getPackagePath(importPath, system, baseDirectory);
-    if (filePath) {
-      return filePath;
-    }
-
-    return importPath;
-  }
-
-  // ES modules don't allow directory imports, so we append `index.{extension}`
-  // if the import path is a directory.
-  if (
-    relative(dirname(fileName), dirname(resolvedModule.resolvedFileName)) !==
-      '' &&
-    system.directoryExists(resolve(dirname(fileName), importPath))
-  ) {
-    return `${importPath}/index${extension}`;
-  }
-
-  const importName = importPath.replace(/\.(?:js|ts|mjs|cjs)$/u, '');
-  return `${importName}${extension}`;
-}
 
 /**
  * Check if a symbol name is unique in the scope of the given node.
@@ -224,7 +113,6 @@ export function getUniqueIdentifier(
  * @param typeChecker - The type checker to use.
  * @param sourceFile - The source file to use.
  * @param node - The import declaration node.
- * @param baseDirectory - The base directory to start resolving from.
  * @param system - The compiler system to use.
  * @returns The new node(s) for the named import.
  */
@@ -232,7 +120,6 @@ export function getNamedImportNodes(
   typeChecker: TypeChecker,
   sourceFile: SourceFile,
   node: ImportDeclaration,
-  baseDirectory: string,
   system: System,
 ): Statement | Statement[] {
   // If the import declaration does not have named bindings, return the node
@@ -252,8 +139,8 @@ export function getNamedImportNodes(
     return node;
   }
 
-  // If the module specifier is an ES module, return the node as is.
-  if (isESModule(node.moduleSpecifier.text, system, baseDirectory)) {
+  // If the module specifier is not a CommonJS module, return the node as is.
+  if (!isCommonJs(node.moduleSpecifier.text, system, sourceFile.fileName)) {
     return node;
   }
 

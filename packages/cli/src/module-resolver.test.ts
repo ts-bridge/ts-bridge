@@ -1,20 +1,14 @@
-import {
-  getMockNodeModule,
-  getMockPackageJson,
-  getVirtualEnvironment,
-} from '@ts-bridge/test-utils';
+import { noOp } from '@ts-bridge/test-utils';
 import { dirname, resolve } from 'path';
 import typescript from 'typescript';
 import { fileURLToPath } from 'url';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import {
-  getPackageEntryPoint,
-  getPackageJson,
-  getPackageName,
-  getPackageParentPaths,
-  getPackagePath,
-  isESModule,
+  getFileSystemFromTypeScript,
+  getModulePath,
+  resolvePackageSpecifier,
+  resolveRelativePackageSpecifier,
 } from './module-resolver.js';
 
 const { sys } = typescript;
@@ -23,229 +17,301 @@ const BASE_DIRECTORY = resolve(
   dirname(fileURLToPath(import.meta.url)),
   '..',
   '..',
-  '..',
+  'test-utils',
+  'test',
+  'fixtures',
+  'import-resolver',
 );
 
-describe('getPackageName', () => {
-  it('returns the name of a scoped package', () => {
-    expect(getPackageName('@babel/core')).toBe('@babel/core');
-  });
+const PARENT_URL = resolve(BASE_DIRECTORY, 'src', 'index.ts');
 
-  it('returns the name of a scoped package with a path', () => {
-    expect(getPackageName('@babel/core/lib/index.js')).toBe('@babel/core');
-  });
-
-  it('returns the name of an unscoped package', () => {
-    expect(getPackageName('typescript')).toBe('typescript');
-  });
-
-  it('returns the name of an unscoped package with a path', () => {
-    expect(getPackageName('typescript/lib/typescript.js')).toBe('typescript');
-  });
-
-  it('throws an error for an invalid package name', () => {
-    expect(() => getPackageName('')).toThrowError(
-      'Invalid package specifier: "".',
+describe('resolvePackageSpecifier', () => {
+  it('resolves a package specifier', () => {
+    const packageSpecifier = resolvePackageSpecifier(
+      'typescript',
+      '.mjs',
+      PARENT_URL,
+      sys,
     );
+
+    expect(packageSpecifier).toBe('typescript');
+  });
+
+  it('resolves a package specifier for a package without a `main` field', () => {
+    const packageSpecifier = resolvePackageSpecifier(
+      'is-stream',
+      '.mjs',
+      PARENT_URL,
+      sys,
+    );
+
+    expect(packageSpecifier).toBe('is-stream/index.js');
+  });
+
+  it('resolves a package specifier with an extension', () => {
+    const packageSpecifier = resolvePackageSpecifier(
+      'semver/preload',
+      '.mjs',
+      PARENT_URL,
+      sys,
+    );
+
+    expect(packageSpecifier).toBe('semver/preload.js');
   });
 });
 
-describe('getPackageParentPaths', () => {
-  it('returns the paths of the parent directories of a package', () => {
-    const paths = getPackageParentPaths(
-      'typescript/foo/bar/baz',
-      BASE_DIRECTORY,
+describe('resolveRelativePackageSpecifier', () => {
+  it('resolves a relative package specifier', () => {
+    const packageSpecifier = resolveRelativePackageSpecifier(
+      './dummy',
+      '.mjs',
+      PARENT_URL,
+      sys,
     );
 
-    expect(paths[0]).toBe(resolve(BASE_DIRECTORY, 'typescript/foo/bar'));
-    expect(paths[1]).toBe(resolve(BASE_DIRECTORY, 'typescript/foo'));
-    expect(paths).not.toContain(resolve(BASE_DIRECTORY, 'typescript'));
+    expect(packageSpecifier).toBe('./dummy.mjs');
   });
 
-  it('returns the paths of the parent directories of a scoped package', () => {
-    const paths = getPackageParentPaths(
-      '@babel/core/foo/bar/baz',
-      BASE_DIRECTORY,
+  it('resolves to `index.mjs` when the imported path is a folder', () => {
+    const packageSpecifier = resolveRelativePackageSpecifier(
+      './folder',
+      '.mjs',
+      PARENT_URL,
+      sys,
     );
 
-    expect(paths[0]).toBe(resolve(BASE_DIRECTORY, '@babel/core/foo/bar'));
-    expect(paths[1]).toBe(resolve(BASE_DIRECTORY, '@babel/core/foo'));
-    expect(paths).not.toContain(resolve(BASE_DIRECTORY, '@babel/core'));
+    expect(packageSpecifier).toBe('./folder/index.mjs');
+  });
+
+  it('replaces an extension with `.mjs` when the imported path is a file', () => {
+    const packageSpecifier = resolveRelativePackageSpecifier(
+      './dummy.js',
+      '.mjs',
+      PARENT_URL,
+      sys,
+    );
+
+    expect(packageSpecifier).toBe('./dummy.mjs');
+  });
+
+  it('does not replace non-JS extensions', () => {
+    const packageSpecifier = resolveRelativePackageSpecifier(
+      './data.json',
+      '.mjs',
+      PARENT_URL,
+      sys,
+    );
+
+    expect(packageSpecifier).toBe('./data.json');
   });
 });
 
-describe('getPackageJson', () => {
-  it('returns the package.json file for a given module', () => {
-    expect(getPackageJson('typescript', sys)).toStrictEqual(
-      expect.objectContaining({
-        name: 'typescript',
+describe('getModulePath', () => {
+  it('returns the path for built-in modules as-is', () => {
+    expect(
+      getModulePath({
+        packageSpecifier: 'fs',
+        extension: '.mjs',
+        parentUrl: PARENT_URL,
+        system: sys,
       }),
-    );
+    ).toBe('fs');
 
-    expect(getPackageJson('vitest', sys)).toStrictEqual(
-      expect.objectContaining({
-        name: 'vitest',
+    expect(
+      getModulePath({
+        packageSpecifier: 'path',
+        extension: '.mjs',
+        parentUrl: PARENT_URL,
+        system: sys,
       }),
-    );
-  });
+    ).toBe('path');
 
-  it('returns `null` if it cannot resolve the module', () => {
-    expect(getPackageJson('foo', sys)).toBeNull();
-  });
-
-  it('returns `null` for built-in modules', () => {
-    expect(getPackageJson('fs', sys)).toBeNull();
-    expect(getPackageJson('path', sys)).toBeNull();
-  });
-});
-
-describe('getPackageEntryPoint', () => {
-  it('returns the import entry point for a given module', () => {
     expect(
-      getPackageEntryPoint(
-        {
-          name: 'foo',
-          main: 'dist/foo.js',
-          exports: {
-            '.': {
-              import: './dist/bar.js',
-              require: './dist/baz.js',
-            },
-          },
-        },
-        'foo',
-      ),
-    ).toBe('./dist/bar.js');
+      getModulePath({
+        packageSpecifier: 'path/posix',
+        extension: '.mjs',
+        parentUrl: PARENT_URL,
+        system: sys,
+      }),
+    ).toBe('path/posix');
   });
 
-  it('returns the main entry point if it cannot resolve the module', () => {
+  it('returns the path for a `node_modules` package', () => {
     expect(
-      getPackageEntryPoint(
-        {
-          name: 'foo',
-          main: 'dist/foo.js',
-          exports: {
-            '.': {
-              require: './dist/baz.js',
-            },
-          },
-        },
-        'bar',
-      ),
-    ).toBe('./dist/foo.js');
-  });
+      getModulePath({
+        packageSpecifier: 'semver',
+        extension: '.mjs',
+        parentUrl: PARENT_URL,
+        system: sys,
+      }),
+    ).toBe('semver');
 
-  it('returns the main entry point if the package does not have exports', () => {
     expect(
-      getPackageEntryPoint(
-        {
-          name: 'foo',
-          main: 'dist/foo.js',
-        },
-        'bar',
-      ),
-    ).toBe('./dist/foo.js');
-  });
+      getModulePath({
+        packageSpecifier: 'typescript',
+        extension: '.mjs',
+        parentUrl: PARENT_URL,
+        system: sys,
+      }),
+    ).toBe('typescript');
 
-  it('returns `null` if the package does not have a main field', () => {
     expect(
-      getPackageEntryPoint(
-        {
-          name: 'foo',
-        },
-        'bar',
-      ),
-    ).toBeNull();
-  });
-});
-
-describe('isESModule', () => {
-  it('returns true for built-in modules', () => {
-    expect(isESModule('fs', sys, BASE_DIRECTORY)).toBe(true);
-    expect(isESModule('path', sys, BASE_DIRECTORY)).toBe(true);
+      getModulePath({
+        packageSpecifier: '@babel/core',
+        extension: '.mjs',
+        parentUrl: PARENT_URL,
+        system: sys,
+      }),
+    ).toBe('@babel/core');
   });
 
-  it('returns true for modules with a .mjs extension', () => {
+  it('returns the path for a `node_modules` package with a path', () => {
     expect(
-      isESModule('typescript/lib/typescript.mjs', sys, BASE_DIRECTORY),
-    ).toBe(true);
+      getModulePath({
+        packageSpecifier: 'semver/preload',
+        extension: '.mjs',
+        parentUrl: PARENT_URL,
+        system: sys,
+      }),
+    ).toBe('semver/preload.js');
+
+    expect(
+      getModulePath({
+        packageSpecifier: '@babel/core/lib/index.js',
+        extension: '.mjs',
+        parentUrl: PARENT_URL,
+        system: sys,
+      }),
+    ).toBe('@babel/core/lib/index.js');
   });
 
-  it('returns true for modules with a .mjs entry point', () => {
-    expect(isESModule('vite', sys, BASE_DIRECTORY)).toBe(true);
+  it('returns the same path if the package specifier cannot be resolved', () => {
+    expect(
+      getModulePath({
+        packageSpecifier: 'non-existing',
+        extension: '.mjs',
+        parentUrl: PARENT_URL,
+        system: sys,
+      }),
+    ).toBe('non-existing');
   });
 
-  it('returns true for modules with "type: module"', () => {
-    const { system } = getVirtualEnvironment({
-      files: {
-        '/index.ts': '// no-op',
-        ...getMockNodeModule({
-          name: 'foo',
-          files: {},
-          packageJson: getMockPackageJson({
-            name: 'foo',
-            main: 'index.js',
-            type: 'module',
-          }),
-        }),
-        ...getMockNodeModule({
-          name: 'bar',
-          files: {
-            'dist/esm/index.js': '// no-op',
-            'dist/esm/package.json': '{ "type": "module" }',
-            'dist/cjs/index.js': '// no-op',
-          },
-          packageJson: getMockPackageJson({
-            name: 'bar',
-            exports: {
-              '.': {
-                import: './dist/esm/index.js',
-                require: './dist/cjs/index.js',
-              },
-            },
-          }),
-        }),
-      },
+  it('logs a warning if the package specifier cannot be resolved', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(noOp);
+
+    getModulePath({
+      packageSpecifier: 'non-existing',
+      extension: '.mjs',
+      parentUrl: PARENT_URL,
+      system: sys,
+      verbose: true,
     });
 
-    // expect(isESModule('foo', system, '/')).toBe(true);
-    expect(isESModule('bar', system, '/')).toBe(true);
-  });
-
-  it('returns false for CommonJS modules', () => {
-    expect(isESModule('typescript', sys, BASE_DIRECTORY)).toBe(false);
-    expect(
-      isESModule('typescript/lib/typescript.js', sys, BASE_DIRECTORY),
-    ).toBe(false);
-    expect(isESModule('@jest/globals', sys, BASE_DIRECTORY)).toBe(false);
+    expect(warn).toHaveBeenCalledWith(
+      expect.stringContaining('Could not resolve module:'),
+    );
   });
 });
 
-describe('getPackagePath', () => {
-  it('returns the path to a file in a package', () => {
-    expect(getPackagePath('globals/index', sys, BASE_DIRECTORY)).toBe(
-      'globals/index.js',
-    );
+describe('getFileSystemFromTypeScript', () => {
+  it("returns the file system interface from TypeScript's `system`", () => {
+    const fileSystem = getFileSystemFromTypeScript(sys);
+
+    expect(fileSystem.isFile).toBeInstanceOf(Function);
+    expect(fileSystem.isDirectory).toBeInstanceOf(Function);
+    expect(fileSystem.readFile).toBeInstanceOf(Function);
+    expect(fileSystem.readBytes).toBeInstanceOf(Function);
   });
 
-  it('returns the path to a file in a package with a .js extension', () => {
-    expect(getPackagePath('globals/index.js', sys, BASE_DIRECTORY)).toBe(
-      'globals/index.js',
-    );
+  describe('isFile', () => {
+    it('returns true for existing files', () => {
+      const fileSystem = getFileSystemFromTypeScript(sys);
+
+      expect(
+        fileSystem.isFile(resolve(BASE_DIRECTORY, 'src', 'dummy.ts')),
+      ).toBe(true);
+    });
+
+    it('returns false for non-existing files', () => {
+      const fileSystem = getFileSystemFromTypeScript(sys);
+
+      expect(
+        fileSystem.isFile(resolve(BASE_DIRECTORY, 'src', 'non-existing.ts')),
+      ).toBe(false);
+    });
+
+    it('returns false for directories', () => {
+      const fileSystem = getFileSystemFromTypeScript(sys);
+
+      expect(fileSystem.isFile(resolve(BASE_DIRECTORY, 'src'))).toBe(false);
+    });
   });
 
-  it('returns the path to a file in a package with a .cjs extension', () => {
-    expect(getPackagePath('globals/index.cjs', sys, BASE_DIRECTORY)).toBe(
-      'globals/index.cjs',
-    );
+  describe('isDirectory', () => {
+    it('returns true for existing directories', () => {
+      const fileSystem = getFileSystemFromTypeScript(sys);
+
+      expect(fileSystem.isDirectory(resolve(BASE_DIRECTORY, 'src'))).toBe(true);
+    });
+
+    it('returns false for non-existing directories', () => {
+      const fileSystem = getFileSystemFromTypeScript(sys);
+
+      expect(
+        fileSystem.isDirectory(resolve(BASE_DIRECTORY, 'non-existing')),
+      ).toBe(false);
+    });
+
+    it('returns false for files', () => {
+      const fileSystem = getFileSystemFromTypeScript(sys);
+
+      expect(
+        fileSystem.isDirectory(resolve(BASE_DIRECTORY, 'src', 'dummy.ts')),
+      ).toBe(false);
+    });
   });
 
-  it('returns `null` if the package could not be found', () => {
-    expect(getPackagePath('foo', sys, BASE_DIRECTORY)).toBeNull();
+  describe('readFile', () => {
+    it('reads the contents of a file', () => {
+      const fileSystem = getFileSystemFromTypeScript(sys);
+
+      expect(
+        fileSystem.readFile(resolve(BASE_DIRECTORY, 'src', 'dummy.ts')),
+      ).toBe('export const foo = 42;\n');
+    });
+
+    it('throws an error for non-existing files', () => {
+      const fileSystem = getFileSystemFromTypeScript(sys);
+
+      expect(() =>
+        fileSystem.readFile(resolve(BASE_DIRECTORY, 'src', 'non-existing.ts')),
+      ).toThrow(/File not found: ".*"\./u);
+    });
   });
 
-  it('returns `null` for built-in modules', () => {
-    expect(getPackagePath('fs', sys, BASE_DIRECTORY)).toBeNull();
-    expect(getPackagePath('path', sys, BASE_DIRECTORY)).toBeNull();
+  describe('readBytes', () => {
+    it('reads the contents of a file as bytes', () => {
+      const fileSystem = getFileSystemFromTypeScript(sys);
+
+      expect(
+        fileSystem.readBytes(resolve(BASE_DIRECTORY, 'src', 'dummy.ts'), 20),
+      ).toStrictEqual(
+        new Uint8Array([
+          101, 120, 112, 111, 114, 116, 32, 99, 111, 110, 115, 116, 32, 102,
+          111, 111, 32, 61, 32, 52,
+        ]),
+      );
+    });
+
+    it('throws an error for non-existing files', () => {
+      const fileSystem = getFileSystemFromTypeScript(sys);
+
+      expect(() =>
+        fileSystem.readBytes(
+          resolve(BASE_DIRECTORY, 'src', 'non-existing.ts'),
+          0,
+        ),
+      ).toThrow(/File not found: ".*"\./u);
+    });
   });
 });

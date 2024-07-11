@@ -26,6 +26,9 @@
   "files": [
     "dist"
   ],
+  "workspaces": [
+    "test/fixtures/*"
+  ],
   "scripts": {
     "allow-scripts": "yarn workspace @ts-bridge/root allow-scripts",
     "build": "tsc --project tsconfig.build.json",

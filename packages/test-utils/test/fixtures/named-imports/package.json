@@ -1,0 +1,10 @@
+{
+  "name": "@ts-bridge/named-imports-fixture",
+  "private": true,
+  "workspaces": [
+    "packages/*"
+  ],
+  "dependencies": {
+    "commonjs-module": "workspace:^"
+  }
+}

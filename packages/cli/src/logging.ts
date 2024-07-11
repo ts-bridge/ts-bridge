@@ -5,21 +5,32 @@ import type { SourceFile, Transformer } from 'typescript';
  * Get an error message from an error object.
  *
  * @param errorObject - The error object.
+ * @param verbose - Whether to enable verbose logging.
  * @returns The error message.
  */
-export function getErrorMessage(errorObject: unknown) {
-  return errorObject instanceof Error
-    ? errorObject.message
-    : String(errorObject);
+export function getErrorMessage(
+  errorObject: unknown,
+  verbose?: boolean,
+): string {
+  if (errorObject instanceof Error) {
+    if (verbose && errorObject.stack) {
+      return errorObject.stack;
+    }
+
+    return errorObject.message;
+  }
+
+  return String(errorObject);
 }
 
 /**
  * Log an error message. The message is prefixed with a red cross.
  *
  * @param errorObject - The error to log.
+ * @param verbose - Whether to enable verbose logging.
  */
-export function error(errorObject: unknown) {
-  console.error(`${chalk.red('✖')} ${getErrorMessage(errorObject)}`);
+export function error(errorObject: unknown, verbose?: boolean) {
+  console.error(`${chalk.red('✖')} ${getErrorMessage(errorObject, verbose)}`);
 }
 
 /**

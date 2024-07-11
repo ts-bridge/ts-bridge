@@ -1,253 +1,259 @@
-import { isBuiltin, createRequire } from 'module';
-import { dirname, join, sep } from 'path';
-import {
-  exports as resolveExports,
-  legacy as resolveLegacy,
-} from 'resolve.exports';
+import { resolve } from '@ts-bridge/resolver';
+import type { FileSystemInterface } from '@ts-bridge/resolver';
+import chalk from 'chalk';
+import { resolve as resolvePath, extname } from 'path';
+import { join as joinPosix } from 'path/posix';
 import type { System } from 'typescript';
+import { pathToFileURL } from 'url';
 
-import { readJsonFile } from './file-system.js';
+import { warn } from './logging.js';
+
+// The first entry is an empty string, which is used for the base package name.
+const DEFAULT_EXTENSIONS = ['', '.js', '.cjs', '.mjs', '.json'];
+const TYPESCRIPT_EXTENSIONS = ['.ts', '.tsx', '.d.ts'];
+
+const SOURCE_EXTENSIONS_REGEX = /\.(js|jsx|cjs|mjs|ts|tsx)$/u;
 
 /**
- * Get the name of a package, i.e., the first part of a package specifier. For
- * example, the package name of `@scope/name/foo` is `@scope/name`.
+ * Check if a specifier is relative.
  *
- * @param packageSpecifier - The package specifier.
- * @returns The name of the package.
+ * @param specifier - The specifier to check.
+ * @returns Whether the specifier is relative.
  */
-export function getPackageName(packageSpecifier: string): string {
-  const parts = packageSpecifier.split('/');
-  if (!parts[0]) {
-    throw new Error(`Invalid package specifier: "${packageSpecifier}".`);
-  }
-
-  if (packageSpecifier.startsWith('@')) {
-    return parts.slice(0, 2).join('/');
-  }
-
-  return parts[0];
+export function isRelative(specifier: string) {
+  return specifier.startsWith('.');
 }
 
 /**
- * Get the paths where a package can be found.
- *
- * @param packageName - The name of the package.
- * @param baseDirectory - The directory to start resolving from.
- * @returns The paths where the package can be found, or `null` if the package
- * is a built-in module.
- */
-function getPackagePaths(packageName: string, baseDirectory: string) {
-  const require = createRequire(join(baseDirectory, 'noop.js'));
-  return require.resolve.paths(packageName);
-}
-
-/**
- * Get the paths of the parent directories of a package, which can contain a
- * `package.json` file.
- *
- * @param packageName - The name of the package.
- * @param baseDirectory - The directory to start resolving from.
- * @param paths - The paths of the parent directories. This is used for
- * recursion.
- * @param basePackageName - The base package name. This is used for recursion.
- * @returns The paths of the parent directories of the package.
- */
-export function getPackageParentPaths(
-  packageName: string,
-  baseDirectory: string,
-  paths: string[] = [],
-  basePackageName = getPackageName(packageName),
-) {
-  const parentPath = packageName.split(sep).slice(0, -1).join(sep);
-  if (parentPath.length <= basePackageName.length) {
-    return paths;
-  }
-
-  const path = join(baseDirectory, parentPath);
-  return getPackageParentPaths(
-    parentPath,
-    baseDirectory,
-    // Note: The order of paths here is important, since we want to check the
-    // "deepest" directory first.
-    [...paths, path],
-    basePackageName,
-  );
-}
-
-/**
- * Get the `package.json` file for a module.
- *
- * @param packageName - The name of the module.
- * @param system - The file system to use.
- * @param baseDirectory - The directory to start resolving from.
- * @returns The content of the `package.json` file or `null` if it could not be
- * found.
- */
-export function getPackageJson(
-  packageName: string,
-  system: System,
-  baseDirectory = system.getCurrentDirectory(),
-) {
-  const paths = getPackagePaths(packageName, baseDirectory);
-
-  // `require.resolve.paths` returns `null` for built-in modules.
-  if (!paths) {
-    return null;
-  }
-
-  const pathsWithPackage = paths.flatMap((path) => [
-    ...getPackageParentPaths(packageName, path),
-    join(path, packageName),
-  ]);
-
-  for (const path of pathsWithPackage) {
-    const packagePath = join(path, 'package.json');
-    if (system.fileExists(packagePath)) {
-      return readJsonFile(packagePath, system);
-    }
-  }
-
-  return null;
-}
-
-/**
- * Get the entry point for a package that's not using the `exports` field.
- *
- * @param packageJson - The `package.json` file for the package.
- * @returns The entry point for the package.
- */
-function getLegacyPackageEntryPoint(packageJson: Record<string, unknown>) {
-  return (
-    resolveLegacy(packageJson, {
-      browser: false,
-    }) ?? null
-  );
-}
-
-/**
- * Get the entry point for a package.
- *
- * @param packageJson - The `package.json` file for the package.
- * @param packageSpecifier - The specifier for the package.
- * @returns The entry point for the package.
- */
-export function getPackageEntryPoint(
-  packageJson: Record<string, unknown>,
-  packageSpecifier: string,
-) {
-  try {
-    const resolvedExports = resolveExports(packageJson, packageSpecifier);
-    if (!resolvedExports?.[0]) {
-      return getLegacyPackageEntryPoint(packageJson);
-    }
-
-    return resolvedExports[0];
-  } catch {
-    return getLegacyPackageEntryPoint(packageJson);
-  }
-}
-
-/**
- * Check if a package is an ECMAScript module.
- *
- * This function checks if a package is an ECMAScript module by looking at the
- * extension of the entry point file, the `type` field in the `package.json`
- * file, and the `type` field in the `package.json` file of the directory
- * containing the entry point file (if any).
- *
- * This is intended to match the behavior of Node.js when resolving packages,
- * though it may not be 100% accurate.
+ * Resolve a package specifier to a file in a package. This function will try to
+ * resolve the package specifier to a file in the package's directory.
  *
  * @param packageSpecifier - The specifier for the package.
- * @param system - The file system to use.
- * @param baseDirectory - The directory to start resolving from.
- * @returns Whether the package is an ECMAScript module.
+ * @param _extension - The extension to use for relative source paths. This is
+ * unused for this function.
+ * @param parentUrl - The URL of the parent module.
+ * @param system - The TypeScript system.
+ * @param extensions - The extensions to use for resolving the package.
+ * @returns The resolved package specifier, or `null` if the package could not
+ * be resolved.
  */
-export function isESModule(
+export function resolvePackageSpecifier(
   packageSpecifier: string,
+  _extension: string,
+  parentUrl: string,
   system: System,
-  baseDirectory: string,
-) {
-  if (isBuiltin(packageSpecifier)) {
-    return true;
-  }
+  extensions = DEFAULT_EXTENSIONS,
+): string | null {
+  // We check for `/index.js` as well, to support packages without a `main`
+  // entry in their `package.json`.
+  for (const specifier of [packageSpecifier, `${packageSpecifier}/index`]) {
+    for (const extension of extensions) {
+      try {
+        resolve(
+          `${specifier}${extension}`,
+          pathToFileURL(parentUrl),
+          getFileSystemFromTypeScript(system),
+        );
 
-  if (packageSpecifier.endsWith('.mjs')) {
-    return true;
-  }
-
-  const packageName = getPackageName(packageSpecifier);
-  const packageJson = getPackageJson(packageName, system, baseDirectory);
-  if (!packageJson) {
-    return false;
-  }
-
-  const entryPoint = getPackageEntryPoint(packageJson, packageSpecifier);
-
-  // If the entry point is a `.mjs` file, the package is an ECMAScript module.
-  if (entryPoint?.endsWith('.mjs')) {
-    return true;
-  }
-
-  if (!entryPoint?.endsWith('.js')) {
-    return false;
-  }
-
-  // Packages may have a `package.json` closer to the entry point that specifies
-  // that the package is an ECMAScript module.
-  const entryPointPackageJson = getPackageJson(
-    join(packageName, dirname(entryPoint)),
-    system,
-    baseDirectory,
-  );
-
-  if (entryPointPackageJson) {
-    return entryPointPackageJson.type === 'module';
-  }
-
-  // Otherwise, check the `type` field in the `package.json` file. Note that we
-  // check if the entry point ends with `.js` because it could technically be
-  // `.cjs` or another extension.
-  return packageJson.type === 'module';
-}
-
-/**
- * Get the path to a file in a package. This assumes that the package is not an
- * ECMAScript module, and does not use the `exports` field. This function will
- * try to find the file for the given package specifier in the package's
- * directory.
- *
- * @param packageSpecifier - The specifier for the package.
- * @param system - The file system to use.
- * @param baseDirectory - The directory to start resolving from.
- * @returns The path to the package, or `null` if the package could not be
- * found.
- */
-export function getPackagePath(
-  packageSpecifier: string,
-  system: System,
-  baseDirectory: string,
-) {
-  if (packageSpecifier.endsWith('.js') || packageSpecifier.endsWith('.cjs')) {
-    return packageSpecifier;
-  }
-
-  const packageName = getPackageName(packageSpecifier);
-  const paths = getPackagePaths(packageName, baseDirectory);
-
-  // `require.resolve.paths` returns `null` for built-in modules.
-  if (!paths) {
-    return null;
-  }
-
-  for (const path of paths) {
-    for (const extension of ['.js', '.cjs']) {
-      const packagePath = join(path, `${packageSpecifier}${extension}`);
-      if (system.fileExists(packagePath)) {
-        return `${packageSpecifier}${extension}`;
+        return `${specifier}${extension}`;
+      } catch {
+        // no-op
       }
     }
   }
 
   return null;
+}
+
+/**
+ * Resolve a relative package specifier to a file in the package. This function
+ * will try to resolve the package specifier to a file in the package's
+ * directory.
+ *
+ * @param packageSpecifier - The specifier for the package.
+ * @param extension - The extension to use for relative source paths.
+ * @param parentUrl - The URL of the parent module.
+ * @param system - The TypeScript system.
+ * @param extensions - The extensions to use for resolving the package.
+ * @returns The resolved package specifier, or `null` if the package could not
+ * be resolved.
+ */
+export function resolveRelativePackageSpecifier(
+  packageSpecifier: string,
+  extension: string,
+  parentUrl: string,
+  system: System,
+  extensions = TYPESCRIPT_EXTENSIONS,
+): string | null {
+  const basePath = resolvePath(parentUrl, '..', packageSpecifier);
+  if (system.directoryExists(basePath)) {
+    return `./${joinPosix(packageSpecifier, `index${extension}`)}`;
+  }
+
+  const resolution = resolvePackageSpecifier(
+    packageSpecifier,
+    extension,
+    parentUrl,
+    system,
+    [...extensions, ...DEFAULT_EXTENSIONS],
+  );
+
+  if (resolution) {
+    return resolution.replace(SOURCE_EXTENSIONS_REGEX, extension);
+  }
+
+  const packageSpecifierWithoutExtension = packageSpecifier.replace(
+    extname(packageSpecifier),
+    '',
+  );
+
+  const resolutionWithoutExtension = resolvePackageSpecifier(
+    packageSpecifierWithoutExtension,
+    extension,
+    parentUrl,
+    system,
+    [...extensions, ...DEFAULT_EXTENSIONS],
+  );
+
+  if (resolutionWithoutExtension) {
+    return resolutionWithoutExtension.replace(
+      SOURCE_EXTENSIONS_REGEX,
+      extension,
+    );
+  }
+
+  return null;
+}
+
+export type GetModulePathOptions = {
+  /**
+   * The specifier for the module.
+   */
+  packageSpecifier: string;
+
+  /**
+   * The extension to use for relative source paths.
+   */
+  extension: string;
+
+  /**
+   * The URL of the parent module.
+   */
+  parentUrl: string;
+
+  /**
+   * The TypeScript system.
+   */
+  system: System;
+
+  /**
+   * Whether to show verbose output.
+   */
+  verbose?: boolean;
+};
+
+/**
+ * Get the path to a module.
+ *
+ * @param options - The options for resolving the module.
+ * @param options.packageSpecifier - The specifier for the module.
+ * @param options.extension - The extension to use for relative source paths.
+ * @param options.parentUrl - The URL of the parent module.
+ * @param options.system - The TypeScript system.
+ * @param options.verbose - Whether to show verbose output.
+ * @returns The path to the module, or the original specifier if the module
+ * could not be resolved.
+ */
+export function getModulePath({
+  packageSpecifier,
+  extension,
+  parentUrl,
+  system,
+  verbose,
+}: GetModulePathOptions) {
+  const resolver = isRelative(packageSpecifier)
+    ? resolveRelativePackageSpecifier
+    : resolvePackageSpecifier;
+
+  const resolution = resolver(packageSpecifier, extension, parentUrl, system);
+  if (!resolution) {
+    verbose &&
+      warn(
+        `Could not resolve module: ${chalk.bold(
+          `"${packageSpecifier}"`,
+        )}. This means that TS Bridge will not update the import path, and the module may not be resolved correctly in some cases.`,
+      );
+
+    return packageSpecifier;
+  }
+
+  return resolution;
+}
+
+/**
+ * Get a {@link FileSystemInterface} from a TypeScript system. This is used
+ * for module resolution.
+ *
+ * @param system - The TypeScript system.
+ * @returns The file system interface.
+ */
+export function getFileSystemFromTypeScript(
+  system: System,
+): FileSystemInterface {
+  return {
+    isFile: system.fileExists.bind(system),
+    isDirectory: system.directoryExists.bind(system),
+
+    readFile(path: string): string {
+      const contents = system.readFile(path);
+      if (contents === undefined) {
+        throw new Error(`File not found: "${path}".`);
+      }
+
+      return contents;
+    },
+
+    readBytes(path: string, length: number): Uint8Array {
+      const contents = system.readFile(path);
+      if (contents === undefined) {
+        throw new Error(`File not found: "${path}".`);
+      }
+
+      // TypeScript does not support reading a file as bytes, so we convert the
+      // contents to a byte array manually. This is a bit hacky, but it should
+      // work for most cases.
+      const buffer = new Uint8Array(length);
+      for (let index = 0; index < length; index++) {
+        buffer[index] = contents.charCodeAt(index);
+      }
+
+      return buffer;
+    },
+  };
+}
+
+/**
+ * Check if a package specifier is a CommonJS package.
+ *
+ * @param packageSpecifier - The specifier for the package.
+ * @param system - The TypeScript system.
+ * @param parentUrl - The URL of the parent module.
+ * @returns Whether the package is a CommonJS package.
+ */
+export function isCommonJs(
+  packageSpecifier: string,
+  system: System,
+  parentUrl: string,
+) {
+  if (isRelative(packageSpecifier)) {
+    return false;
+  }
+
+  const { format } = resolve(
+    packageSpecifier,
+    pathToFileURL(parentUrl),
+    getFileSystemFromTypeScript(system),
+  );
+
+  return format === 'commonjs';
 }

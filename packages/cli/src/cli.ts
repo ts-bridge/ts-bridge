@@ -4,7 +4,7 @@ import { hideBin } from 'yargs/helpers';
 import yargs from 'yargs/yargs';
 
 import { buildHandler } from './build.js';
-import { error, getErrorMessage } from './logging.js';
+import { error } from './logging.js';
 
 const { sys } = typescript;
 
@@ -64,7 +64,7 @@ export async function main(argv: string[]) {
       },
     )
     .fail((_, _error) => {
-      error(getErrorMessage(_error));
+      error(_error);
 
       // If we don't exit immediately, Yargs will duplicate the error message.
       // eslint-disable-next-line n/no-process-exit

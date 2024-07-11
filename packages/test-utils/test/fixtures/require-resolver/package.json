@@ -1,0 +1,7 @@
+{
+  "name": "@ts-bridge/require-resolver-fixture",
+  "private": true,
+  "dependencies": {
+    "semver": "^7.6.2"
+  }
+}
