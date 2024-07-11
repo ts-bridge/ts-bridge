@@ -325,11 +325,16 @@ export function hasImportAttributes() {
  *
  * @param name - The name of the attribute.
  * @param value - The value of the attribute.
+ * @param useAttributes - Whether to use import attributes. By default, this is
+ * determined by the {@link hasImportAttributes} function.
  * @returns The import attributes.
  */
-export function getImportAttribute(name: string, value: string) {
-  /* istanbul ignore next if -- @preserve */
-  if (hasImportAttributes()) {
+export function getImportAttribute(
+  name: string,
+  value: string,
+  useAttributes: boolean = hasImportAttributes(),
+) {
+  if (useAttributes) {
     return factory.createImportAttributes(
       factory.createNodeArray([
         factory.createImportAttribute(
@@ -340,7 +345,6 @@ export function getImportAttribute(name: string, value: string) {
     );
   }
 
-  /* istanbul ignore next -- @preserve */
   return factory.createAssertClause(
     factory.createNodeArray([
       factory.createAssertEntry(
