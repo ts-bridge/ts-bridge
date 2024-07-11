@@ -9,10 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.1.0]
 
-### Uncategorized
+### Added
 
-- Implement custom resolver in CLI ([#24](https://github.com/ts-bridge/ts-bridge/pull/24))
-- Add `@ts-bridge/resolver` package ([#20](https://github.com/ts-bridge/ts-bridge/pull/20))
+- Initial release of the `@ts-bridge/resolver` package ([#20](https://github.com/ts-bridge/ts-bridge/pull/20), [#24](https://github.com/ts-bridge/ts-bridge/pull/24))
 
 [Unreleased]: https://github.com/ts-bridge/ts-bridge/compare/@ts-bridge/resolver@0.1.0...HEAD
 [0.1.0]: https://github.com/ts-bridge/ts-bridge/releases/tag/@ts-bridge/resolver@0.1.0
