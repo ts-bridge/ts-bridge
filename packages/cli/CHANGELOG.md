@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0]
+
+### Added
+
+- Add import attribute to JSON imports ([#26](https://github.com/ts-bridge/ts-bridge/pull/26))
+  - This fixes compatibility with Node.js, Rollup, and other tools that do not
+    support JSON imports without a `with { type: 'json' }` attribute.
+
+### Changed
+
+- Implement `@ts-bridge/resolver` ([#24](https://github.com/ts-bridge/ts-bridge/pull/24))
+  - `@ts-bridge/resolver` implements the Node.js module resolution algorithm and
+    is now used instead of the custom resolver implementation.
+  - This resolves some edge cases and makes the tool more compatible with
+    Node.js and other tools.
+
 ## [0.1.4]
 
 ### Fixed
@@ -50,7 +66,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Initial release of the `@ts-bridge/cli` package.
 
-[Unreleased]: https://github.com/ts-bridge/ts-bridge/compare/@ts-bridge/cli@0.1.4...HEAD
+[Unreleased]: https://github.com/ts-bridge/ts-bridge/compare/@ts-bridge/cli@0.2.0...HEAD
+[0.2.0]: https://github.com/ts-bridge/ts-bridge/compare/@ts-bridge/cli@0.1.4...@ts-bridge/cli@0.2.0
 [0.1.4]: https://github.com/ts-bridge/ts-bridge/compare/@ts-bridge/cli@0.1.3...@ts-bridge/cli@0.1.4
 [0.1.3]: https://github.com/ts-bridge/ts-bridge/compare/@ts-bridge/cli@0.1.2...@ts-bridge/cli@0.1.3
 [0.1.2]: https://github.com/ts-bridge/ts-bridge/compare/@ts-bridge/cli@0.1.1...@ts-bridge/cli@0.1.2
