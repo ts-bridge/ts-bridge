@@ -32,7 +32,7 @@ export type ResolvedModule = {
   /**
    * The type of the module.
    */
-  format: FileFormat | 'directory' | null;
+  format: FileFormat | null;
 };
 
 /**
@@ -96,10 +96,11 @@ export function resolveRelativePackageSpecifier(
 ): ResolvedModule | null {
   const basePath = resolvePath(parentUrl, '..', packageSpecifier);
   if (system.directoryExists(basePath)) {
-    return {
-      specifier: packageSpecifier,
-      format: 'directory',
-    };
+    return resolveRelativePackageSpecifier(
+      `${packageSpecifier}/index`,
+      parentUrl,
+      system,
+    );
   }
 
   const packageSpecifierWithoutExtension = packageSpecifier.replace(
@@ -203,10 +204,6 @@ export function getModulePath({
   }
 
   if (isRelative(packageSpecifier)) {
-    if (resolution.format === 'directory') {
-      return `${resolution.specifier}/index${extension}`;
-    }
-
     return resolution.specifier.replace(SOURCE_EXTENSIONS_REGEX, extension);
   }
 

@@ -81,7 +81,7 @@ describe('resolveRelativePackageSpecifier', () => {
     });
   });
 
-  it('resolves with `directory` as format when the imported path is a folder', () => {
+  it('resolves a directory import', () => {
     const packageSpecifier = resolveRelativePackageSpecifier(
       './folder',
       PARENT_URL,
@@ -89,8 +89,8 @@ describe('resolveRelativePackageSpecifier', () => {
     );
 
     expect(packageSpecifier).toStrictEqual({
-      specifier: './folder',
-      format: 'directory',
+      specifier: './folder/index.ts',
+      format: null,
     });
   });
 });
@@ -234,7 +234,7 @@ describe('getModuleType', () => {
     expect(getModuleType('chalk', sys, PARENT_URL)).toBe('module');
 
     expect(getModuleType('./dummy', sys, PARENT_URL)).toBe(null);
-    expect(getModuleType('./folder', sys, PARENT_URL)).toBe('directory');
+    expect(getModuleType('./folder', sys, PARENT_URL)).toBe(null);
   });
 });
 
