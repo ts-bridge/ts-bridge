@@ -366,12 +366,12 @@ export function build({
     undefined,
     {
       before: [
-        ...getTransformers(type, options),
         getLoggingTransformer(verbose),
         getRequireExtensionTransformer(extension, options),
         getImportExtensionTransformer(extension, options),
         getExportExtensionTransformer(extension, options),
         getTypeImportExportTransformer(options),
+        ...getTransformers(type, options),
       ],
       afterDeclarations: [
         getImportExtensionTransformer(extension, options),
