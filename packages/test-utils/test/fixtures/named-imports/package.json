@@ -1,5 +1,6 @@
 {
   "name": "@ts-bridge/named-imports-fixture",
+  "version": "0.0.0",
   "private": true,
   "workspaces": [
     "packages/*"
