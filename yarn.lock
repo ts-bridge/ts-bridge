@@ -1119,6 +1119,12 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"@ts-bridge/import-attributes-fixture@workspace:packages/test-utils/test/fixtures/import-attributes":
+  version: 0.0.0-use.local
+  resolution: "@ts-bridge/import-attributes-fixture@workspace:packages/test-utils/test/fixtures/import-attributes"
+  languageName: unknown
+  linkType: soft
+
 "@ts-bridge/import-resolver-fixture@workspace:packages/test-utils/test/fixtures/import-resolver":
   version: 0.0.0-use.local
   resolution: "@ts-bridge/import-resolver-fixture@workspace:packages/test-utils/test/fixtures/import-resolver"

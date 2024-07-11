@@ -424,7 +424,7 @@ describe('getTransformers', () => {
       true,
     );
 
-    expect(transformers).toHaveLength(4);
+    expect(transformers).toHaveLength(5);
   });
 
   it('returns the correct transformers for the `commonjs` format', () => {
@@ -438,7 +438,7 @@ describe('getTransformers', () => {
       true,
     );
 
-    expect(transformers).toHaveLength(2);
+    expect(transformers).toHaveLength(3);
   });
 
   it('returns the correct transformers for the `module` format without shims', () => {
@@ -452,7 +452,7 @@ describe('getTransformers', () => {
       false,
     );
 
-    expect(transformers).toHaveLength(2);
+    expect(transformers).toHaveLength(3);
   });
 
   it('returns the correct transformers for the `commonjs` format without shims', () => {
@@ -466,6 +466,6 @@ describe('getTransformers', () => {
       false,
     );
 
-    expect(transformers).toHaveLength(1);
+    expect(transformers).toHaveLength(2);
   });
 });

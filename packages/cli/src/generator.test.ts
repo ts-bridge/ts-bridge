@@ -9,12 +9,14 @@ import typescript from 'typescript';
 import { describe, expect, it, vi } from 'vitest';
 
 import {
+  getImportAttribute,
   getImportMetaUrl,
   getNamedImportNodes,
   getNamespaceImport,
   getNonTypeExports,
   getNonTypeImports,
   getUniqueIdentifier,
+  hasImportAttributes,
 } from './generator.js';
 
 // TODO: Change these tests to use the real file system, to avoid the need for
@@ -25,7 +27,7 @@ vi.mock('@ts-bridge/resolver', () => ({
   })),
 }));
 
-const { factory } = typescript;
+const { factory, isAssertClause, isImportAttributes } = typescript;
 
 /**
  * Compile a statement. This is used to test the output of the generator
@@ -595,5 +597,21 @@ describe('getImportMetaUrl', () => {
       import.meta.url;
       "
     `);
+  });
+});
+
+describe('getImportAttribute', () => {
+  // For compatibility with TypeScript <5.3, we have to check if the factory
+  // function exists before running the test.
+  it.runIf(hasImportAttributes())('returns an import attribute', () => {
+    expect(isImportAttributes(getImportAttribute('type', 'json'))).toBe(true);
+    expect(isImportAttributes(getImportAttribute('type', 'json', true))).toBe(
+      true,
+    );
+  });
+
+  it('returns an assert clause if the factory function does not exist', () => {
+    const node = getImportAttribute('type', 'json', false);
+    expect(isAssertClause(node)).toBe(true);
   });
 });
