@@ -2,7 +2,9 @@ import { dirname, join } from 'path';
 import type {
   CompilerHost,
   CompilerOptions,
+  ParsedCommandLine,
   Program,
+  ProjectReference,
   System,
 } from 'typescript';
 import typescript from 'typescript';
@@ -18,6 +20,10 @@ import {
 import { TypeScriptError } from './errors.js';
 import { getWriteFileFunction, removeDirectory } from './file-system.js';
 import { getLoggingTransformer } from './logging.js';
+import {
+  createProjectReferencesCompilerHost,
+  getResolvedProjectReferences,
+} from './project-references.js';
 import { isShimsPackageInstalled } from './shims.js';
 import type { Steps } from './steps.js';
 import { executeSteps } from './steps.js';
@@ -28,12 +34,14 @@ import {
   getImportExtensionTransformer,
   getRequireExtensionTransformer,
 } from './transformers.js';
+import { getDefinedArray } from './utils.js';
 
 const { createProgram, getPreEmitDiagnostics, ModuleResolutionKind } =
   typescript;
 
 type GetProgramOptions = {
   compilerOptions: CompilerOptions;
+  projectReferences?: readonly ProjectReference[];
   files: string[];
   oldProgram?: Program;
   host?: CompilerHost;
@@ -46,6 +54,7 @@ type GetProgramOptions = {
  *
  * @param options - The options.
  * @param options.compilerOptions - The compiler options to use.
+ * @param options.projectReferences - The project references to use.
  * @param options.files - The files to include in the program.
  * @param options.oldProgram - The old program to reuse.
  * @param options.host - The compiler host to use.
@@ -53,6 +62,7 @@ type GetProgramOptions = {
  */
 export function getProgram({
   compilerOptions,
+  projectReferences,
   files,
   oldProgram,
   host,
@@ -60,6 +70,7 @@ export function getProgram({
   const program = createProgram({
     rootNames: files,
     options: compilerOptions,
+    projectReferences,
     oldProgram,
     host,
   });
@@ -106,13 +117,14 @@ export function getFiles(
  * @property clean - Whether to clean the output directory before building.
  */
 export type BuildHandlerOptions = {
-  format: string[];
+  format: BuildType[];
   project: string;
   files?: string[];
   clean: boolean;
   system: System;
   host?: CompilerHost;
   verbose?: boolean;
+  references?: boolean;
 };
 
 /**
@@ -129,6 +141,7 @@ export function buildHandler(options: BuildHandlerOptions) {
     system,
     host,
     verbose,
+    references,
   } = options;
 
   const tsConfig = getTypeScriptConfig(project, system);
@@ -145,40 +158,38 @@ export function buildHandler(options: BuildHandlerOptions) {
   const files = getFiles(customFiles, tsConfig.fileNames);
 
   const compilerOptions = getCompilerOptions(baseOptions);
-  const program = getProgram({ compilerOptions, files, host });
+  const program = getProgram({
+    compilerOptions,
+    files,
+    host,
+    projectReferences: tsConfig.projectReferences,
+  });
 
-  if (
-    compilerOptions.moduleResolution !== ModuleResolutionKind.Node16 &&
-    compilerOptions.moduleResolution !== ModuleResolutionKind.NodeNext
-  ) {
-    // If we use a module resolution other than `Node16` (or `NodeNext`), we
-    // need to create a separate program for each module format. This is
-    // unfortunately much slower than using the same program for all formats, so
-    // it's recommended to use `Node16` (or `NodeNext`) if possible.
-    buildNode10({
-      program,
-      compilerOptions,
-      format,
-      files,
-      system,
-      host,
-      baseDirectory,
-      verbose,
-    });
-    return;
-  }
+  const buildOptions: BuilderOptions = {
+    program,
+    compilerOptions,
+    format,
+    files,
+    system,
+    host,
+    baseDirectory,
+    tsConfig,
+    verbose,
+  };
 
-  buildNode16(program, format, system);
+  const buildFunction = getBuildFunction(tsConfig, references);
+  buildFunction(buildOptions);
 }
 
-type BuildNode10Options = {
+type BuilderOptions = {
   program: Program;
   compilerOptions: CompilerOptions;
-  format: string[];
+  format: BuildType[];
   files: string[];
   system: System;
   host?: CompilerHost;
   baseDirectory: string;
+  tsConfig: ParsedCommandLine;
   verbose?: boolean;
 };
 
@@ -205,7 +216,7 @@ export function buildNode10({
   system,
   host,
   verbose,
-}: BuildNode10Options) {
+}: BuilderOptions) {
   const buildSteps: Steps<Record<string, never>> = [
     {
       name: 'Building ES module.',
@@ -267,28 +278,29 @@ export function buildNode10({
 /**
  * Build the project using the Node.js 16 module resolution strategy.
  *
- * @param program - The TypeScript program to build.
- * @param formats - The formats to build.
- * @param system - The file system to use.
- * @param verbose - Whether to enable verbose logging.
+ * @param options - The build options.
+ * @param options.program - The TypeScript program to build.
+ * @param options.format - The formats to build.
+ * @param options.system - The file system to use.
+ * @param options.verbose - Whether to enable verbose logging.
  */
-export function buildNode16(
-  program: Program,
-  formats: string[],
-  system: System,
-  verbose?: boolean,
-) {
+export function buildNode16({
+  program,
+  format,
+  system,
+  verbose,
+}: BuilderOptions) {
   const buildSteps: Steps<Record<string, never>> = [
     {
       name: 'Building ES module.',
-      condition: () => formats.includes('module'),
+      condition: () => format.includes('module'),
       task: () => {
         build({ program, type: 'module', system });
       },
     },
     {
       name: 'Building CommonJS module.',
-      condition: () => formats.includes('commonjs'),
+      condition: () => format.includes('commonjs'),
       task: () => {
         build({ program, type: 'commonjs', system });
       },
@@ -296,6 +308,103 @@ export function buildNode16(
   ];
 
   executeSteps(buildSteps, {}, verbose);
+}
+
+/**
+ * Build the project references. This function will build the project references
+ * using the specified formats.
+ *
+ * @param options - The build options.
+ * @param options.program - The base TypeScript program to use.
+ * @param options.format - The formats to build.
+ * @param options.system - The file system to use.
+ * @param options.baseDirectory - The base directory of the project.
+ */
+export function buildProjectReferences({
+  program,
+  format,
+  system,
+  baseDirectory,
+}: BuilderOptions) {
+  const resolvedProjectReferences = getDefinedArray(
+    program.getResolvedProjectReferences(),
+  );
+
+  const sortedProjectReferences = getResolvedProjectReferences(
+    baseDirectory,
+    resolvedProjectReferences,
+  );
+
+  for (const {
+    sourceFile,
+    commandLine,
+    references,
+  } of sortedProjectReferences) {
+    const {
+      fileNames,
+      options: childOptions,
+      projectReferences: childProjectReferences,
+    } = commandLine;
+
+    const baseChildOptions = getBaseCompilerOptions(
+      dirname(sourceFile.fileName),
+      childOptions,
+    );
+
+    const compilerOptions = getCompilerOptions(baseChildOptions);
+    const host = createProjectReferencesCompilerHost(
+      format,
+      compilerOptions,
+      getDefinedArray(references),
+    );
+
+    const childProgram = getProgram({
+      compilerOptions,
+      host,
+      projectReferences: childProjectReferences,
+      files: fileNames,
+      oldProgram: program,
+    });
+
+    const buildFunction = getBuildFunction(commandLine);
+    buildFunction({
+      host,
+      program: childProgram,
+      compilerOptions,
+      format,
+      files: fileNames,
+      system,
+      baseDirectory: dirname(sourceFile.fileName),
+      tsConfig: commandLine,
+    });
+  }
+}
+
+/**
+ * Get the build function to use based on the TypeScript configuration. This
+ * function will return the appropriate build function based on whether project
+ * references are used and the module resolution strategy.
+ *
+ * @param tsConfig - The TypeScript configuration.
+ * @param useReferences - Whether to include project references in the build.
+ * @returns The build function to use.
+ */
+export function getBuildFunction(
+  tsConfig: ParsedCommandLine,
+  useReferences = false,
+): (options: BuilderOptions) => void {
+  if (useReferences && tsConfig.projectReferences) {
+    return buildProjectReferences;
+  }
+
+  if (
+    tsConfig.options.moduleResolution !== ModuleResolutionKind.Node16 &&
+    tsConfig.options.moduleResolution !== ModuleResolutionKind.NodeNext
+  ) {
+    return buildNode10;
+  }
+
+  return buildNode16;
 }
 
 /**

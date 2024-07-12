@@ -1,0 +1,14 @@
+{
+  "files": [],
+  "references": [
+    {
+      "path": "./packages/project-1"
+    },
+    {
+      "path": "./packages/project-2"
+    },
+    {
+      "path": "./packages/project-3"
+    }
+  ]
+}

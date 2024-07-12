@@ -1,0 +1,14 @@
+{
+  "files": [],
+  "references": [
+    {
+      "path": "./packages/project-1/tsconfig.circular.json"
+    },
+    {
+      "path": "./packages/project-2/tsconfig.circular.json"
+    },
+    {
+      "path": "./packages/project-3/tsconfig.circular.json"
+    }
+  ]
+}

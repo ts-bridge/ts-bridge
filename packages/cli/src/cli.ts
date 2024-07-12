@@ -3,6 +3,7 @@ import typescript from 'typescript';
 import { hideBin } from 'yargs/helpers';
 import yargs from 'yargs/yargs';
 
+import type { BuildType } from './build-type.js';
 import { buildHandler } from './build.js';
 import { error } from './logging.js';
 
@@ -48,16 +49,18 @@ export async function main(argv: string[]) {
             type: 'boolean',
             description: 'Enable verbose logging.',
             default: false,
+          })
+          .option('references', {
+            // `tsc` uses `--build`.
+            alias: ['build'],
+            type: 'boolean',
+            description:
+              'Build project references in the project. Enabled by default if `tsconfig.json` contains project references.',
+            default: true,
           }),
-      // .positional('files', {
-      //   type: 'string',
-      //   description:
-      //     'The files to build. Defaults to the files in the `tsconfig.json`.',
-      //   array: true,
-      //   demandOption: false,
-      // }),
-      (options) => {
+      ({ format, ...options }) => {
         return buildHandler({
+          format: format as BuildType[],
           ...options,
           system: sys,
         });

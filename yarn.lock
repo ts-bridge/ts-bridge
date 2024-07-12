@@ -938,6 +938,28 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@project-references-test/project-1@workspace:^, @project-references-test/project-1@workspace:packages/test-utils/test/fixtures/project-references/packages/project-1":
+  version: 0.0.0-use.local
+  resolution: "@project-references-test/project-1@workspace:packages/test-utils/test/fixtures/project-references/packages/project-1"
+  dependencies:
+    "@project-references-test/project-3": "workspace:^"
+  languageName: unknown
+  linkType: soft
+
+"@project-references-test/project-2@workspace:packages/test-utils/test/fixtures/project-references/packages/project-2":
+  version: 0.0.0-use.local
+  resolution: "@project-references-test/project-2@workspace:packages/test-utils/test/fixtures/project-references/packages/project-2"
+  dependencies:
+    "@project-references-test/project-1": "workspace:^"
+  languageName: unknown
+  linkType: soft
+
+"@project-references-test/project-3@workspace:^, @project-references-test/project-3@workspace:packages/test-utils/test/fixtures/project-references/packages/project-3":
+  version: 0.0.0-use.local
+  resolution: "@project-references-test/project-3@workspace:packages/test-utils/test/fixtures/project-references/packages/project-3"
+  languageName: unknown
+  linkType: soft
+
 "@rollup/rollup-android-arm-eabi@npm:4.14.1":
   version: 4.14.1
   resolution: "@rollup/rollup-android-arm-eabi@npm:4.14.1"
@@ -1156,6 +1178,12 @@ __metadata:
 "@ts-bridge/node-16-fixture@workspace:packages/test-utils/test/fixtures/node-16":
   version: 0.0.0-use.local
   resolution: "@ts-bridge/node-16-fixture@workspace:packages/test-utils/test/fixtures/node-16"
+  languageName: unknown
+  linkType: soft
+
+"@ts-bridge/project-references-fixture@workspace:packages/test-utils/test/fixtures/project-references":
+  version: 0.0.0-use.local
+  resolution: "@ts-bridge/project-references-fixture@workspace:packages/test-utils/test/fixtures/project-references"
   languageName: unknown
   linkType: soft
 

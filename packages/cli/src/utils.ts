@@ -25,3 +25,20 @@ export function getIdentifierName(value: string) {
 
   return sanitisedValue;
 }
+
+/**
+ * Get the defined values from an array, removing all `undefined` values. If the
+ * array itself is `undefined`, an empty array is returned.
+ *
+ * @param array - The array to get the defined values from.
+ * @returns The array with all `undefined` values removed.
+ */
+export function getDefinedArray<Type>(
+  array: readonly (Type | undefined)[] | undefined,
+): Type[] {
+  if (!array) {
+    return [];
+  }
+
+  return array.filter((value): value is Type => value !== undefined);
+}
