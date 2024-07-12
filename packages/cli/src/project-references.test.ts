@@ -189,7 +189,7 @@ describe('createProjectReferencesCompilerHost', () => {
     });
   });
 
-  it('returns a compiler host object with a modified `getSourceFile` method', () => {
+  it('modifies the source file to `.cts` when building `commonjs`', () => {
     const host = createProjectReferencesCompilerHost(
       ['commonjs'],
       tsConfig.options,
