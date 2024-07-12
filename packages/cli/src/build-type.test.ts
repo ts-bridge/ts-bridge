@@ -11,6 +11,7 @@ describe('getBuildTypeOptions', () => {
         "getShimsTransformers": [Function],
         "getTransformers": [Function],
         "name": "ES module",
+        "sourceExtension": ".mts",
         "target": 99,
       }
     `);
@@ -24,6 +25,7 @@ describe('getBuildTypeOptions', () => {
         "getShimsTransformers": [Function],
         "getTransformers": [Function],
         "name": "CommonJS module",
+        "sourceExtension": ".cts",
         "target": 1,
       }
     `);

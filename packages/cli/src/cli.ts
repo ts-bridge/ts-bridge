@@ -3,6 +3,7 @@ import typescript from 'typescript';
 import { hideBin } from 'yargs/helpers';
 import yargs from 'yargs/yargs';
 
+import type { BuildType } from './build-type.js';
 import { buildHandler } from './build.js';
 import { error } from './logging.js';
 
@@ -57,8 +58,9 @@ export async function main(argv: string[]) {
               'Build project references in the project. Enabled by default if `tsconfig.json` contains project references.',
             default: true,
           }),
-      (options) => {
+      ({ format, ...options }) => {
         return buildHandler({
+          format: format as BuildType[],
           ...options,
           system: sys,
         });

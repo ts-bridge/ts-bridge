@@ -117,7 +117,7 @@ export function getFiles(
  * @property clean - Whether to clean the output directory before building.
  */
 export type BuildHandlerOptions = {
-  format: string[];
+  format: BuildType[];
   project: string;
   files?: string[];
   clean: boolean;
@@ -184,7 +184,7 @@ export function buildHandler(options: BuildHandlerOptions) {
 type BuilderOptions = {
   program: Program;
   compilerOptions: CompilerOptions;
-  format: string[];
+  format: BuildType[];
   files: string[];
   system: System;
   host?: CompilerHost;
