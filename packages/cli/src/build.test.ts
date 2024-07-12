@@ -40,8 +40,13 @@ function compile(
 
   const system: System = {
     ...sys,
-    writeFile(path: string, data: string) {
+    writeFile(
+      path: string,
+      data: string,
+      writeByteOrderMark?: boolean | undefined,
+    ) {
       files[relative(projectPath, path)] = data;
+      sys.writeFile(path, data, writeByteOrderMark);
     },
   };
 
@@ -348,6 +353,46 @@ describe('build', () => {
           'dist/index.d.cts',
         ]);
       });
+    });
+  });
+
+  describe('project references', () => {
+    let files: Record<string, string>;
+
+    beforeAll(() => {
+      files = compile(
+        getFixture('project-references'),
+        ['commonjs', 'module'],
+        {
+          references: true,
+        },
+      );
+    });
+
+    it('builds all projects when using project references', () => {
+      expect(Object.keys(files)).toStrictEqual([
+        'packages/project-3/dist/index.mjs',
+        'packages/project-3/dist/index.d.mts.map',
+        'packages/project-3/dist/index.d.mts',
+        'packages/project-3/tsconfig.tsbuildinfo',
+        'packages/project-3/dist/index.cjs',
+        'packages/project-3/dist/index.d.cts.map',
+        'packages/project-3/dist/index.d.cts',
+        'packages/project-1/dist/index.mjs',
+        'packages/project-1/dist/index.d.mts.map',
+        'packages/project-1/dist/index.d.mts',
+        'packages/project-1/tsconfig.tsbuildinfo',
+        'packages/project-1/dist/index.cjs',
+        'packages/project-1/dist/index.d.cts.map',
+        'packages/project-1/dist/index.d.cts',
+        'packages/project-2/dist/index.mjs',
+        'packages/project-2/dist/index.d.mts.map',
+        'packages/project-2/dist/index.d.mts',
+        'packages/project-2/tsconfig.tsbuildinfo',
+        'packages/project-2/dist/index.cjs',
+        'packages/project-2/dist/index.d.cts.map',
+        'packages/project-2/dist/index.d.cts',
+      ]);
     });
   });
 

@@ -36,7 +36,7 @@ describe('getTypeScriptConfig', () => {
     expect(getTypeScriptConfig('/tsconfig.json', system).options)
       .toMatchInlineSnapshot(`
         {
-          "configFilePath": undefined,
+          "configFilePath": "/tsconfig.json",
           "declaration": true,
           "declarationDir": "/",
           "declarationMap": true,

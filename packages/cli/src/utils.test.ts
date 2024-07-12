@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { isObject, getIdentifierName } from './utils.js';
+import { isObject, getIdentifierName, getDefinedArray } from './utils.js';
 
 describe('isObject', () => {
   it('returns `true` if the value is an object', () => {
@@ -52,5 +52,21 @@ describe('getIdentifierName', () => {
     },
   ])('converts "$value" to "$expected"', ({ value, expected }) => {
     expect(getIdentifierName(value)).toBe(expected);
+  });
+});
+
+describe('getDefinedArray', () => {
+  it('returns the array if it is defined', () => {
+    expect(getDefinedArray([1, 2, 3])).toStrictEqual([1, 2, 3]);
+  });
+
+  it('removes undefined values from the array', () => {
+    expect(getDefinedArray([1, undefined, 2, undefined, 3])).toStrictEqual([
+      1, 2, 3,
+    ]);
+  });
+
+  it('returns an empty array if the array is undefined', () => {
+    expect(getDefinedArray(undefined)).toStrictEqual([]);
   });
 });

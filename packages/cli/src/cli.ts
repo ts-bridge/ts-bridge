@@ -48,14 +48,15 @@ export async function main(argv: string[]) {
             type: 'boolean',
             description: 'Enable verbose logging.',
             default: false,
+          })
+          .option('references', {
+            // `tsc` uses `--build`.
+            alias: ['build'],
+            type: 'boolean',
+            description:
+              'Build project references in the project. Enabled by default if `tsconfig.json` contains project references.',
+            default: true,
           }),
-      // .positional('files', {
-      //   type: 'string',
-      //   description:
-      //     'The files to build. Defaults to the files in the `tsconfig.json`.',
-      //   array: true,
-      //   demandOption: false,
-      // }),
       (options) => {
         return buildHandler({
           ...options,

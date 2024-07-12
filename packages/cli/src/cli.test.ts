@@ -37,6 +37,7 @@ describe('cli', () => {
       '--formats',
       'commonjs',
       '--clean',
+      '--references',
     ]);
 
     expect(buildHandler).toHaveBeenCalledWith(
@@ -44,6 +45,7 @@ describe('cli', () => {
         clean: true,
         formats: ['module', 'commonjs'],
         project: resolve(process.cwd(), './tsconfig.json'),
+        references: true,
       }),
     );
   });

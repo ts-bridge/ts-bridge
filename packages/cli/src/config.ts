@@ -46,6 +46,8 @@ export function getTypeScriptConfig(path: string, system = sys) {
     config,
     system,
     dirname(path),
+    undefined,
+    path,
   );
 
   if (parsedConfig.errors.length) {
