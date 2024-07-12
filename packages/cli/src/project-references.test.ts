@@ -158,7 +158,8 @@ describe('getResolvedProjectReferences', () => {
         getFixture('project-references'),
         references,
       ),
-    ).toThrow(`Unable to build project references due to a dependency cycle:
+    )
+      .toThrow(`Unable to build project references due to one or more dependency cycles:
 - packages/project-1/tsconfig.circular.json -> packages/project-3/tsconfig.circular.json -> packages/project-2/tsconfig.circular.json -> packages/project-1/tsconfig.circular.json`);
   });
 });

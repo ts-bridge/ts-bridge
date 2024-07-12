@@ -130,7 +130,7 @@ export function getCyclesError(
     )
     .join('\n');
 
-  return `Unable to build project references due to a dependency cycle:\n${cyclesMessage}`;
+  return `Unable to build project references due to one or more dependency cycles:\n${cyclesMessage}`;
 }
 
 /**
