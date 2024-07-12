@@ -6,6 +6,8 @@ import type {
 } from 'typescript';
 import typescript from 'typescript';
 
+import type { BuildType } from './build-type.js';
+import { getBuildTypeOptions } from './build-type.js';
 import { getDefinedArray } from './utils.js';
 
 const { createCompilerHost, getOutputFileNames } = typescript;
@@ -151,15 +153,20 @@ export function getReferencedProjectPaths(
  * `getSourceFile` method to look at `.d.cts` files instead of `.d.ts` files for
  * declaration files.
  *
+ * @param format - The format of the output files.
  * @param compilerOptions - The compiler options to use.
  * @param resolvedProjectReferences - The resolved project references of the
  * package that is being built.
  * @returns The compiler host.
  */
 export function createProjectReferencesCompilerHost(
+  format: BuildType[],
   compilerOptions: CompilerOptions,
   resolvedProjectReferences: readonly ResolvedProjectReference[],
 ): CompilerHost {
+  assert(format[0]);
+  const { sourceExtension } = getBuildTypeOptions(format[0]);
+
   const host = createCompilerHost(compilerOptions);
   const originalGetSourceFile = host.getSourceFile.bind(host);
   const referencedProjectPaths = getReferencedProjectPaths(
@@ -174,7 +181,10 @@ export function createProjectReferencesCompilerHost(
     // TypeScript checks the referenced distribution files to see if the project
     // is built. We simply point it to the `.d.cts` files instead of the `.d.ts`
     // files.
-    return originalGetSourceFile(fileName.replace(/\.ts$/u, '.cts'), ...args);
+    return originalGetSourceFile(
+      fileName.replace(/\.ts$/u, sourceExtension),
+      ...args,
+    );
   };
 
   return {

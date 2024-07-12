@@ -42,6 +42,7 @@ export type BuildTypeOptions = {
   name: string;
   extension: string;
   declarationExtension: string;
+  sourceExtension: string;
   target: ResolutionMode;
   getTransformers: (
     options: TransformerOptions,
@@ -56,6 +57,7 @@ export const BUILD_TYPES: Record<BuildType, BuildTypeOptions> = {
     name: 'ES module',
     extension: '.mjs',
     declarationExtension: '.d.mts',
+    sourceExtension: '.mts',
     target: ModuleKind.ESNext,
     getTransformers: (options) => [
       getNamedImportTransformer(options),
@@ -77,6 +79,7 @@ export const BUILD_TYPES: Record<BuildType, BuildTypeOptions> = {
     name: 'CommonJS module',
     extension: '.cjs',
     declarationExtension: '.d.cts',
+    sourceExtension: '.cts',
     target: ModuleKind.CommonJS,
     getTransformers: (options) => [
       getRemoveImportAttributeTransformer(options),

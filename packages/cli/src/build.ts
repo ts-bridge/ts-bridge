@@ -350,6 +350,7 @@ export function buildProjectReferences({
 
     const compilerOptions = getCompilerOptions(baseChildOptions);
     const host = createProjectReferencesCompilerHost(
+      format,
       compilerOptions,
       getDefinedArray(references),
     );

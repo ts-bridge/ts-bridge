@@ -181,8 +181,9 @@ describe('createProjectReferencesCompilerHost', () => {
     });
   });
 
-  it('returns a compiler host object with a modified getSourceFile method', () => {
+  it('returns a compiler host object with a modified `getSourceFile` method', () => {
     const host = createProjectReferencesCompilerHost(
+      ['commonjs'],
       tsConfig.options,
       getDefinedArray(program.getResolvedProjectReferences()),
     );
@@ -198,8 +199,27 @@ describe('createProjectReferencesCompilerHost', () => {
     );
   });
 
+  it('modifies the source file to `.mts` when building `module`', () => {
+    const host = createProjectReferencesCompilerHost(
+      ['module'],
+      tsConfig.options,
+      getDefinedArray(program.getResolvedProjectReferences()),
+    );
+
+    const sourceFile = host.getSourceFile(
+      getFixture('project-references', 'packages/project-1/dist/index.d.ts'),
+      ScriptTarget.ES2020,
+    );
+
+    expect(sourceFile).toBeDefined();
+    expect(sourceFile?.fileName).toContain(
+      'packages/project-1/dist/index.d.mts',
+    );
+  });
+
   it('does not modify the source file for non-output files', () => {
     const host = createProjectReferencesCompilerHost(
+      ['commonjs'],
       tsConfig.options,
       getDefinedArray(program.getResolvedProjectReferences()),
     );
