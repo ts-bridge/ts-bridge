@@ -93,23 +93,26 @@ describe('topologicalSort', () => {
       ['e', []],
     ]);
 
-    const { stack, cycle } = topologicalSort(graph);
+    const { stack, cycles } = topologicalSort(graph);
     expect(stack).toStrictEqual(['e', 'd', 'c', 'b', 'a']);
-    expect(cycle).toBe(false);
+    expect(cycles).toStrictEqual([]);
   });
 
-  it('detects a cycle in a dependency graph', () => {
+  it('detects cycles in the dependency graph', () => {
     const graph: DependencyGraph<string> = new Map([
-      ['a', ['b', 'd']],
-      ['b', ['c', 'e']],
+      ['a', ['b']],
+      ['b', ['a']],
       ['c', ['d']],
       ['d', ['e']],
-      ['e', ['a']],
+      ['e', ['c']],
     ]);
 
-    const { stack, cycle } = topologicalSort(graph);
-    expect(stack).toStrictEqual(['e', 'd', 'c', 'b', 'a']);
-    expect(cycle).toBe(true);
+    const { stack, cycles } = topologicalSort(graph);
+    expect(stack).toStrictEqual(['b', 'a', 'e', 'd', 'c']);
+    expect(cycles).toStrictEqual([
+      ['a', 'b', 'a'],
+      ['c', 'd', 'e', 'c'],
+    ]);
   });
 });
 
@@ -127,6 +130,7 @@ describe('getResolvedProjectReferences', () => {
 
     const references = getDefinedArray(program.getResolvedProjectReferences());
     const resolvedProjectReferences = getResolvedProjectReferences(
+      getFixture('project-references'),
       references,
     ).map((reference) => getReferenceName(reference.sourceFile.fileName));
 
@@ -149,9 +153,13 @@ describe('getResolvedProjectReferences', () => {
     });
 
     const references = getDefinedArray(program.getResolvedProjectReferences());
-    expect(() => getResolvedProjectReferences(references)).toThrow(
-      'Unable to build project references due to a dependency cycle.',
-    );
+    expect(() =>
+      getResolvedProjectReferences(
+        getFixture('project-references'),
+        references,
+      ),
+    ).toThrow(`Unable to build project references due to a dependency cycle:
+- packages/project-1/tsconfig.circular.json -> packages/project-3/tsconfig.circular.json -> packages/project-2/tsconfig.circular.json -> packages/project-1/tsconfig.circular.json`);
   });
 });
 

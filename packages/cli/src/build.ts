@@ -318,17 +318,20 @@ export function buildNode16({
  * @param options.program - The base TypeScript program to use.
  * @param options.format - The formats to build.
  * @param options.system - The file system to use.
+ * @param options.baseDirectory - The base directory of the project.
  */
 export function buildProjectReferences({
   program,
   format,
   system,
+  baseDirectory,
 }: BuilderOptions) {
   const resolvedProjectReferences = getDefinedArray(
     program.getResolvedProjectReferences(),
   );
 
   const sortedProjectReferences = getResolvedProjectReferences(
+    baseDirectory,
     resolvedProjectReferences,
   );
 

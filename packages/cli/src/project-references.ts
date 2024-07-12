@@ -1,4 +1,5 @@
 import assert from 'assert';
+import { relative } from 'path';
 import type {
   CompilerHost,
   CompilerOptions,
@@ -52,7 +53,7 @@ export type TopologicalSortResult<Value> = {
   /**
    * Whether there was a cycle in the graph.
    */
-  cycle: boolean;
+  cycles: Value[][];
 };
 
 /**
@@ -60,7 +61,7 @@ export type TopologicalSortResult<Value> = {
  * that all dependencies of a node come before the node itself.
  *
  * @param graph - The dependency graph to sort.
- * @returns The topologically sorted nodes and whether there was a cycle.
+ * @returns The topologically sorted nodes and an array of cycles (if any).
  */
 export function topologicalSort<Value>(
   graph: DependencyGraph<Value>,
@@ -68,16 +69,17 @@ export function topologicalSort<Value>(
   const stack: Value[] = [];
   const visited = new Set<Value>();
   const recursionStack = new Set<Value>();
-  let cycle = false;
+  const cycles: Value[][] = [];
 
   /**
    * Visit a node in the graph.
    *
    * @param node - The node to visit.
+   * @param path - The current path in the graph.
    */
-  function visit(node: Value) {
+  function visit(node: Value, path: Value[]) {
     if (recursionStack.has(node)) {
-      cycle = true;
+      cycles.push([...path, node]);
       return;
     }
 
@@ -91,38 +93,63 @@ export function topologicalSort<Value>(
     const neighbours = graph.get(node);
     assert(neighbours !== undefined);
 
-    neighbours.forEach(visit);
+    neighbours.forEach((neighbour) => visit(neighbour, [...path, node]));
     recursionStack.delete(node);
     stack.push(node);
   }
 
   for (const node of graph.keys()) {
-    visit(node);
+    visit(node, []);
   }
 
   return {
     stack,
-    cycle,
+    cycles,
   };
+}
+
+/**
+ * Get the error message for a dependency cycle.
+ *
+ * @param baseDirectory - The base directory path.
+ * @param cycles - The cycles in the dependency graph.
+ * @returns The error message.
+ */
+export function getCyclesError(
+  baseDirectory: string,
+  cycles: ResolvedProjectReference[][],
+): string {
+  const cyclesMessage = cycles
+    .map(
+      (cycle) =>
+        `- ${cycle
+          .map((reference) =>
+            relative(baseDirectory, reference.sourceFile.fileName),
+          )
+          .join(' -> ')}`,
+    )
+    .join('\n');
+
+  return `Unable to build project references due to a dependency cycle:\n${cyclesMessage}`;
 }
 
 /**
  * Get the resolved project references from a TypeScript program.
  *
+ * @param baseDirectory - The base directory path.
  * @param resolvedProjectReferences - The resolved project references of the
  * package that is being built.
  * @returns The resolved project references.
  */
 export function getResolvedProjectReferences(
+  baseDirectory: string,
   resolvedProjectReferences: ResolvedProjectReference[],
 ) {
   const graph = createGraph(resolvedProjectReferences);
-  const { stack, cycle } = topologicalSort(graph);
+  const { stack, cycles } = topologicalSort(graph);
 
-  if (cycle) {
-    throw new Error(
-      'Unable to build project references due to a dependency cycle.',
-    );
+  if (cycles.length > 0) {
+    throw new Error(getCyclesError(baseDirectory, cycles));
   }
 
   return stack;
