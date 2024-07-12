@@ -74,6 +74,18 @@ Specify the path to the `tsconfig.json` file to use for the build.
 $ ts-bridge build --project tsconfig.build.json
 ```
 
+### `--references`
+
+- Alias: `--build`
+- Type: `boolean`
+
+Whether to build project references. By default, project references are built if
+they are detected in the `tsconfig.json` file.
+
+```shell
+$ ts-bridge build --references
+```
+
 ### `--verbose`
 
 - Alias: `-v`

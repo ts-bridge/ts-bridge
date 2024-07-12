@@ -15,6 +15,11 @@ and directories, configuring the target, and more.
 For more information on how to configure the TypeScript compiler, refer to the
 [TypeScript documentation](https://www.typescriptlang.org/tsconfig).
 
+> [!NOTE]
+> If you're using project references in your TypeScript project, take a look at
+> the [project references](./project-references) section for more information on
+> how to use them with TS Bridge.
+
 ## Recommended configuration
 
 ### `Node16` module resolution
@@ -48,9 +53,6 @@ resulting in much faster builds for large projects.
 There are a few caveats to keep in mind when using TS Bridge with your
 TypeScript project:
 
-- **No support for project references**: TS Bridge does not support TypeScript
-  project references. Though support for project references is planned for a
-  future release, it is not currently available.
 - **No incremental compilation**: TS Bridge does not support incremental
   compilation. This means that TS Bridge will always compile all files in your
   project, even if they have not changed since the last build.
