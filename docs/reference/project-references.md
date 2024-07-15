@@ -19,7 +19,8 @@ your TypeScript projects with ease.
 
 To use project references with TS Bridge, you need to set up your
 `tsconfig.json` files correctly. Here's an example of how you can set up project
-references in a monorepo with two packages, `package-a` and `package-b`:
+references in a monorepo with two packages, `package-a` and `package-b`, where
+`package-b` depends on `package-a`:
 
 1. Create a `tsconfig.json` file in the root of your monorepo with the following
    contents:
