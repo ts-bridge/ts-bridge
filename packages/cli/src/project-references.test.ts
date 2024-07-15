@@ -339,4 +339,82 @@ describe('createProjectReferencesCompilerHost', () => {
       );
     });
   });
+
+  describe('resolveModuleNames', () => {
+    it('resolves a `.cjs` file', () => {
+      const host = createProjectReferencesCompilerHost(
+        ['commonjs'],
+        tsConfig.options,
+        getDefinedArray(program.getResolvedProjectReferences()),
+        sys,
+      );
+
+      const containingPath = getFixture(
+        FIXTURE_NAME,
+        'packages/project-3/src/index.ts',
+      );
+
+      const containingFile = host.getSourceFile(
+        containingPath,
+        ScriptTarget.ES2020,
+      );
+
+      assert(containingFile);
+
+      const modules = host.resolveModuleNames?.(
+        ['./index.cjs', './foo.cjs'],
+        containingPath,
+        undefined,
+        undefined,
+        tsConfig.options,
+        containingFile,
+      );
+
+      expect(modules).toHaveLength(2);
+      expect(modules?.[0]?.resolvedFileName).toBe(
+        getFixture(FIXTURE_NAME, 'packages/project-3/src/index.ts'),
+      );
+      expect(modules?.[1]?.resolvedFileName).toBe(
+        getFixture(FIXTURE_NAME, 'packages/project-3/src/foo.ts'),
+      );
+    });
+
+    it('resolves a `.mjs` file', () => {
+      const host = createProjectReferencesCompilerHost(
+        ['commonjs'],
+        tsConfig.options,
+        getDefinedArray(program.getResolvedProjectReferences()),
+        sys,
+      );
+
+      const containingPath = getFixture(
+        FIXTURE_NAME,
+        'packages/project-3/src/index.ts',
+      );
+
+      const containingFile = host.getSourceFile(
+        containingPath,
+        ScriptTarget.ES2020,
+      );
+
+      assert(containingFile);
+
+      const modules = host.resolveModuleNames?.(
+        ['./index.mjs', './foo.mjs'],
+        containingPath,
+        undefined,
+        undefined,
+        tsConfig.options,
+        containingFile,
+      );
+
+      expect(modules).toHaveLength(2);
+      expect(modules?.[0]?.resolvedFileName).toBe(
+        getFixture(FIXTURE_NAME, 'packages/project-3/src/index.ts'),
+      );
+      expect(modules?.[1]?.resolvedFileName).toBe(
+        getFixture(FIXTURE_NAME, 'packages/project-3/src/foo.ts'),
+      );
+    });
+  });
 });

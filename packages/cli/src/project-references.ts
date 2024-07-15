@@ -4,9 +4,7 @@ import type {
   CompilerHost,
   CompilerOptions,
   ParsedCommandLine,
-  ResolvedModuleWithFailedLookupLocations,
   ResolvedProjectReference,
-  StringLiteralLike,
   System,
 } from 'typescript';
 import typescript from 'typescript';
@@ -245,28 +243,28 @@ function getReferencedProjectPaths(
 }
 
 /**
- * Get the module name from a {@link StringLiteralLike}, based on the containing
- * file and the list of input files.
+ * Get the module name from a string, based on the containing file and the list
+ * of input files.
  *
  * If the containing file is in the list of input files, the module name
  * extension is replaced with `.js`. Otherwise, the module name is returned as
  * is.
  *
- * @param moduleLiteral - The module literal.
+ * @param originalName - The original name of the module.
  * @param containingFile - The containing file.
  * @param inputs - The list of input files.
  * @returns The module name as string.
  */
 function getModuleName(
-  moduleLiteral: StringLiteralLike,
+  originalName: string,
   containingFile: string,
   inputs: string[],
 ) {
   if (inputs.includes(containingFile)) {
-    return moduleLiteral.text.replace(/\.[cm]js$/u, '.js');
+    return originalName.replace(/\.[cm]js$/u, '.js');
   }
 
-  return moduleLiteral.text;
+  return originalName;
 }
 
 /**
@@ -318,27 +316,55 @@ export function createProjectReferencesCompilerHost(
     (fileName) => getCanonicalFileName(fileName, system),
   );
 
+  const resolveModuleNameLiterals: CompilerHost['resolveModuleNameLiterals'] = (
+    moduleLiterals,
+    containingFile,
+    redirectedReference,
+    options,
+  ) => {
+    return moduleLiterals.map((moduleLiteral) => {
+      const name = getModuleName(moduleLiteral.text, containingFile, inputs);
+      return resolveModuleName(
+        name,
+        containingFile,
+        options,
+        // eslint-disable-next-line @typescript-eslint/no-use-before-define
+        host,
+        cache,
+        redirectedReference,
+      );
+    });
+  };
+
+  const resolveModuleNames: CompilerHost['resolveModuleNames'] = (
+    moduleNames,
+    containingFile,
+    _reusedNames,
+    redirectedReference,
+    options,
+  ) => {
+    return moduleNames.map((moduleName) => {
+      const name = getModuleName(moduleName, containingFile, inputs);
+      return resolveModuleName(
+        name,
+        containingFile,
+        options,
+        // eslint-disable-next-line @typescript-eslint/no-use-before-define
+        host,
+        cache,
+        redirectedReference,
+      ).resolvedModule;
+    });
+  };
+
   const host: CompilerHost = {
     ...compilerHost,
     getSourceFile,
-    resolveModuleNameLiterals(
-      moduleLiterals: readonly StringLiteralLike[],
-      containingFile: string,
-      redirectedReference: ResolvedProjectReference | undefined,
-      options: CompilerOptions,
-    ): readonly ResolvedModuleWithFailedLookupLocations[] {
-      return moduleLiterals.map((moduleLiteral) => {
-        const name = getModuleName(moduleLiteral, containingFile, inputs);
-        return resolveModuleName(
-          name,
-          containingFile,
-          options,
-          host,
-          cache,
-          redirectedReference,
-        );
-      });
-    },
+    resolveModuleNameLiterals,
+
+    // `resolveModuleNames` is deprecated since TypeScript 5.0, but for
+    // compatibility with TypeScript 4.x, we need to keep it.
+    resolveModuleNames,
   };
 
   return host;
