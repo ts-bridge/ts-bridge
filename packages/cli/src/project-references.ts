@@ -3,15 +3,22 @@ import { relative } from 'path';
 import type {
   CompilerHost,
   CompilerOptions,
+  ParsedCommandLine,
+  ResolvedModuleWithFailedLookupLocations,
   ResolvedProjectReference,
+  StringLiteralLike,
+  System,
 } from 'typescript';
 import typescript from 'typescript';
 
 import type { BuildType } from './build-type.js';
 import { getBuildTypeOptions } from './build-type.js';
+import { getTypeScriptConfig } from './config.js';
+import { getCanonicalFileName } from './file-system.js';
 import { getDefinedArray } from './utils.js';
 
-const { createCompilerHost, getOutputFileNames } = typescript;
+const { createCompilerHost, getOutputFileNames, resolveModuleName } =
+  typescript;
 
 /**
  * A dependency graph where each value has a list of dependencies.
@@ -90,8 +97,10 @@ export function topologicalSort<Value>(
     recursionStack.add(node);
     visited.add(node);
 
-    const neighbours = graph.get(node);
-    assert(neighbours !== undefined);
+    // The graph only contains dependencies that are referenced in the parent
+    // `tsconfig.json`. If it's not referenced there, we can assume that it
+    // doesn't have any dependencies.
+    const neighbours = graph.get(node) ?? [];
 
     neighbours.forEach((neighbour) => visit(neighbour, [...path, node]));
     recursionStack.delete(node);
@@ -156,20 +165,108 @@ export function getResolvedProjectReferences(
 }
 
 /**
+ * Get the output file paths for a list of files.
+ *
+ * @param files - The list of files.
+ * @param options - The compiler options.
+ * @returns The output file paths.
+ */
+function getOutputPaths(files: string[], options: ParsedCommandLine) {
+  return files.flatMap((fileName) =>
+    getOutputFileNames(options, fileName, false),
+  );
+}
+
+/**
+ * A tuple containing an array of input files and an array of output files.
+ *
+ * @property 0 - The array of input files.
+ * @property 1 - The array of output files.
+ */
+type ReferencedFiles = [string[], string[]];
+
+/**
+ * Resolve the input and output file paths of the project references. This not
+ * only resolves the input and output files of direct project references, but
+ * also of the nested project references.
+ *
+ * @param options - The compiler options.
+ * @param inputs - The set of input files to add to.
+ * @param outputs - The set of output files to add to.
+ * @returns A tuple containing an array of input files and an array of output
+ * files.
+ */
+function resolveProjectReferenceFiles(
+  options: ParsedCommandLine,
+  inputs: Set<string>,
+  outputs: Set<string>,
+): ReferencedFiles {
+  /* eslint-disable @typescript-eslint/unbound-method */
+  options.fileNames.forEach(inputs.add, inputs);
+  getOutputPaths(options.fileNames, options).forEach(outputs.add, outputs);
+
+  if (options.projectReferences) {
+    for (const reference of options.projectReferences) {
+      const referenceOptions = getTypeScriptConfig(reference.path);
+      referenceOptions.fileNames.forEach(inputs.add, inputs);
+
+      getOutputPaths(referenceOptions.fileNames, referenceOptions).forEach(
+        outputs.add,
+        outputs,
+      );
+
+      resolveProjectReferenceFiles(referenceOptions, inputs, outputs);
+    }
+  }
+  /* eslint-enable @typescript-eslint/unbound-method */
+
+  return [Array.from(inputs), Array.from(outputs)];
+}
+
+/**
  * Get a list of the output file paths in the referenced projects.
  *
  * @param resolvedProjectReferences - The resolved project references of the
  * package that is being built.
  * @returns A list of output paths.
  */
-export function getReferencedProjectPaths(
+function getReferencedProjectPaths(
   resolvedProjectReferences: readonly ResolvedProjectReference[],
-): string[] {
-  return resolvedProjectReferences.flatMap(({ commandLine }) => {
-    return commandLine.fileNames.flatMap((fileName) =>
-      getOutputFileNames(commandLine, fileName, false),
-    );
-  });
+): ReferencedFiles {
+  const inputs = new Set<string>();
+  const outputs = new Set<string>();
+
+  for (const reference of resolvedProjectReferences) {
+    const referenceOptions = getTypeScriptConfig(reference.sourceFile.fileName);
+    resolveProjectReferenceFiles(referenceOptions, inputs, outputs);
+  }
+
+  return [Array.from(inputs), Array.from(outputs)];
+}
+
+/**
+ * Get the module name from a {@link StringLiteralLike}, based on the containing
+ * file and the list of input files.
+ *
+ * If the containing file is in the list of input files, the module name
+ * extension is replaced with `.js`. Otherwise, the module name is returned as
+ * is.
+ *
+ * @param moduleLiteral - The module literal.
+ * @param containingFile - The containing file.
+ * @param inputs - The list of input files.
+ * @returns The module name as string.
+ */
+function getModuleName(
+  moduleLiteral: StringLiteralLike,
+  containingFile: string,
+  inputs: string[],
+) {
+  if (inputs.includes(containingFile)) {
+    return moduleLiteral.text.replace(/\.[cm]js$/u, '.js');
+  }
+
+  return moduleLiteral.text;
 }
 
 /**
@@ -184,24 +281,26 @@ export function getReferencedProjectPaths(
  * @param compilerOptions - The compiler options to use.
  * @param resolvedProjectReferences - The resolved project references of the
  * package that is being built.
+ * @param system - The TypeScript system to use.
  * @returns The compiler host.
  */
 export function createProjectReferencesCompilerHost(
   format: BuildType[],
   compilerOptions: CompilerOptions,
   resolvedProjectReferences: readonly ResolvedProjectReference[],
+  system: System,
 ): CompilerHost {
   assert(format[0]);
   const { sourceExtension } = getBuildTypeOptions(format[0]);
 
-  const host = createCompilerHost(compilerOptions);
-  const originalGetSourceFile = host.getSourceFile.bind(host);
-  const referencedProjectPaths = getReferencedProjectPaths(
+  const compilerHost = createCompilerHost(compilerOptions);
+  const originalGetSourceFile = compilerHost.getSourceFile.bind(compilerHost);
+  const [inputs, outputs] = getReferencedProjectPaths(
     resolvedProjectReferences,
   );
 
   const getSourceFile: CompilerHost['getSourceFile'] = (fileName, ...args) => {
-    if (!referencedProjectPaths.includes(fileName)) {
+    if (!outputs.includes(fileName)) {
       return originalGetSourceFile(fileName, ...args);
     }
 
@@ -214,8 +313,33 @@ export function createProjectReferencesCompilerHost(
     );
   };
 
-  return {
-    ...host,
+  const cache = typescript.createModuleResolutionCache(
+    process.cwd(),
+    (fileName) => getCanonicalFileName(fileName, system),
+  );
+
+  const host: CompilerHost = {
+    ...compilerHost,
     getSourceFile,
+    resolveModuleNameLiterals(
+      moduleLiterals: readonly StringLiteralLike[],
+      containingFile: string,
+      redirectedReference: ResolvedProjectReference | undefined,
+      options: CompilerOptions,
+    ): readonly ResolvedModuleWithFailedLookupLocations[] {
+      return moduleLiterals.map((moduleLiteral) => {
+        const name = getModuleName(moduleLiteral, containingFile, inputs);
+        return resolveModuleName(
+          name,
+          containingFile,
+          options,
+          host,
+          cache,
+          redirectedReference,
+        );
+      });
+    },
   };
+
+  return host;
 }

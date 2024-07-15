@@ -1,0 +1,8 @@
+{
+  "name": "@project-references-node-16-test/project-2",
+  "version": "0.0.0",
+  "private": true,
+  "dependencies": {
+    "@project-references-node-16-test/project-1": "workspace:^"
+  }
+}

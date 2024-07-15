@@ -1,0 +1,10 @@
+{
+  "name": "@project-references-node-10-test/project-1",
+  "version": "0.0.0",
+  "private": true,
+  "main": "./dist/index.cjs",
+  "types": "./dist/index.d.cts",
+  "dependencies": {
+    "@project-references-node-10-test/project-3": "workspace:^"
+  }
+}

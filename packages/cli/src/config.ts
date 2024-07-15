@@ -1,5 +1,5 @@
-import { dirname } from 'path';
-import type { CompilerOptions } from 'typescript';
+import { dirname, join } from 'path';
+import type { CompilerOptions, System } from 'typescript';
 import typescript from 'typescript';
 
 import { TypeScriptError } from './errors.js';
@@ -19,6 +19,24 @@ export const BASE_COMPILER_OPTIONS: CompilerOptions = {
 };
 
 /**
+ * Get the TypeScript configuration path. This checks if the TypeScript
+ * configuration exists at the path + `tsconfig.json`. If it does not exist, it
+ * returns the path as is.
+ *
+ * @param path - The path to check.
+ * @param system - The system to use for file operations.
+ * @returns The TypeScript configuration path.
+ */
+function getTypeScriptConfigPath(path: string, system: System) {
+  const configPath = join(path, 'tsconfig.json');
+  if (system.fileExists(configPath)) {
+    return configPath;
+  }
+
+  return path;
+}
+
+/**
  * Get the TypeScript configuration.
  *
  * This function reads the TypeScript configuration from the specified path.
@@ -28,13 +46,18 @@ export const BASE_COMPILER_OPTIONS: CompilerOptions = {
  * @returns The TypeScript configuration.
  */
 export function getTypeScriptConfig(path: string, system = sys) {
-  if (!system.fileExists(path)) {
+  const resolvedPath = getTypeScriptConfigPath(path, system);
+  if (!system.fileExists(resolvedPath)) {
     throw new Error(
-      `The TypeScript configuration file does not exist: "${path}".`,
+      `The TypeScript configuration file does not exist: "${resolvedPath}".`,
     );
   }
 
-  const { config, error } = readConfigFile(path, system.readFile.bind(system));
+  const { config, error } = readConfigFile(
+    resolvedPath,
+    system.readFile.bind(system),
+  );
+
   if (error) {
     throw new TypeScriptError(
       'Failed to read the TypeScript configuration.',
@@ -45,9 +68,9 @@ export function getTypeScriptConfig(path: string, system = sys) {
   const parsedConfig = parseJsonConfigFileContent(
     config,
     system,
-    dirname(path),
+    dirname(resolvedPath),
     undefined,
-    path,
+    resolvedPath,
   );
 
   if (parsedConfig.errors.length) {
@@ -77,7 +100,8 @@ export function getBaseCompilerOptions(
   return {
     ...baseOptions,
     emitDeclarationOnly: false,
-    declarationDir: baseOptions.declarationDir ?? fallbackPath,
+    declarationDir:
+      baseOptions.declarationDir ?? baseOptions.outDir ?? fallbackPath,
     outDir: baseOptions.outDir ?? fallbackPath,
   };
 }

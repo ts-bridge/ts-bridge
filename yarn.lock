@@ -938,25 +938,47 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@project-references-test/project-1@workspace:^, @project-references-test/project-1@workspace:packages/test-utils/test/fixtures/project-references/packages/project-1":
+"@project-references-node-10-test/project-1@workspace:^, @project-references-node-10-test/project-1@workspace:packages/test-utils/test/fixtures/project-references-node-10/packages/project-1":
   version: 0.0.0-use.local
-  resolution: "@project-references-test/project-1@workspace:packages/test-utils/test/fixtures/project-references/packages/project-1"
+  resolution: "@project-references-node-10-test/project-1@workspace:packages/test-utils/test/fixtures/project-references-node-10/packages/project-1"
   dependencies:
-    "@project-references-test/project-3": "workspace:^"
+    "@project-references-node-10-test/project-3": "workspace:^"
   languageName: unknown
   linkType: soft
 
-"@project-references-test/project-2@workspace:packages/test-utils/test/fixtures/project-references/packages/project-2":
+"@project-references-node-10-test/project-2@workspace:packages/test-utils/test/fixtures/project-references-node-10/packages/project-2":
   version: 0.0.0-use.local
-  resolution: "@project-references-test/project-2@workspace:packages/test-utils/test/fixtures/project-references/packages/project-2"
+  resolution: "@project-references-node-10-test/project-2@workspace:packages/test-utils/test/fixtures/project-references-node-10/packages/project-2"
   dependencies:
-    "@project-references-test/project-1": "workspace:^"
+    "@project-references-node-10-test/project-1": "workspace:^"
   languageName: unknown
   linkType: soft
 
-"@project-references-test/project-3@workspace:^, @project-references-test/project-3@workspace:packages/test-utils/test/fixtures/project-references/packages/project-3":
+"@project-references-node-10-test/project-3@workspace:^, @project-references-node-10-test/project-3@workspace:packages/test-utils/test/fixtures/project-references-node-10/packages/project-3":
   version: 0.0.0-use.local
-  resolution: "@project-references-test/project-3@workspace:packages/test-utils/test/fixtures/project-references/packages/project-3"
+  resolution: "@project-references-node-10-test/project-3@workspace:packages/test-utils/test/fixtures/project-references-node-10/packages/project-3"
+  languageName: unknown
+  linkType: soft
+
+"@project-references-node-16-test/project-1@workspace:^, @project-references-node-16-test/project-1@workspace:packages/test-utils/test/fixtures/project-references-node-16/packages/project-1":
+  version: 0.0.0-use.local
+  resolution: "@project-references-node-16-test/project-1@workspace:packages/test-utils/test/fixtures/project-references-node-16/packages/project-1"
+  dependencies:
+    "@project-references-node-16-test/project-3": "workspace:^"
+  languageName: unknown
+  linkType: soft
+
+"@project-references-node-16-test/project-2@workspace:packages/test-utils/test/fixtures/project-references-node-16/packages/project-2":
+  version: 0.0.0-use.local
+  resolution: "@project-references-node-16-test/project-2@workspace:packages/test-utils/test/fixtures/project-references-node-16/packages/project-2"
+  dependencies:
+    "@project-references-node-16-test/project-1": "workspace:^"
+  languageName: unknown
+  linkType: soft
+
+"@project-references-node-16-test/project-3@workspace:^, @project-references-node-16-test/project-3@workspace:packages/test-utils/test/fixtures/project-references-node-16/packages/project-3":
+  version: 0.0.0-use.local
+  resolution: "@project-references-node-16-test/project-3@workspace:packages/test-utils/test/fixtures/project-references-node-16/packages/project-3"
   languageName: unknown
   linkType: soft
 
@@ -1181,9 +1203,15 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@ts-bridge/project-references-fixture@workspace:packages/test-utils/test/fixtures/project-references":
+"@ts-bridge/project-references-node-10-fixture@workspace:packages/test-utils/test/fixtures/project-references-node-10":
   version: 0.0.0-use.local
-  resolution: "@ts-bridge/project-references-fixture@workspace:packages/test-utils/test/fixtures/project-references"
+  resolution: "@ts-bridge/project-references-node-10-fixture@workspace:packages/test-utils/test/fixtures/project-references-node-10"
+  languageName: unknown
+  linkType: soft
+
+"@ts-bridge/project-references-node-16-fixture@workspace:packages/test-utils/test/fixtures/project-references-node-16":
+  version: 0.0.0-use.local
+  resolution: "@ts-bridge/project-references-node-16-fixture@workspace:packages/test-utils/test/fixtures/project-references-node-16"
   languageName: unknown
   linkType: soft
 
