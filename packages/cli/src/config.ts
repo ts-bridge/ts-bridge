@@ -20,20 +20,26 @@ export const BASE_COMPILER_OPTIONS: CompilerOptions = {
 
 /**
  * Get the TypeScript configuration path. This checks if the TypeScript
- * configuration exists at the path + `tsconfig.json`. If it does not exist, it
- * returns the path as is.
+ * configuration exists at the specified path, and the path + `tsconfig.json`.
+ * If the file exists at neither path, this throws an error.
  *
  * @param path - The path to check.
  * @param system - The system to use for file operations.
  * @returns The TypeScript configuration path.
  */
 function getTypeScriptConfigPath(path: string, system: System) {
+  if (system.fileExists(path)) {
+    return path;
+  }
+
   const configPath = join(path, 'tsconfig.json');
   if (system.fileExists(configPath)) {
     return configPath;
   }
 
-  return path;
+  throw new Error(
+    `The TypeScript configuration file does not exist at "${path}" or "${configPath}".`,
+  );
 }
 
 /**
@@ -47,12 +53,6 @@ function getTypeScriptConfigPath(path: string, system: System) {
  */
 export function getTypeScriptConfig(path: string, system = sys) {
   const resolvedPath = getTypeScriptConfigPath(path, system);
-  if (!system.fileExists(resolvedPath)) {
-    throw new Error(
-      `The TypeScript configuration file does not exist: "${resolvedPath}".`,
-    );
-  }
-
   const { config, error } = readConfigFile(
     resolvedPath,
     system.readFile.bind(system),
