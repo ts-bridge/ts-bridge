@@ -357,42 +357,119 @@ describe('build', () => {
   });
 
   describe('project references', () => {
-    let files: Record<string, string>;
+    describe('node 10', () => {
+      const log = vi.spyOn(console, 'log').mockImplementation(noOp);
+      let files: Record<string, string>;
 
-    beforeAll(() => {
-      files = compile(
-        getFixture('project-references'),
-        ['commonjs', 'module'],
-        {
-          references: true,
-        },
-      );
+      beforeAll(() => {
+        files = compile(
+          getFixture('project-references-node-10'),
+          ['commonjs', 'module'],
+          {
+            references: true,
+            verbose: true,
+          },
+        );
+      });
+
+      it('builds all projects when using project references', () => {
+        expect(Object.keys(files)).toStrictEqual([
+          'packages/project-3/dist/foo.mjs',
+          'packages/project-3/dist/foo.d.mts.map',
+          'packages/project-3/dist/foo.d.mts',
+          'packages/project-3/dist/index.mjs',
+          'packages/project-3/dist/index.d.mts.map',
+          'packages/project-3/dist/index.d.mts',
+          'packages/project-3/tsconfig.tsbuildinfo',
+          'packages/project-3/dist/foo.cjs',
+          'packages/project-3/dist/foo.d.cts.map',
+          'packages/project-3/dist/foo.d.cts',
+          'packages/project-3/dist/index.cjs',
+          'packages/project-3/dist/index.d.cts.map',
+          'packages/project-3/dist/index.d.cts',
+          'packages/project-1/dist/index.mjs',
+          'packages/project-1/dist/index.d.mts.map',
+          'packages/project-1/dist/index.d.mts',
+          'packages/project-1/tsconfig.tsbuildinfo',
+          'packages/project-1/dist/index.cjs',
+          'packages/project-1/dist/index.d.cts.map',
+          'packages/project-1/dist/index.d.cts',
+          'packages/project-2/dist/index.mjs',
+          'packages/project-2/dist/index.d.mts.map',
+          'packages/project-2/dist/index.d.mts',
+          'packages/project-2/tsconfig.tsbuildinfo',
+          'packages/project-2/dist/index.cjs',
+          'packages/project-2/dist/index.d.cts.map',
+          'packages/project-2/dist/index.d.cts',
+        ]);
+      });
+
+      it('logs the project references', () => {
+        expect(log).toHaveBeenCalledWith(
+          expect.stringMatching(
+            /Building referenced project ".*packages\/project-1\/tsconfig\.json.*"\./u,
+          ),
+        );
+
+        expect(log).toHaveBeenCalledWith(
+          expect.stringMatching(
+            /Building referenced project ".*packages\/project-2\/tsconfig\.json.*"\./u,
+          ),
+        );
+
+        expect(log).toHaveBeenCalledWith(
+          expect.stringMatching(
+            /Building referenced project ".*packages\/project-3\/tsconfig\.json.*"\./u,
+          ),
+        );
+      });
     });
 
-    it('builds all projects when using project references', () => {
-      expect(Object.keys(files)).toStrictEqual([
-        'packages/project-3/dist/index.mjs',
-        'packages/project-3/dist/index.d.mts.map',
-        'packages/project-3/dist/index.d.mts',
-        'packages/project-3/tsconfig.tsbuildinfo',
-        'packages/project-3/dist/index.cjs',
-        'packages/project-3/dist/index.d.cts.map',
-        'packages/project-3/dist/index.d.cts',
-        'packages/project-1/dist/index.mjs',
-        'packages/project-1/dist/index.d.mts.map',
-        'packages/project-1/dist/index.d.mts',
-        'packages/project-1/tsconfig.tsbuildinfo',
-        'packages/project-1/dist/index.cjs',
-        'packages/project-1/dist/index.d.cts.map',
-        'packages/project-1/dist/index.d.cts',
-        'packages/project-2/dist/index.mjs',
-        'packages/project-2/dist/index.d.mts.map',
-        'packages/project-2/dist/index.d.mts',
-        'packages/project-2/tsconfig.tsbuildinfo',
-        'packages/project-2/dist/index.cjs',
-        'packages/project-2/dist/index.d.cts.map',
-        'packages/project-2/dist/index.d.cts',
-      ]);
+    describe('node 16', () => {
+      let files: Record<string, string>;
+
+      beforeAll(() => {
+        files = compile(
+          getFixture('project-references-node-16'),
+          ['commonjs', 'module'],
+          {
+            references: true,
+            verbose: true,
+          },
+        );
+      });
+
+      it('builds all projects when using project references', () => {
+        expect(Object.keys(files)).toStrictEqual([
+          'packages/project-3/dist/foo.mjs',
+          'packages/project-3/dist/foo.d.mts.map',
+          'packages/project-3/dist/foo.d.mts',
+          'packages/project-3/dist/index.mjs',
+          'packages/project-3/dist/index.d.mts.map',
+          'packages/project-3/dist/index.d.mts',
+          'packages/project-3/tsconfig.tsbuildinfo',
+          'packages/project-3/dist/foo.cjs',
+          'packages/project-3/dist/foo.d.cts.map',
+          'packages/project-3/dist/foo.d.cts',
+          'packages/project-3/dist/index.cjs',
+          'packages/project-3/dist/index.d.cts.map',
+          'packages/project-3/dist/index.d.cts',
+          'packages/project-1/dist/index.mjs',
+          'packages/project-1/dist/index.d.mts.map',
+          'packages/project-1/dist/index.d.mts',
+          'packages/project-1/tsconfig.tsbuildinfo',
+          'packages/project-1/dist/index.cjs',
+          'packages/project-1/dist/index.d.cts.map',
+          'packages/project-1/dist/index.d.cts',
+          'packages/project-2/dist/index.mjs',
+          'packages/project-2/dist/index.d.mts.map',
+          'packages/project-2/dist/index.d.mts',
+          'packages/project-2/tsconfig.tsbuildinfo',
+          'packages/project-2/dist/index.cjs',
+          'packages/project-2/dist/index.d.cts.map',
+          'packages/project-2/dist/index.d.cts',
+        ]);
+      });
     });
   });
 

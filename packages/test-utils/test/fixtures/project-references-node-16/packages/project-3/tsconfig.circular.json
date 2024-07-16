@@ -11,7 +11,7 @@
     "moduleResolution": "Node16",
     "outDir": "./dist",
     "paths": {
-      "@project-references-test/*": ["../*/src"]
+      "@project-references-node-16-test/*": ["../*/src"]
     },
     "rootDir": "./src",
     "skipLibCheck": true,
@@ -21,7 +21,7 @@
   "include": ["src"],
   "references": [
     {
-      "path": "../project-1/tsconfig.circular.json"
+      "path": "../project-2/tsconfig.circular.json"
     }
   ]
 }

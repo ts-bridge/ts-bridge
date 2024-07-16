@@ -54,9 +54,47 @@ describe('getTypeScriptConfig', () => {
       `);
   });
 
+  it('reads the TypeScript configuration from `/tsconfig.json` when specifying `/`', () => {
+    const { system } = getVirtualEnvironment({
+      files: {
+        '/index.ts': '// no-op',
+      },
+      tsconfig: getMockTsConfig({
+        compilerOptions: {
+          lib: ['ES2022'],
+          module: 'Node16',
+          moduleResolution: 'Node16',
+          outDir: '/foo',
+          skipLibCheck: true,
+          strict: true,
+          target: 'ES2022',
+        },
+      }),
+    });
+
+    expect(getTypeScriptConfig('/', system).options).toMatchInlineSnapshot(`
+        {
+          "configFilePath": "/tsconfig.json",
+          "declaration": true,
+          "declarationDir": "/",
+          "declarationMap": true,
+          "esModuleInterop": true,
+          "lib": [
+            "lib.es2022.d.ts",
+          ],
+          "module": 100,
+          "moduleResolution": 3,
+          "outDir": "/foo",
+          "skipLibCheck": true,
+          "strict": true,
+          "target": 9,
+        }
+      `);
+  });
+
   it('throws an error if the file does not exist', () => {
-    expect(() => getTypeScriptConfig('/tsconfig.json')).toThrowError(
-      'The TypeScript configuration file does not exist: "/tsconfig.json".',
+    expect(() => getTypeScriptConfig('/')).toThrowError(
+      'The TypeScript configuration file does not exist at "/" or "/tsconfig.json".',
     );
   });
 

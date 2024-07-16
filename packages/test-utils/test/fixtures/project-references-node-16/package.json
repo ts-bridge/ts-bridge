@@ -1,5 +1,5 @@
 {
-  "name": "@ts-bridge/project-references-fixture",
+  "name": "@ts-bridge/project-references-node-16-fixture",
   "version": "0.0.0",
   "private": true,
   "workspaces": [

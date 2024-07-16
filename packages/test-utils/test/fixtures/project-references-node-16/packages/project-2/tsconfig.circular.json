@@ -11,12 +11,17 @@
     "moduleResolution": "Node16",
     "outDir": "./dist",
     "paths": {
-      "@project-references-test/*": ["../*/src"]
+      "@project-references-node-16-test/*": ["../*/src"]
     },
     "rootDir": "./src",
     "skipLibCheck": true,
     "strict": true,
     "target": "ES2022"
   },
-  "include": ["src"]
+  "include": ["src"],
+  "references": [
+    {
+      "path": "../project-1/tsconfig.circular.json"
+    }
+  ]
 }

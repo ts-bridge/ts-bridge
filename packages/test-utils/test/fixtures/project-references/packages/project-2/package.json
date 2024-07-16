@@ -1,8 +1,0 @@
-{
-  "name": "@project-references-test/project-2",
-  "version": "0.0.0",
-  "private": true,
-  "dependencies": {
-    "@project-references-test/project-1": "workspace:^"
-  }
-}

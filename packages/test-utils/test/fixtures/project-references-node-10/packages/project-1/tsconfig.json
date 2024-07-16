@@ -1,0 +1,28 @@
+{
+  "compilerOptions": {
+    "baseUrl": "./",
+    "composite": true,
+    "declaration": true,
+    "declarationDir": "./dist",
+    "declarationMap": true,
+    "esModuleInterop": true,
+    "lib": ["ES2022"],
+    "module": "ES2022",
+    "moduleResolution": "Node",
+    "outDir": "./dist",
+    "paths": {
+      "@project-references-node-10-test/*": ["../*/src"]
+    },
+    "rootDir": "./src",
+    "skipLibCheck": true,
+    "strict": true,
+    "target": "ES2022",
+    "typeRoots": []
+  },
+  "include": ["src"],
+  "references": [
+    {
+      "path": "../project-3"
+    }
+  ]
+}

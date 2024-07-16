@@ -1,4 +1,5 @@
-import { dirname, join } from 'path';
+import chalk from 'chalk';
+import { dirname, join, relative } from 'path';
 import type {
   CompilerHost,
   CompilerOptions,
@@ -19,7 +20,7 @@ import {
 } from './config.js';
 import { TypeScriptError } from './errors.js';
 import { getWriteFileFunction, removeDirectory } from './file-system.js';
-import { getLoggingTransformer } from './logging.js';
+import { getLoggingTransformer, info } from './logging.js';
 import {
   createProjectReferencesCompilerHost,
   getResolvedProjectReferences,
@@ -166,6 +167,7 @@ export function buildHandler(options: BuildHandlerOptions) {
   });
 
   const buildOptions: BuilderOptions = {
+    projectReferences: tsConfig.projectReferences,
     program,
     compilerOptions,
     format,
@@ -183,6 +185,7 @@ export function buildHandler(options: BuildHandlerOptions) {
 
 type BuilderOptions = {
   program: Program;
+  projectReferences?: readonly ProjectReference[];
   compilerOptions: CompilerOptions;
   format: BuildType[];
   files: string[];
@@ -201,6 +204,7 @@ type BuilderOptions = {
  *
  * @param options - The build options.
  * @param options.program - The TypeScript program to build.
+ * @param options.projectReferences - The project references to use.
  * @param options.compilerOptions - The compiler options to use.
  * @param options.format - The formats to build.
  * @param options.files - The files to include in the program.
@@ -210,6 +214,7 @@ type BuilderOptions = {
  */
 export function buildNode10({
   program,
+  projectReferences,
   compilerOptions,
   format,
   files,
@@ -227,10 +232,12 @@ export function buildNode10({
             ...compilerOptions,
             module: typescript.ModuleKind.ES2022,
 
-            // `ModuleResolutionKind.NodeJs` is in TypeScript 5 and later, but
-            // TypeScript 4 doesn't support `ModuleResolutionKind.Node10`.
+            // `ModuleResolutionKind.NodeJs` is deprecated in TypeScript 5 and
+            // later, but TypeScript 4 doesn't support
+            // `ModuleResolutionKind.Node10`.
             moduleResolution: ModuleResolutionKind.NodeJs,
           },
+          projectReferences,
           files,
           oldProgram: program,
           host,
@@ -253,10 +260,12 @@ export function buildNode10({
             ...compilerOptions,
             module: typescript.ModuleKind.CommonJS,
 
-            // `ModuleResolutionKind.NodeJs` is in TypeScript 5 and later, but
-            // TypeScript 4 doesn't support `ModuleResolutionKind.Node10`.
+            // `ModuleResolutionKind.NodeJs` is deprecated in TypeScript 5 and
+            // later, but TypeScript 4 doesn't support
+            // `ModuleResolutionKind.Node10`.
             moduleResolution: ModuleResolutionKind.NodeJs,
           },
+          projectReferences,
           files,
           oldProgram: program,
           host,
@@ -319,12 +328,14 @@ export function buildNode16({
  * @param options.format - The formats to build.
  * @param options.system - The file system to use.
  * @param options.baseDirectory - The base directory of the project.
+ * @param options.verbose - Whether to enable verbose logging.
  */
 export function buildProjectReferences({
   program,
   format,
   system,
   baseDirectory,
+  verbose,
 }: BuilderOptions) {
   const resolvedProjectReferences = getDefinedArray(
     program.getResolvedProjectReferences(),
@@ -340,6 +351,13 @@ export function buildProjectReferences({
     commandLine,
     references,
   } of sortedProjectReferences) {
+    verbose &&
+      info(
+        `Building referenced project "${chalk.underline(
+          relative(baseDirectory, sourceFile.fileName),
+        )}".`,
+      );
+
     const {
       fileNames,
       options: childOptions,
@@ -356,6 +374,7 @@ export function buildProjectReferences({
       format,
       compilerOptions,
       getDefinedArray(references),
+      system,
     );
 
     const childProgram = getProgram({
@@ -370,12 +389,14 @@ export function buildProjectReferences({
     buildFunction({
       host,
       program: childProgram,
+      projectReferences: childProjectReferences,
       compilerOptions,
       format,
       files: fileNames,
       system,
       baseDirectory: dirname(sourceFile.fileName),
       tsConfig: commandLine,
+      verbose,
     });
   }
 }
