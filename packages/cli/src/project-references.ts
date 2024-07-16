@@ -271,9 +271,9 @@ function getModuleName(
  * Create a compiler host that can be used to build projects using
  * project references.
  *
- * This is almost the same as the default compiler host, but it modifies the
- * `getSourceFile` method to look at `.d.cts` files instead of `.d.ts` files for
- * declaration files.
+ * This is almost the same as the default compiler host, but it modifies a few
+ * functions to redirect TypeScript to the `.[cm]ts` and `.[cm]js` files of the
+ * referenced projects, depending on the used format.
  *
  * @param format - The format of the output files.
  * @param compilerOptions - The compiler options to use.
