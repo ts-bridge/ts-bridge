@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Uncategorized
+
+- Fix project references module resolution ([#32](https://github.com/ts-bridge/ts-bridge/pull/32))
+- Add experimental support for project references ([#30](https://github.com/ts-bridge/ts-bridge/pull/30))
+
 ## [0.2.0]
 
 ### Added
