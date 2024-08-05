@@ -9,10 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.3.0]
 
-### Uncategorized
+### Added
 
-- Fix project references module resolution ([#32](https://github.com/ts-bridge/ts-bridge/pull/32))
-- Add experimental support for project references ([#30](https://github.com/ts-bridge/ts-bridge/pull/30))
+- Add experimental support for project references ([#30](https://github.com/ts-bridge/ts-bridge/pull/30), [#32](https://github.com/ts-bridge/ts-bridge/pull/32))
+  - If the specified `tsconfig.json` contains a `references` field, all
+    referenced projects will be sorted based on their dependencies, and built.
 
 ## [0.2.0]
 
