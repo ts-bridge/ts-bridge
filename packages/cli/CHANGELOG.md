@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.0]
+
+### Added
+
+- Add experimental support for project references ([#30](https://github.com/ts-bridge/ts-bridge/pull/30), [#32](https://github.com/ts-bridge/ts-bridge/pull/32))
+  - If the specified `tsconfig.json` contains a `references` field, all
+    referenced projects will be sorted based on their dependencies, and built.
+
 ## [0.2.0]
 
 ### Added
@@ -66,7 +74,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Initial release of the `@ts-bridge/cli` package.
 
-[Unreleased]: https://github.com/ts-bridge/ts-bridge/compare/@ts-bridge/cli@0.2.0...HEAD
+[Unreleased]: https://github.com/ts-bridge/ts-bridge/compare/@ts-bridge/cli@0.3.0...HEAD
+[0.3.0]: https://github.com/ts-bridge/ts-bridge/compare/@ts-bridge/cli@0.2.0...@ts-bridge/cli@0.3.0
 [0.2.0]: https://github.com/ts-bridge/ts-bridge/compare/@ts-bridge/cli@0.1.4...@ts-bridge/cli@0.2.0
 [0.1.4]: https://github.com/ts-bridge/ts-bridge/compare/@ts-bridge/cli@0.1.3...@ts-bridge/cli@0.1.4
 [0.1.3]: https://github.com/ts-bridge/ts-bridge/compare/@ts-bridge/cli@0.1.2...@ts-bridge/cli@0.1.3
