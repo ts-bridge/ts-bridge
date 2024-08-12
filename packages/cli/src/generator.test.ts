@@ -23,8 +23,10 @@ import {
 
 const { factory, isAssertClause, isImportAttributes, sys } = typescript;
 
+// TODO: Change these tests to use the real file system, to avoid the need for
+// mocking the resolver.
 vi.mock('@ts-bridge/resolver', () => ({
-  resolve: vi.fn(() => ({
+  resolve: vi.fn().mockImplementation(() => ({
     format: 'commonjs',
     path: '/fake.js',
   })),
