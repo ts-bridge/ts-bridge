@@ -1,4 +1,4 @@
-import { foo } from 'commonjs-module';
+import { bar } from 'commonjs-module';
 
 const $commonjsmodule = 'foo';
-console.log($commonjsmodule, foo);
+console.log($commonjsmodule, bar);

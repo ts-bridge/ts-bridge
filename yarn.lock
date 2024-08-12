@@ -1133,6 +1133,7 @@ __metadata:
     "@types/yargs": "npm:^17.0.32"
     "@typescript/vfs": "npm:^1.5.0"
     chalk: "npm:^5.3.0"
+    cjs-module-lexer: "npm:^1.3.1"
     typescript: "npm:^5.4.5"
     vite-tsconfig-paths: "npm:^4.3.2"
     vitest: "npm:^1.5.0"
@@ -1174,6 +1175,14 @@ __metadata:
   resolution: "@ts-bridge/import-resolver-fixture@workspace:packages/test-utils/test/fixtures/import-resolver"
   dependencies:
     semver: "npm:^7.6.2"
+  languageName: unknown
+  linkType: soft
+
+"@ts-bridge/imports-fixture@workspace:packages/test-utils/test/fixtures/imports":
+  version: 0.0.0-use.local
+  resolution: "@ts-bridge/imports-fixture@workspace:packages/test-utils/test/fixtures/imports"
+  dependencies:
+    commonjs-module: "workspace:^"
   languageName: unknown
   linkType: soft
 
@@ -2054,6 +2063,13 @@ __metadata:
   version: 2.0.0
   resolution: "chownr@npm:2.0.0"
   checksum: 10c0/594754e1303672171cc04e50f6c398ae16128eb134a88f801bf5354fd96f205320f23536a045d9abd8b51024a149696e51231565891d4efdab8846021ecf88e6
+  languageName: node
+  linkType: hard
+
+"cjs-module-lexer@npm:^1.3.1":
+  version: 1.3.1
+  resolution: "cjs-module-lexer@npm:1.3.1"
+  checksum: 10c0/cd98fbf3c7f4272fb0ebf71d08d0c54bc75ce0e30b9d186114e15b4ba791f3d310af65a339eea2a0318599af2818cdd8886d353b43dfab94468f72987397ad16
   languageName: node
   linkType: hard
 

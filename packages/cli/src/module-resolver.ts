@@ -1,11 +1,16 @@
 import { resolve } from '@ts-bridge/resolver';
 import type { FileSystemInterface, FileFormat } from '@ts-bridge/resolver';
 import chalk from 'chalk';
+import { init, parse } from 'cjs-module-lexer';
 import { resolve as resolvePath, extname } from 'path';
 import type { System } from 'typescript';
 import { pathToFileURL } from 'url';
 
 import { warn } from './logging.js';
+
+// This initialises `cjs-module-lexer` so that we can parse CommonJS modules
+// quickly using the WASM binary.
+await init();
 
 // The first entry is an empty string, which is used for the base package name.
 const DEFAULT_EXTENSIONS = ['', '.js', '.cjs', '.mjs', '.json'];
@@ -28,6 +33,11 @@ export type ResolvedModule = {
    * The specifier for the module.
    */
   specifier: string;
+
+  /**
+   * The path to the module.
+   */
+  path: string;
 
   /**
    * The type of the module.
@@ -57,7 +67,7 @@ export function resolvePackageSpecifier(
   for (const specifier of [packageSpecifier, `${packageSpecifier}/index`]) {
     for (const extension of extensions) {
       try {
-        const { format } = resolve(
+        const { format, path } = resolve(
           `${specifier}${extension}`,
           pathToFileURL(parentUrl),
           getFileSystemFromTypeScript(system),
@@ -65,6 +75,7 @@ export function resolvePackageSpecifier(
 
         return {
           specifier: `${specifier}${extension}`,
+          path,
           format,
         };
       } catch {
@@ -287,4 +298,35 @@ export function isCommonJs(
   }
 
   return getModuleType(packageSpecifier, system, parentUrl) === 'commonjs';
+}
+
+/**
+ * Get the exports for a CommonJS package. This uses `cjs-module-lexer` to parse
+ * the CommonJS module and extract the exports, which matches the behaviour of
+ * Node.js. This function will return an empty array if the package is not a
+ * CommonJS package, or if the package could not be resolved.
+ *
+ * @param packageSpecifier - The specifier for the package.
+ * @param system - The TypeScript system.
+ * @param parentUrl - The URL of the parent module.
+ * @returns The exports for the CommonJS package.
+ */
+export function getCommonJsExports(
+  packageSpecifier: string,
+  system: System,
+  parentUrl: string,
+): string[] {
+  const resolution = resolveModule(packageSpecifier, parentUrl, system);
+  if (!resolution || resolution.format !== 'commonjs') {
+    return [];
+  }
+
+  const { path } = resolution;
+  const code = system.readFile(path);
+  if (!code) {
+    return [];
+  }
+
+  const { exports, reexports } = parse(code);
+  return [...exports, ...reexports];
 }
