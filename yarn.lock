@@ -1178,14 +1178,6 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@ts-bridge/imports-fixture@workspace:packages/test-utils/test/fixtures/imports":
-  version: 0.0.0-use.local
-  resolution: "@ts-bridge/imports-fixture@workspace:packages/test-utils/test/fixtures/imports"
-  dependencies:
-    commonjs-module: "workspace:^"
-  languageName: unknown
-  linkType: soft
-
 "@ts-bridge/invalid-fixture@workspace:packages/test-utils/test/fixtures/invalid":
   version: 0.0.0-use.local
   resolution: "@ts-bridge/invalid-fixture@workspace:packages/test-utils/test/fixtures/invalid"
