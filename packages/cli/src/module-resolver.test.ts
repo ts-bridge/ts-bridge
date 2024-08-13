@@ -5,6 +5,7 @@ import { fileURLToPath } from 'url';
 import { describe, expect, it, vi } from 'vitest';
 
 import {
+  getCommonJsExports,
   getFileSystemFromTypeScript,
   getModulePath,
   getModuleType,
@@ -36,6 +37,9 @@ describe('resolvePackageSpecifier', () => {
 
     expect(packageSpecifier).toStrictEqual({
       specifier: 'typescript',
+      path: expect.stringContaining(
+        'node_modules/typescript/lib/typescript.js',
+      ),
       format: 'commonjs',
     });
   });
@@ -49,6 +53,7 @@ describe('resolvePackageSpecifier', () => {
 
     expect(packageSpecifier).toStrictEqual({
       specifier: 'is-stream/index.js',
+      path: expect.stringContaining('node_modules/is-stream/index.js'),
       format: 'commonjs',
     });
   });
@@ -62,6 +67,7 @@ describe('resolvePackageSpecifier', () => {
 
     expect(packageSpecifier).toStrictEqual({
       specifier: 'semver/preload.js',
+      path: expect.stringContaining('node_modules/semver/preload.js'),
       format: 'commonjs',
     });
   });
@@ -77,6 +83,9 @@ describe('resolveRelativePackageSpecifier', () => {
 
     expect(packageSpecifier).toStrictEqual({
       specifier: './dummy.ts',
+      path: expect.stringContaining(
+        'test-utils/test/fixtures/import-resolver/src/dummy.ts',
+      ),
       format: null,
     });
   });
@@ -90,6 +99,9 @@ describe('resolveRelativePackageSpecifier', () => {
 
     expect(packageSpecifier).toStrictEqual({
       specifier: './folder/index.ts',
+      path: expect.stringContaining(
+        'test-utils/test/fixtures/import-resolver/src/folder/index.ts',
+      ),
       format: null,
     });
   });
@@ -338,5 +350,27 @@ describe('getFileSystemFromTypeScript', () => {
         ),
       ).toThrow(/File not found: ".*"\./u);
     });
+  });
+});
+
+describe('getCommonJsExports', () => {
+  it('returns the exports for a CommonJS module', () => {
+    expect(getCommonJsExports('semver', sys, PARENT_URL)).toStrictEqual(
+      expect.arrayContaining(['parse', 'valid', 'clean']),
+    );
+  });
+
+  it('returns an empty array if the module is not CommonJS', () => {
+    expect(getCommonJsExports('chalk', sys, PARENT_URL)).toStrictEqual([]);
+  });
+
+  it('returns an empty array if the module does not resolve', () => {
+    expect(getCommonJsExports('foo', sys, PARENT_URL)).toStrictEqual([]);
+  });
+
+  it('returns an empty array if the code is empty', () => {
+    expect(
+      getCommonJsExports('commonjs-module/empty', sys, PARENT_URL),
+    ).toStrictEqual([]);
   });
 });

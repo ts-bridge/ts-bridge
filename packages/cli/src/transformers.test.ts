@@ -678,11 +678,11 @@ describe('getNamedImportTransformer', () => {
       );
     });
 
-    it('rewrites a named import for a CommonJS module', async () => {
-      expect(files['rewrite.js']).toMatchInlineSnapshot(`
+    it('rewrites a named import for an undetected CommonJS module import', async () => {
+      expect(files['undetected.js']).toMatchInlineSnapshot(`
         "import $commonjsmodule from 'commonjs-module';
-        const { foo } = $commonjsmodule;
-        console.log(foo);
+        const { bar } = $commonjsmodule;
+        console.log(bar);
         "
       `);
     });
@@ -690,9 +690,37 @@ describe('getNamedImportTransformer', () => {
     it('renames the import when the name is already used in the scope', () => {
       expect(files['rename.js']).toMatchInlineSnapshot(`
         "import $_commonjsmodule from 'commonjs-module';
-        const { foo } = $_commonjsmodule;
+        const { bar } = $_commonjsmodule;
         const $commonjsmodule = 'foo';
-        console.log($commonjsmodule, foo);
+        console.log($commonjsmodule, bar);
+        "
+      `);
+    });
+
+    it('only rewrites undetected imports if there are multiple imports', async () => {
+      expect(files['both.js']).toMatchInlineSnapshot(`
+        "import { foo } from 'commonjs-module';
+        import $commonjsmodule from 'commonjs-module';
+        const { bar } = $commonjsmodule;
+        console.log(foo, bar);
+        "
+      `);
+    });
+
+    it('supports imports with property names', async () => {
+      expect(files['property-names.js']).toMatchInlineSnapshot(`
+        "import { foo as fooImport } from 'commonjs-module';
+        import $commonjsmodule from 'commonjs-module';
+        const { bar: barImport } = $commonjsmodule;
+        console.log(fooImport, barImport);
+        "
+      `);
+    });
+
+    it('does not rewrite a named import for a detected CommonJS module import', async () => {
+      expect(files['detected.js']).toMatchInlineSnapshot(`
+        "import { foo } from 'commonjs-module';
+        console.log(foo);
         "
       `);
     });

@@ -7,10 +7,12 @@ import type {
   Statement,
   System,
   ExportDeclaration,
+  NodeArray,
+  ImportSpecifier,
 } from 'typescript';
 import typescript from 'typescript';
 
-import { isCommonJs } from './module-resolver.js';
+import { getCommonJsExports, isCommonJs } from './module-resolver.js';
 import { getIdentifierName } from './utils.js';
 
 const {
@@ -95,6 +97,89 @@ export function getUniqueIdentifier(
 }
 
 /**
+ * An import declaration, containing the name of the import and an optional
+ * property name.
+ */
+export type Import = {
+  /**
+   * The name of the import. This is the name that is available the scope of the
+   * file containing the import. If the `propertyName` is not set, this is the
+   * name that is exported by the module as well.
+   */
+  name: string;
+
+  /**
+   * The property name of the import. If this is set, this is the name that is
+   * exported by the module.
+   */
+  propertyName?: string;
+};
+
+/**
+ * An object with the detected and undetected imports.
+ */
+export type Imports = {
+  /**
+   * The detected imports, i.e., the named imports that are detected by
+   * `cjs-module-lexer` and can be used as named imports in ES modules.
+   */
+  detected: Import[];
+
+  /**
+   * The other imports, i.e., the named imports that are not detected by
+   * `cjs-module-lexer` and need to be imported as a default import and
+   * destructured.
+   */
+  undetected: Import[];
+};
+
+/**
+ * Get the detected and undetected imports for the given package specifier.
+ * This function uses `cjs-module-lexer` to parse the CommonJS module and
+ * extract the exports, and then compares the named imports to the exports to
+ * determine which imports are detected and which are not.
+ *
+ * @param packageSpecifier - The specifier for the package.
+ * @param system - The TypeScript system.
+ * @param parentUrl - The URL of the parent module.
+ * @param imports - The named imports from the import declaration.
+ * @returns The "exported" imports and other imports.
+ */
+export function getImports(
+  packageSpecifier: string,
+  system: System,
+  parentUrl: string,
+  imports: NodeArray<ImportSpecifier>,
+): Imports {
+  const exports = getCommonJsExports(packageSpecifier, system, parentUrl);
+
+  return imports.reduce<Imports>(
+    (accumulator, element) => {
+      if (element.isTypeOnly) {
+        return accumulator;
+      }
+
+      const name = element.name.text;
+      const propertyName = element.propertyName?.text;
+      const exportName = propertyName ?? name;
+
+      if (exports.includes(exportName)) {
+        return {
+          ...accumulator,
+          detected: [...accumulator.detected, { name, propertyName }],
+        };
+      }
+
+      return {
+        ...accumulator,
+        undetected: [...accumulator.undetected, { name, propertyName }],
+      };
+    },
+    { detected: [], undetected: [] },
+  );
+}
+
+/**
  * Get the named import node(s) for the given import declaration. This function
  * transforms named imports for CommonJS modules to a default import and a
  * variable declaration, so that the named imports can be used in ES modules.
@@ -144,15 +229,23 @@ export function getNamedImportNodes(
     return node;
   }
 
-  // If the named bindings are a named import, get the import names.
-  const importNames = namedBindings.elements
-    .filter((element) => !element.isTypeOnly)
-    .map((element) => ({
-      name: element.name.text,
-      propertyName: element.propertyName?.text,
-    }));
+  const importNames = getImports(
+    node.moduleSpecifier.text,
+    system,
+    sourceFile.fileName,
+    namedBindings.elements,
+  );
 
-  if (importNames.length === 0) {
+  // If there are no named imports, return the node as is.
+  if (
+    importNames.detected.length === 0 &&
+    importNames.undetected.length === 0
+  ) {
+    return node;
+  }
+
+  // If there are no undetected imports, return the node as is.
+  if (importNames.undetected.length === 0) {
     return node;
   }
 
@@ -163,8 +256,33 @@ export function getNamedImportNodes(
     moduleSpecifier,
   );
 
+  const statements: Statement[] = [];
+
+  if (importNames.detected.length > 0) {
+    // Create a new named import node for the detected imports.
+    const namedImport = factory.createImportDeclaration(
+      node.modifiers,
+      factory.createImportClause(
+        false,
+        undefined,
+        factory.createNamedImports(
+          importNames.detected.map(({ propertyName, name }) =>
+            factory.createImportSpecifier(
+              false,
+              propertyName ? factory.createIdentifier(propertyName) : undefined,
+              factory.createIdentifier(name),
+            ),
+          ),
+        ),
+      ),
+      node.moduleSpecifier,
+    );
+
+    statements.push(namedImport);
+  }
+
   // Create a new default import node.
-  const wildcardImport = factory.createImportDeclaration(
+  const defaultImport = factory.createImportDeclaration(
     node.modifiers,
     factory.createImportClause(
       false,
@@ -174,14 +292,14 @@ export function getNamedImportNodes(
     node.moduleSpecifier,
   );
 
-  // Create a variable declaration for the import names.
+  // Create a variable declaration for the undetected import names.
   const variableStatement = factory.createVariableStatement(
     undefined,
     factory.createVariableDeclarationList(
       [
         factory.createVariableDeclaration(
           factory.createObjectBindingPattern([
-            ...importNames.map(({ propertyName, name }) =>
+            ...importNames.undetected.map(({ propertyName, name }) =>
               factory.createBindingElement(undefined, propertyName, name),
             ),
           ]),
@@ -195,7 +313,9 @@ export function getNamedImportNodes(
     ),
   );
 
-  return [wildcardImport, variableStatement];
+  statements.push(defaultImport, variableStatement);
+
+  return statements;
 }
 
 /**

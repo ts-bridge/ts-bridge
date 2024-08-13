@@ -1,4 +1,5 @@
-import { getVirtualEnvironment } from '@ts-bridge/test-utils';
+import { resolve } from '@ts-bridge/resolver';
+import { getFixture, getVirtualEnvironment } from '@ts-bridge/test-utils';
 import type {
   ExportDeclaration,
   ImportDeclaration,
@@ -11,6 +12,7 @@ import { describe, expect, it, vi } from 'vitest';
 import {
   getImportAttribute,
   getImportMetaUrl,
+  getImports,
   getNamedImportNodes,
   getNamespaceImport,
   getNonTypeExports,
@@ -19,15 +21,16 @@ import {
   hasImportAttributes,
 } from './generator.js';
 
+const { factory, isAssertClause, isImportAttributes, sys } = typescript;
+
 // TODO: Change these tests to use the real file system, to avoid the need for
 // mocking the resolver.
 vi.mock('@ts-bridge/resolver', () => ({
   resolve: vi.fn().mockImplementation(() => ({
     format: 'commonjs',
+    path: '/fake.js',
   })),
 }));
-
-const { factory, isAssertClause, isImportAttributes } = typescript;
 
 /**
  * Compile a statement. This is used to test the output of the generator
@@ -89,15 +92,63 @@ describe('getUniqueIdentifier', () => {
   });
 });
 
+describe('getImports', () => {
+  it('returns the imports from an import declaration', () => {
+    const resolveMock = vi.mocked(resolve);
+    resolveMock.mockReturnValueOnce({
+      format: 'commonjs',
+      path: getFixture(
+        'named-imports',
+        'packages',
+        'commonjs-module',
+        'index.js',
+      ),
+    });
+
+    const imports = getImports(
+      'commonjs-module',
+      sys,
+      getFixture('named-imports', 'src', 'index.ts'),
+      factory.createNodeArray([
+        factory.createImportSpecifier(
+          false,
+          factory.createIdentifier('foo'),
+          factory.createIdentifier('bar'),
+        ),
+        factory.createImportSpecifier(
+          false,
+          undefined,
+          factory.createIdentifier('baz'),
+        ),
+      ]),
+    );
+
+    expect(imports.detected).toStrictEqual([
+      {
+        name: 'bar',
+        propertyName: 'foo',
+      },
+    ]);
+
+    expect(imports.undetected).toStrictEqual([
+      {
+        name: 'baz',
+        propertyName: undefined,
+      },
+    ]);
+  });
+});
+
 describe('getNamedImportNodes', () => {
   const { program, typeChecker, system } = getVirtualEnvironment({
     files: {
       '/index.ts': '// no-op',
       '/foo.ts': 'export const $foo: number = 1;',
+      '/fake.js': 'module.exports.foo = 1;',
     },
   });
 
-  it('transforms named bindings into a default import', () => {
+  it('transforms undetected named bindings into a default import', () => {
     const sourceFile = program.getSourceFile('/index.ts') as SourceFile;
     const importDeclaration = factory.createImportDeclaration(
       undefined,
@@ -113,7 +164,7 @@ describe('getNamedImportNodes', () => {
           factory.createImportSpecifier(
             false,
             undefined,
-            factory.createIdentifier('bar'),
+            factory.createIdentifier('undetected'),
           ),
         ]),
       ),
@@ -131,13 +182,14 @@ describe('getNamedImportNodes', () => {
     expect(result).not.toBe(importDeclaration);
     expect(compile(result)).toMatchInlineSnapshot(`
       ""use strict";
+      import { foo } from "foo";
       import $foo from "foo";
-      const { foo, bar } = $foo;
+      const { undetected } = $foo;
       "
     `);
   });
 
-  it('transforms named bindings into a default import and removes type imports', () => {
+  it('removes type imports', () => {
     const sourceFile = program.getSourceFile('/index.ts') as SourceFile;
     const importDeclaration = factory.createImportDeclaration(
       undefined,
@@ -176,8 +228,9 @@ describe('getNamedImportNodes', () => {
     expect(result).not.toBe(importDeclaration);
     expect(compile(result)).toMatchInlineSnapshot(`
       ""use strict";
+      import { foo } from "foo";
       import $foo from "foo";
-      const { foo, bar } = $foo;
+      const { bar } = $foo;
       "
     `);
   });
@@ -256,8 +309,9 @@ describe('getNamedImportNodes', () => {
     expect(result).not.toBe(importDeclaration);
     expect(compile(result)).toMatchInlineSnapshot(`
       ""use strict";
+      import { foo } from "foo";
       import $_foo from "foo";
-      const { foo, bar } = $_foo;
+      const { bar } = $_foo;
       "
     `);
   });
