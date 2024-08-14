@@ -14,6 +14,7 @@ import type { BuildType } from './build-type.js';
 import { getBuildTypeOptions } from './build-type.js';
 import { getTypeScriptConfig } from './config.js';
 import {
+  getDefaultImportTransformer,
   getExportExtensionTransformer,
   getGlobalsTransformer,
   getImportAttributeTransformer,
@@ -684,6 +685,33 @@ describe('getImportMetaTransformer', () => {
         }
         // @ts-expect-error - \`import.meta.url\` isn't allowed here.
         console.log($getImportMetaUrl(__filename));
+        "
+      `);
+    });
+  });
+});
+
+describe('getDefaultImportTransformer', () => {
+  describe('when targeting `module`', () => {
+    let files: Record<string, string>;
+
+    beforeAll(() => {
+      const compiler = createCompiler(getFixture('named-imports'));
+      files = compiler(
+        'module',
+        getDefaultImportTransformer({
+          typeChecker: compiler.typeChecker,
+          system: sys,
+        }),
+      );
+    });
+
+    it('rewrites a default import for a CommonJS module import', async () => {
+      expect(files['default-import.js']).toMatchInlineSnapshot(`
+        "import * as $helpers from "@ts-bridge/helpers/esm";
+        import $foo from 'commonjs-module';
+        const foo = $helpers.importDefault($foo);
+        console.log(foo);
         "
       `);
     });

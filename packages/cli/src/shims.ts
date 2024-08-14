@@ -3,6 +3,8 @@ import typescript from 'typescript';
 
 const { factory, SyntaxKind, NodeFlags } = typescript;
 
+export const ESM_HELPERS_PACKAGE = '@ts-bridge/helpers/esm';
+
 /**
  * Get the AST for the `fileURLToPath` function, i.e.:
  *
