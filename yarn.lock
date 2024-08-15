@@ -1151,6 +1151,15 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"@ts-bridge/default-imports-fixture@workspace:packages/test-utils/test/fixtures/default-imports":
+  version: 0.0.0-use.local
+  resolution: "@ts-bridge/default-imports-fixture@workspace:packages/test-utils/test/fixtures/default-imports"
+  dependencies:
+    commonjs-module: "workspace:^"
+    es-module: "workspace:^"
+  languageName: unknown
+  linkType: soft
+
 "@ts-bridge/export-resolver-fixture@workspace:packages/test-utils/test/fixtures/export-resolver":
   version: 0.0.0-use.local
   resolution: "@ts-bridge/export-resolver-fixture@workspace:packages/test-utils/test/fixtures/export-resolver"
@@ -2441,6 +2450,12 @@ __metadata:
   checksum: 10c0/ba827f89369b4c93382cfca5a264d059dfefdaa56ecc5e338ffa58a6471f5ed93b71a20add1d52290a4873d92381174382658c885ac1a2305f7baca363ce9cce
   languageName: node
   linkType: hard
+
+"es-module@workspace:^, es-module@workspace:packages/test-utils/test/fixtures/default-imports/packages/es-module":
+  version: 0.0.0-use.local
+  resolution: "es-module@workspace:packages/test-utils/test/fixtures/default-imports/packages/es-module"
+  languageName: unknown
+  linkType: soft
 
 "esbuild@npm:^0.20.1":
   version: 0.20.2

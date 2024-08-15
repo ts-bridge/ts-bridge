@@ -540,7 +540,7 @@ describe('getTransformers', () => {
       true,
     );
 
-    expect(transformers).toHaveLength(5);
+    expect(transformers).toHaveLength(6);
   });
 
   it('returns the correct transformers for the `commonjs` format', () => {
@@ -568,7 +568,7 @@ describe('getTransformers', () => {
       false,
     );
 
-    expect(transformers).toHaveLength(3);
+    expect(transformers).toHaveLength(4);
   });
 
   it('returns the correct transformers for the `commonjs` format without shims', () => {

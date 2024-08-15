@@ -696,7 +696,7 @@ describe('getDefaultImportTransformer', () => {
     let files: Record<string, string>;
 
     beforeAll(() => {
-      const compiler = createCompiler(getFixture('named-imports'));
+      const compiler = createCompiler(getFixture('default-imports'));
       files = compiler(
         'module',
         getDefaultImportTransformer({
@@ -711,6 +711,35 @@ describe('getDefaultImportTransformer', () => {
         "import * as $helpers from "@ts-bridge/helpers/esm";
         import $foo from 'commonjs-module';
         const foo = $helpers.importDefault($foo);
+        console.log(foo);
+        "
+      `);
+    });
+
+    it('only rewrites default imports', async () => {
+      expect(files['multiple-imports.js']).toMatchInlineSnapshot(`
+        "import * as $helpers from "@ts-bridge/helpers/esm";
+        import $foo from 'commonjs-module';
+        const foo = $helpers.importDefault($foo);
+        import { foo as bar } from 'commonjs-module';
+        import baz from 'es-module';
+        console.log(foo, bar, baz);
+        "
+      `);
+    });
+
+    it('does not rewrite an invalid import', async () => {
+      expect(files['invalid.js']).toMatchInlineSnapshot(`
+        "// @ts-expect-error - Invalid module specifier.
+        import foo from bar;
+        foo;
+        "
+      `);
+    });
+
+    it('does not rewrite an ESM import', async () => {
+      expect(files['es-module-import.js']).toMatchInlineSnapshot(`
+        "import foo from 'es-module';
         console.log(foo);
         "
       `);
