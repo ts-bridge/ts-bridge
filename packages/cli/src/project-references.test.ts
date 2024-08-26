@@ -196,6 +196,7 @@ describe('createProjectReferencesCompilerHost', () => {
       format: ['commonjs', 'module'],
       baseDirectory: FIXTURE_PATH,
       system: sys,
+      shims: false,
     });
   });
 
