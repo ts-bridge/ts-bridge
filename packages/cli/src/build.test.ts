@@ -11,12 +11,6 @@ import { removeDirectory } from './file-system.js';
 
 const { sys } = typescript;
 
-vi.mock('./shims.js', async (importOriginal) => ({
-  // eslint-disable-next-line @typescript-eslint/consistent-type-imports
-  ...(await importOriginal<typeof import('./shims.js')>()),
-  isShimsPackageInstalled: vi.fn(() => true),
-}));
-
 vi.mock('./file-system.js', async (importOriginal) => ({
   // eslint-disable-next-line @typescript-eslint/consistent-type-imports
   ...(await importOriginal<typeof import('./file-system.js')>()),

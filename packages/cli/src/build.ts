@@ -1,5 +1,5 @@
 import chalk from 'chalk';
-import { dirname, join, relative } from 'path';
+import { dirname, relative } from 'path';
 import type {
   CompilerHost,
   CompilerOptions,
@@ -9,7 +9,6 @@ import type {
   System,
 } from 'typescript';
 import typescript from 'typescript';
-import { pathToFileURL } from 'url';
 
 import type { BuildType } from './build-type.js';
 import { getBuildTypeOptions } from './build-type.js';
@@ -25,7 +24,6 @@ import {
   createProjectReferencesCompilerHost,
   getResolvedProjectReferences,
 } from './project-references.js';
-import { isShimsPackageInstalled } from './shims.js';
 import type { Steps } from './steps.js';
 import { executeSteps } from './steps.js';
 import type { TransformerOptions } from './transformers.js';
@@ -126,6 +124,7 @@ export type BuildHandlerOptions = {
   host?: CompilerHost;
   verbose?: boolean;
   references?: boolean;
+  shims?: boolean;
 };
 
 /**
@@ -143,6 +142,7 @@ export function buildHandler(options: BuildHandlerOptions) {
     host,
     verbose,
     references,
+    shims = true,
   } = options;
 
   const tsConfig = getTypeScriptConfig(project, system);
@@ -177,6 +177,7 @@ export function buildHandler(options: BuildHandlerOptions) {
     baseDirectory,
     tsConfig,
     verbose,
+    shims,
   };
 
   const buildFunction = getBuildFunction(tsConfig, references);
@@ -194,6 +195,7 @@ type BuilderOptions = {
   baseDirectory: string;
   tsConfig: ParsedCommandLine;
   verbose?: boolean;
+  shims: boolean;
 };
 
 /**
@@ -211,6 +213,8 @@ type BuilderOptions = {
  * @param options.system - The file system to use.
  * @param options.host - The compiler host to use.
  * @param options.verbose - Whether to enable verbose logging.
+ * @param options.shims - Whether to generate shims for environment-specific
+ * APIs.
  */
 export function buildNode10({
   program,
@@ -221,6 +225,7 @@ export function buildNode10({
   system,
   host,
   verbose,
+  shims,
 }: BuilderOptions) {
   const buildSteps: Steps<Record<string, never>> = [
     {
@@ -248,6 +253,7 @@ export function buildNode10({
           type: 'module',
           system,
           verbose,
+          shims,
         });
       },
     },
@@ -276,6 +282,7 @@ export function buildNode10({
           type: 'commonjs',
           system,
           verbose,
+          shims,
         });
       },
     },
@@ -292,26 +299,29 @@ export function buildNode10({
  * @param options.format - The formats to build.
  * @param options.system - The file system to use.
  * @param options.verbose - Whether to enable verbose logging.
+ * @param options.shims - Whether to generate shims for environment-specific
+ * APIs.
  */
 export function buildNode16({
   program,
   format,
   system,
   verbose,
+  shims,
 }: BuilderOptions) {
   const buildSteps: Steps<Record<string, never>> = [
     {
       name: 'Building ES module.',
       condition: () => format.includes('module'),
       task: () => {
-        build({ program, type: 'module', system });
+        build({ program, type: 'module', system, shims });
       },
     },
     {
       name: 'Building CommonJS module.',
       condition: () => format.includes('commonjs'),
       task: () => {
-        build({ program, type: 'commonjs', system });
+        build({ program, type: 'commonjs', system, shims });
       },
     },
   ];
@@ -329,6 +339,8 @@ export function buildNode16({
  * @param options.system - The file system to use.
  * @param options.baseDirectory - The base directory of the project.
  * @param options.verbose - Whether to enable verbose logging.
+ * @param options.shims - Whether to generate shims for environment-specific
+ * APIs.
  */
 export function buildProjectReferences({
   program,
@@ -336,6 +348,7 @@ export function buildProjectReferences({
   system,
   baseDirectory,
   verbose,
+  shims,
 }: BuilderOptions) {
   const resolvedProjectReferences = getDefinedArray(
     program.getResolvedProjectReferences(),
@@ -397,6 +410,7 @@ export function buildProjectReferences({
       baseDirectory: dirname(sourceFile.fileName),
       tsConfig: commandLine,
       verbose,
+      shims,
     });
   }
 }
@@ -435,16 +449,13 @@ export function getBuildFunction(
  *
  * @param type - The build type to use.
  * @param options - The transformer options.
- * @param useShims - Whether to use shims. By default, this is determined by
- * whether the shims package is installed.
+ * @param useShims - Whether to generate shims for environment-specific APIs.
  * @returns The transformers to use for the build.
  */
 export function getTransformers(
   type: BuildType,
   options: TransformerOptions,
-  useShims = isShimsPackageInstalled(
-    pathToFileURL(join(process.cwd(), 'dummy.js')).href,
-  ),
+  useShims: boolean,
 ) {
   const { getTransformers: getBaseTransformers, getShimsTransformers } =
     getBuildTypeOptions(type);
@@ -463,6 +474,7 @@ type BuildOptions = {
   type: BuildType;
   system: System;
   verbose?: boolean;
+  shims: boolean;
 };
 
 /**
@@ -474,6 +486,8 @@ type BuildOptions = {
  * @param options.type - The build type to use.
  * @param options.system - The file system to use.
  * @param options.verbose - Whether to enable verbose logging.
+ * @param options.shims - Whether to generate shims for environment-specific
+ * APIs.
  * @returns A promise that resolves when the build is complete.
  */
 export function build({
@@ -481,6 +495,7 @@ export function build({
   type,
   system,
   verbose,
+  shims,
 }: BuildOptions): Program {
   const { name, extension } = getBuildTypeOptions(type);
 
@@ -501,7 +516,7 @@ export function build({
         getImportExtensionTransformer(extension, options),
         getExportExtensionTransformer(extension, options),
         getTypeImportExportTransformer(options),
-        ...getTransformers(type, options),
+        ...getTransformers(type, options, shims),
       ],
       afterDeclarations: [
         getImportExtensionTransformer(extension, options),

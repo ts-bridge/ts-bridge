@@ -57,6 +57,11 @@ export async function main(argv: string[]) {
             description:
               'Build project references in the project. Enabled by default if `tsconfig.json` contains project references.',
             default: true,
+          })
+          .option('shims', {
+            type: 'boolean',
+            description: 'Generate shims for environment-specific APIs.',
+            default: true,
           }),
       ({ format, ...options }) => {
         return buildHandler({
