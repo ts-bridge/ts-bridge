@@ -1,2 +1,2 @@
-const $shims = 'foo';
-console.log($shims, __filename);
+const $dirname = 'foo';
+console.log($dirname, __filename);

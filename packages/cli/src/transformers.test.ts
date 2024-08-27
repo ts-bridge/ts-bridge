@@ -534,33 +534,77 @@ describe('getGlobalsTransformer', () => {
 
     it('adds a shim when using `__filename`', async () => {
       expect(files['filename.js']).toMatchInlineSnapshot(`
-        "import * as $shims from "@ts-bridge/shims/esm";
-        console.log($shims.__filename(import.meta.url));
+        "function $__filename(fileUrl) {
+            const url = new URL(fileUrl);
+            return url.pathname.replace(/^\\/([a-zA-Z]:)/u, "$1");
+        }
+        console.log($__filename(import.meta.url));
+        export {};
         "
       `);
     });
 
     it('adds a shim when using `__dirname`', async () => {
       expect(files['dirname.js']).toMatchInlineSnapshot(`
-        "import * as $shims from "@ts-bridge/shims/esm";
-        console.log($shims.__dirname(import.meta.url));
+        "function $__filename(fileUrl) {
+            const url = new URL(fileUrl);
+            return url.pathname.replace(/^\\/([a-zA-Z]:)/u, "$1");
+        }
+        function $getDirname(path) {
+            const sanitisedPath = path.toString().replace(/\\\\/gu, "/").replace(/\\/$/u, "");
+            const index = sanitisedPath.lastIndexOf("/");
+            if (index === -1) {
+                return path;
+            }
+            if (index === 0) {
+                return "/";
+            }
+            return sanitisedPath.slice(0, index);
+        }
+        function $__dirname(url) {
+            return $getDirname($__filename(url));
+        }
+        console.log($__dirname(import.meta.url));
+        export {};
         "
       `);
     });
 
     it('adds a shim when using both `__filename` and `__dirname`', async () => {
       expect(files['multiple.js']).toMatchInlineSnapshot(`
-        "import * as $shims from "@ts-bridge/shims/esm";
-        console.log($shims.__dirname(import.meta.url), $shims.__filename(import.meta.url));
+        "function $__filename(fileUrl) {
+            const url = new URL(fileUrl);
+            return url.pathname.replace(/^\\/([a-zA-Z]:)/u, "$1");
+        }
+        function $getDirname(path) {
+            const sanitisedPath = path.toString().replace(/\\\\/gu, "/").replace(/\\/$/u, "");
+            const index = sanitisedPath.lastIndexOf("/");
+            if (index === -1) {
+                return path;
+            }
+            if (index === 0) {
+                return "/";
+            }
+            return sanitisedPath.slice(0, index);
+        }
+        function $__dirname(url) {
+            return $getDirname($__filename(url));
+        }
+        console.log($__dirname(import.meta.url), $__filename(import.meta.url));
+        export {};
         "
       `);
     });
 
     it('renames the shim when the name is already used in the scope', async () => {
       expect(files['rename.js']).toMatchInlineSnapshot(`
-        "import * as $_shims from "@ts-bridge/shims/esm";
-        const $shims = 'foo';
-        console.log($shims, $_shims.__filename(import.meta.url));
+        "function $__filename(fileUrl) {
+            const url = new URL(fileUrl);
+            return url.pathname.replace(/^\\/([a-zA-Z]:)/u, "$1");
+        }
+        const $dirname = 'foo';
+        console.log($dirname, $__filename(import.meta.url));
+        export {};
         "
       `);
     });
@@ -593,8 +637,12 @@ describe('getRequireTransformer', () => {
 
     it('adds a shim when using `require`', async () => {
       expect(files['require.js']).toMatchInlineSnapshot(`
-        "import * as $nodeShims from "@ts-bridge/shims/esm/require";
-        const { builtinModules } = $nodeShims.require('module', import.meta.url);
+        "import { createRequire as $createRequire } from "module";
+        function require(identifier, url) {
+            const fn = $createRequire(url);
+            return fn(identifier);
+        }
+        const { builtinModules } = require('module', import.meta.url);
         console.log(builtinModules);
         "
       `);
@@ -630,33 +678,12 @@ describe('getImportMetaTransformer', () => {
     it('adds a shim when using `import.meta.url`', async () => {
       expect(files['import-meta.js']).toMatchInlineSnapshot(`
         ""use strict";
-        var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
-            if (k2 === undefined) k2 = k;
-            var desc = Object.getOwnPropertyDescriptor(m, k);
-            if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
-              desc = { enumerable: true, get: function() { return m[k]; } };
-            }
-            Object.defineProperty(o, k2, desc);
-        }) : (function(o, m, k, k2) {
-            if (k2 === undefined) k2 = k;
-            o[k2] = m[k];
-        }));
-        var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
-            Object.defineProperty(o, "default", { enumerable: true, value: v });
-        }) : function(o, v) {
-            o["default"] = v;
-        });
-        var __importStar = (this && this.__importStar) || function (mod) {
-            if (mod && mod.__esModule) return mod;
-            var result = {};
-            if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
-            __setModuleDefault(result, mod);
-            return result;
-        };
         Object.defineProperty(exports, "__esModule", { value: true });
-        const $shims = __importStar(require("@ts-bridge/shims"));
+        function $getImportMetaUrl(fileName) {
+            return typeof document === "undefined" ? new URL(\`file:\${fileName}\`).href : document.currentScript?.src ?? new URL("main.js", document.baseURI).href;
+        }
         // @ts-expect-error - \`import.meta.url\` isn't allowed here.
-        console.log($shims.getImportMetaUrl(__filename));
+        console.log($getImportMetaUrl(__filename));
         "
       `);
     });

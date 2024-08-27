@@ -16,7 +16,6 @@ import {
   getImportAttribute,
   getImportMetaUrl,
   getNamedImportNodes,
-  getNamespaceImport,
   getNonTypeExports,
   getNonTypeImports,
   getUniqueIdentifier,
@@ -24,9 +23,11 @@ import {
 } from './generator.js';
 import { getModulePath, getModuleType } from './module-resolver.js';
 import {
-  CJS_SHIMS_PACKAGE,
-  ESM_REQUIRE_SHIMS_PACKAGE,
-  ESM_SHIMS_PACKAGE,
+  getDirnameGlobalFunction,
+  getDirnameHelperFunction,
+  getFileUrlToPathHelperFunction,
+  getImportMetaUrlFunction,
+  getRequireHelperFunction,
 } from './shims.js';
 
 const {
@@ -246,10 +247,12 @@ export function getExportExtensionTransformer(
  * ```
  *
  * will be transformed to:
- * ```
- * import * as shims from '@ts-bridge/shims/esm';
+ * ```ts
+ * function $__filename(url) {
+ *   // ...;
+ * }
  *
- * const foo = shims.__filename(import.meta.url);
+ * const foo = $__filename(import.meta.url);
  * ```
  *
  * This should only be used for the ES module target.
@@ -261,12 +264,25 @@ export function getExportExtensionTransformer(
 export function getGlobalsTransformer({ typeChecker }: TransformerOptions) {
   return (context: TransformationContext): Transformer<SourceFile> => {
     return (sourceFile: SourceFile) => {
-      let insertShim = false;
+      let insertFilenameShim = false;
+      let insertDirnameShim = false;
 
-      const shimsIdentifier = getUniqueIdentifier(
+      const dirnameHelperFunctionName = getUniqueIdentifier(
         typeChecker,
         sourceFile,
-        'shims',
+        'getDirname',
+      );
+
+      const fileUrlToPathFunctionName = getUniqueIdentifier(
+        typeChecker,
+        sourceFile,
+        '__filename',
+      );
+
+      const dirnameFunctionName = getUniqueIdentifier(
+        typeChecker,
+        sourceFile,
+        '__dirname',
       );
 
       const visitor = (node: Node): Node => {
@@ -278,12 +294,9 @@ export function getGlobalsTransformer({ typeChecker }: TransformerOptions) {
           !isFunctionDeclaration(node.parent) &&
           isGlobal(typeChecker, node, '__filename')
         ) {
-          insertShim = true;
+          insertFilenameShim = true;
           return factory.createCallExpression(
-            factory.createPropertyAccessExpression(
-              factory.createIdentifier(shimsIdentifier),
-              factory.createIdentifier('__filename'),
-            ),
+            factory.createIdentifier(fileUrlToPathFunctionName),
             undefined,
             [getImportMetaUrl()],
           );
@@ -297,12 +310,9 @@ export function getGlobalsTransformer({ typeChecker }: TransformerOptions) {
           !isFunctionDeclaration(node.parent) &&
           isGlobal(typeChecker, node.parent, '__dirname')
         ) {
-          insertShim = true;
+          insertDirnameShim = true;
           return factory.createCallExpression(
-            factory.createPropertyAccessExpression(
-              factory.createIdentifier(shimsIdentifier),
-              factory.createIdentifier('__dirname'),
-            ),
+            factory.createIdentifier(dirnameFunctionName),
             undefined,
             [getImportMetaUrl()],
           );
@@ -313,9 +323,25 @@ export function getGlobalsTransformer({ typeChecker }: TransformerOptions) {
 
       const modifiedSourceFile = visitNode(sourceFile, visitor) as SourceFile;
 
-      if (insertShim) {
+      const statements = [];
+      if (insertDirnameShim) {
+        statements.push(getDirnameHelperFunction(dirnameHelperFunctionName));
+        statements.push(
+          getDirnameGlobalFunction(
+            dirnameFunctionName,
+            fileUrlToPathFunctionName,
+            dirnameHelperFunctionName,
+          ),
+        );
+      }
+
+      if (insertFilenameShim || insertDirnameShim) {
+        statements.unshift(
+          getFileUrlToPathHelperFunction(fileUrlToPathFunctionName),
+        );
+
         return factory.updateSourceFile(modifiedSourceFile, [
-          getNamespaceImport(shimsIdentifier, ESM_SHIMS_PACKAGE),
+          ...statements,
           ...modifiedSourceFile.statements,
         ]);
       }
@@ -335,10 +361,12 @@ export function getGlobalsTransformer({ typeChecker }: TransformerOptions) {
  * ```
  *
  * will be transformed to:
- * ```
- * import * as nodeShims from '@ts-bridge/shims/esm/require';
+ * ```ts
+ * function require(path, url) {
+ *   // ...;
+ * }
  *
- * const foo = nodeShims.require('bar', import.meta.url);
+ * const foo = require('bar', import.meta.url);
  * ```
  *
  * This should only be used for the ES module target.
@@ -352,10 +380,10 @@ export const getRequireTransformer = ({ typeChecker }: TransformerOptions) => {
     return (sourceFile: SourceFile) => {
       let insertShim = false;
 
-      const shimsIdentifier = getUniqueIdentifier(
+      const createRequireFunctionName = getUniqueIdentifier(
         typeChecker,
         sourceFile,
-        'nodeShims',
+        'createRequire',
       );
 
       const visitor = (node: Node): Node => {
@@ -368,10 +396,7 @@ export const getRequireTransformer = ({ typeChecker }: TransformerOptions) => {
         ) {
           insertShim = true;
           return factory.createCallExpression(
-            factory.createPropertyAccessExpression(
-              factory.createIdentifier(shimsIdentifier),
-              factory.createIdentifier('require'),
-            ),
+            factory.createIdentifier('require'),
             undefined,
             [node.arguments[0], getImportMetaUrl()],
           );
@@ -384,7 +409,7 @@ export const getRequireTransformer = ({ typeChecker }: TransformerOptions) => {
 
       if (insertShim) {
         return factory.updateSourceFile(modifiedSourceFile, [
-          getNamespaceImport(shimsIdentifier, ESM_REQUIRE_SHIMS_PACKAGE),
+          ...getRequireHelperFunction(createRequireFunctionName),
           ...modifiedSourceFile.statements,
         ]);
       }
@@ -405,9 +430,11 @@ export const getRequireTransformer = ({ typeChecker }: TransformerOptions) => {
  *
  * will be transformed to:
  * ```ts
- * import * as shims from '@ts-bridge/shims';
+ * function getImportMetaUrl(filename) {
+ *   // ...;
+ * }
  *
- * const foo = shims.getImportMetaUrl(__filename);
+ * const foo = getImportMetaUrl(__filename);
  * ```
  *
  * This should only be used for the CommonJS target.
@@ -420,10 +447,10 @@ export function getImportMetaTransformer({ typeChecker }: TransformerOptions) {
   return (context: TransformationContext): Transformer<SourceFile> => {
     return (sourceFile: SourceFile) => {
       let insertShim = false;
-      const shimsIdentifier = getUniqueIdentifier(
+      const functionName = getUniqueIdentifier(
         typeChecker,
         sourceFile,
-        'shims',
+        'getImportMetaUrl',
       );
 
       const visitor = (node: Node): Node => {
@@ -435,10 +462,7 @@ export function getImportMetaTransformer({ typeChecker }: TransformerOptions) {
         ) {
           insertShim = true;
           return factory.createCallExpression(
-            factory.createPropertyAccessExpression(
-              factory.createIdentifier(shimsIdentifier),
-              factory.createIdentifier('getImportMetaUrl'),
-            ),
+            factory.createIdentifier(functionName),
             undefined,
             [factory.createIdentifier('__filename')],
           );
@@ -450,7 +474,7 @@ export function getImportMetaTransformer({ typeChecker }: TransformerOptions) {
       const modifiedSourceFile = visitNode(sourceFile, visitor) as SourceFile;
       if (insertShim) {
         return factory.updateSourceFile(modifiedSourceFile, [
-          getNamespaceImport(shimsIdentifier, CJS_SHIMS_PACKAGE),
+          getImportMetaUrlFunction(functionName),
           ...modifiedSourceFile.statements,
         ]);
       }
