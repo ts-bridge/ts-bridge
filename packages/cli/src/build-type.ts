@@ -7,6 +7,7 @@ import typescript from 'typescript';
 
 import type { TransformerOptions } from './transformers.js';
 import {
+  getDefaultImportTransformer,
   getRemoveImportAttributeTransformer,
   getImportAttributeTransformer,
   getRequireTransformer,
@@ -60,6 +61,7 @@ export const BUILD_TYPES: Record<BuildType, BuildTypeOptions> = {
     sourceExtension: '.mts',
     target: ModuleKind.ESNext,
     getTransformers: (options) => [
+      getDefaultImportTransformer(options),
       getNamedImportTransformer(options),
       getImportAttributeTransformer(
         {

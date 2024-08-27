@@ -21,7 +21,8 @@ import {
   getUniqueIdentifier,
   isGlobal,
 } from './generator.js';
-import { getModulePath, getModuleType } from './module-resolver.js';
+import { getImportDefaultHelper } from './helpers.js';
+import { getModulePath, getModuleType, isCommonJs } from './module-resolver.js';
 import {
   getDirnameGlobalFunction,
   getDirnameHelperFunction,
@@ -42,6 +43,7 @@ const {
   isPropertyAccessExpression,
   isStringLiteral,
   isVariableDeclaration,
+  NodeFlags,
   visitEachChild,
   visitNode,
   SyntaxKind,
@@ -475,6 +477,118 @@ export function getImportMetaTransformer({ typeChecker }: TransformerOptions) {
       if (insertShim) {
         return factory.updateSourceFile(modifiedSourceFile, [
           getImportMetaUrlFunction(functionName),
+          ...modifiedSourceFile.statements,
+        ]);
+      }
+
+      return modifiedSourceFile;
+    };
+  };
+}
+
+/**
+ * Get a transformer that updates the default imports to use the `importDefault`
+ * helper function for CommonJS modules.
+ *
+ * For example, the following default import:
+ *
+ * ```ts
+ * import foo from 'module';
+ * ```
+ *
+ * will be transformed to:
+ *
+ * ```ts
+ * function $importDefault(module) {
+ *   // ...;
+ * }
+ *
+ * import $foo from 'module';
+ * const foo = $importDefault($foo);
+ * ```
+ *
+ * @param options - The transformer options.
+ * @param options.typeChecker - The type checker to use.
+ * @param options.system - The compiler system to use.
+ * @returns The transformer function.
+ */
+export function getDefaultImportTransformer({
+  typeChecker,
+  system,
+}: TransformerOptions) {
+  return (context: TransformationContext): Transformer<SourceFile> => {
+    return (sourceFile: SourceFile) => {
+      let insertShim = false;
+      const importDefaultFunctionName = getUniqueIdentifier(
+        typeChecker,
+        sourceFile,
+        'importDefault',
+      );
+
+      const visitor = (node: Node): Node | Node[] | undefined => {
+        if (isImportDeclaration(node) && node.importClause?.name) {
+          // If the module specifier is not a string literal, return the node as is.
+          if (!isStringLiteral(node.moduleSpecifier)) {
+            return node;
+          }
+
+          // If the module specifier is not a CommonJS module, return the node as is.
+          if (
+            !isCommonJs(node.moduleSpecifier.text, system, sourceFile.fileName)
+          ) {
+            return node;
+          }
+
+          insertShim = true;
+          const name = getUniqueIdentifier(
+            typeChecker,
+            sourceFile,
+            node.importClause.name.text,
+          );
+
+          const importDeclaration = factory.updateImportDeclaration(
+            node,
+            node.modifiers,
+            factory.updateImportClause(
+              node.importClause,
+              node.importClause.isTypeOnly,
+              factory.createIdentifier(name),
+              node.importClause.namedBindings,
+            ),
+            node.moduleSpecifier,
+            node.attributes,
+          );
+
+          const variableDeclaration = factory.createVariableStatement(
+            undefined,
+            factory.createVariableDeclarationList(
+              [
+                factory.createVariableDeclaration(
+                  factory.createIdentifier(node.importClause.name.text),
+                  undefined,
+                  undefined,
+                  factory.createCallExpression(
+                    factory.createIdentifier(importDefaultFunctionName),
+                    undefined,
+                    [factory.createIdentifier(name)],
+                  ),
+                ),
+              ],
+              // eslint-disable-next-line no-bitwise
+              NodeFlags.Const,
+            ),
+          );
+
+          return [importDeclaration, variableDeclaration];
+        }
+
+        return visitEachChild(node, visitor, context);
+      };
+
+      const modifiedSourceFile = visitNode(sourceFile, visitor) as SourceFile;
+      if (insertShim) {
+        return factory.updateSourceFile(modifiedSourceFile, [
+          getImportDefaultHelper(importDefaultFunctionName),
           ...modifiedSourceFile.statements,
         ]);
       }

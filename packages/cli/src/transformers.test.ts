@@ -14,6 +14,7 @@ import type { BuildType } from './build-type.js';
 import { getBuildTypeOptions } from './build-type.js';
 import { getTypeScriptConfig } from './config.js';
 import {
+  getDefaultImportTransformer,
   getExportExtensionTransformer,
   getGlobalsTransformer,
   getImportAttributeTransformer,
@@ -684,6 +685,72 @@ describe('getImportMetaTransformer', () => {
         }
         // @ts-expect-error - \`import.meta.url\` isn't allowed here.
         console.log($getImportMetaUrl(__filename));
+        "
+      `);
+    });
+  });
+});
+
+describe('getDefaultImportTransformer', () => {
+  describe('when targeting `module`', () => {
+    let files: Record<string, string>;
+
+    beforeAll(() => {
+      const compiler = createCompiler(getFixture('default-imports'));
+      files = compiler(
+        'module',
+        getDefaultImportTransformer({
+          typeChecker: compiler.typeChecker,
+          system: sys,
+        }),
+      );
+    });
+
+    it('rewrites a default import for a CommonJS module import', async () => {
+      expect(files['default-import.js']).toMatchInlineSnapshot(`
+        "function $importDefault(module) {
+            if (module?.__esModule) {
+                return module.default;
+            }
+            return module;
+        }
+        import $foo from 'commonjs-module';
+        const foo = $importDefault($foo);
+        console.log(foo);
+        "
+      `);
+    });
+
+    it('only rewrites default imports', async () => {
+      expect(files['multiple-imports.js']).toMatchInlineSnapshot(`
+        "function $importDefault(module) {
+            if (module?.__esModule) {
+                return module.default;
+            }
+            return module;
+        }
+        import $foo from 'commonjs-module';
+        const foo = $importDefault($foo);
+        import { foo as bar } from 'commonjs-module';
+        import baz from 'es-module';
+        console.log(foo, bar, baz);
+        "
+      `);
+    });
+
+    it('does not rewrite an invalid import', async () => {
+      expect(files['invalid.js']).toMatchInlineSnapshot(`
+        "// @ts-expect-error - Invalid module specifier.
+        import foo from bar;
+        foo;
+        "
+      `);
+    });
+
+    it('does not rewrite an ESM import', async () => {
+      expect(files['es-module-import.js']).toMatchInlineSnapshot(`
+        "import foo from 'es-module';
+        console.log(foo);
         "
       `);
     });
