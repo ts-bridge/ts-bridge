@@ -61,13 +61,7 @@
     "vitest": "^1.5.0"
   },
   "peerDependencies": {
-    "@ts-bridge/shims": "workspace:^",
     "typescript": ">=4.8.0"
-  },
-  "peerDependenciesMeta": {
-    "@ts-bridge/shims": {
-      "optional": true
-    }
   },
   "packageManager": "yarn@4.1.1",
   "engines": {

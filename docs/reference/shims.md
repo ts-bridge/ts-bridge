@@ -5,21 +5,18 @@ icon: code-square
 
 # Shims
 
-If the `@ts-bridge/shims` package is installed, TS Bridge will automatically
+When shims are enabled (which is the default), TS Bridge will automatically
 use it to provide shims for certain APIs that are not available in the target
 environment. This is useful for using APIs specific to CommonJS environments
 such as `__dirname` and `__filename`, or `import.meta.url` in ESM environments.
-The shims are provided by the `@ts-bridge/shims` package, which is an optional
-peer dependency of TS Bridge.
 
 This means that you can use these APIs in your TypeScript code, and TS Bridge
 will automatically provide the necessary shims when compiling the code. This
 makes it easier to write code that works in both CommonJS and ESM environments.
 
 > [!NOTE]
-> You should not import from the `@ts-bridge/shims` package directly in your
-> code. TS Bridge will automatically provide the necessary shims when compiling
-> your code.
+> Shims are enabled by default, but you can disable them by specifying
+> `--shims false` or `--no-shims` when running the `ts-bridge` CLI.
 
 The following shims are available:
 
@@ -44,15 +41,18 @@ function getFile(filePath: string) {
 ```
 
 When compiled with TS Bridge, the code will work in both CommonJS and ESM
-environments, as the necessary shims will be provided by the
-`@ts-bridge/shims/esm` package (when targeting ESM).
+environments, as the necessary shims will be provided injected into the output
+code. The ESM version of the code will look something like this:
 
 ```javascript
-import * as $shims from '@ts-bridge/shims/esm';
+function $__dirname(url) {
+  // Some logic to get the directory name from `import.meta.url`.
+}
+
 import { resolve } from 'path';
 
 function getFile(filePath) {
-  return resolve($shims.__dirname(import.meta.url), filePath);
+  return resolve($__dirname(import.meta.url), filePath);
 }
 ```
 

@@ -1139,11 +1139,7 @@ __metadata:
     vitest: "npm:^1.5.0"
     yargs: "npm:^17.7.2"
   peerDependencies:
-    "@ts-bridge/shims": "workspace:^"
     typescript: ">=4.8.0"
-  peerDependenciesMeta:
-    "@ts-bridge/shims":
-      optional: true
   bin:
     ts-bridge: ./dist/index.js
     tsbridge: ./dist/index.js

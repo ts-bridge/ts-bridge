@@ -29,25 +29,3 @@ $ yarn add -D @ts-bridge/cli typescript
 ```
 
 +++
-
-## Installing the shims package (optional)
-
-If you want to use the shims provided by TS Bridge, you can install the
-`@ts-bridge/shims` package as well. Make sure to install it as a **regular
-dependency**:
-
-+++ NPM
-
-```shell
-$ npm install --save @ts-bridge/shims
-```
-
-+++ Yarn
-
-```shell
-$ yarn add @ts-bridge/shims
-```
-
-+++
-
-The shims will automatically be enabled when the package is installed.
