@@ -247,10 +247,12 @@ export function getExportExtensionTransformer(
  * ```
  *
  * will be transformed to:
- * ```
- * import * as shims from '@ts-bridge/shims/esm';
+ * ```ts
+ * function $__filename(url) {
+ *   // ...;
+ * }
  *
- * const foo = shims.__filename(import.meta.url);
+ * const foo = $__filename(import.meta.url);
  * ```
  *
  * This should only be used for the ES module target.
@@ -359,10 +361,12 @@ export function getGlobalsTransformer({ typeChecker }: TransformerOptions) {
  * ```
  *
  * will be transformed to:
- * ```
- * import * as nodeShims from '@ts-bridge/shims/esm/require';
+ * ```ts
+ * function require(path, url) {
+ *   // ...;
+ * }
  *
- * const foo = nodeShims.require('bar', import.meta.url);
+ * const foo = require('bar', import.meta.url);
  * ```
  *
  * This should only be used for the ES module target.
@@ -426,9 +430,11 @@ export const getRequireTransformer = ({ typeChecker }: TransformerOptions) => {
  *
  * will be transformed to:
  * ```ts
- * import * as shims from '@ts-bridge/shims';
+ * function getImportMetaUrl(filename) {
+ *   // ...;
+ * }
  *
- * const foo = shims.getImportMetaUrl(__filename);
+ * const foo = getImportMetaUrl(__filename);
  * ```
  *
  * This should only be used for the CommonJS target.
