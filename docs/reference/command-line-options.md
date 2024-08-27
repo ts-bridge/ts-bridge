@@ -86,6 +86,22 @@ they are detected in the `tsconfig.json` file.
 $ ts-bridge build --references
 ```
 
+### `--shims`
+
+- Type: `boolean`
+- Default: `true`
+
+Enable or disable shims for CommonJS and ESM environments. Shims are enabled by
+default. To disable them, specify `--shims false`, or `--no-shims`.
+
+```shell
+$ ts-bridge build --shims false
+```
+
+```shell
+$ ts-bridge build --no-shims
+```
+
 ### `--verbose`
 
 - Alias: `-v`
