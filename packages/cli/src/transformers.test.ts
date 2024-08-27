@@ -534,25 +534,11 @@ describe('getGlobalsTransformer', () => {
 
     it('adds a shim when using `__filename`', async () => {
       expect(files['filename.js']).toMatchInlineSnapshot(`
-        "function $getDirname(path) {
-            const sanitisedPath = path.toString().replace(/\\\\/gu, "/").replace(/\\/$/u, "");
-            const index = sanitisedPath.lastIndexOf("/");
-            if (index === -1) {
-                return path;
-            }
-            if (index === 0) {
-                return "/";
-            }
-            return sanitisedPath.slice(0, index);
-        }
-        function $fileUrlToPath(fileUrl) {
+        "function $__filename(fileUrl) {
             const url = new URL(fileUrl);
             return url.pathname.replace(/^\\/([a-zA-Z]:)/u, "$1");
         }
-        function $__dirname(url) {
-            return $getDirname($fileUrlToPath(url));
-        }
-        console.log($fileUrlToPath(import.meta.url));
+        console.log($__filename(import.meta.url));
         export {};
         "
       `);
@@ -560,7 +546,11 @@ describe('getGlobalsTransformer', () => {
 
     it('adds a shim when using `__dirname`', async () => {
       expect(files['dirname.js']).toMatchInlineSnapshot(`
-        "function $getDirname(path) {
+        "function $__filename(fileUrl) {
+            const url = new URL(fileUrl);
+            return url.pathname.replace(/^\\/([a-zA-Z]:)/u, "$1");
+        }
+        function $getDirname(path) {
             const sanitisedPath = path.toString().replace(/\\\\/gu, "/").replace(/\\/$/u, "");
             const index = sanitisedPath.lastIndexOf("/");
             if (index === -1) {
@@ -571,12 +561,8 @@ describe('getGlobalsTransformer', () => {
             }
             return sanitisedPath.slice(0, index);
         }
-        function $fileUrlToPath(fileUrl) {
-            const url = new URL(fileUrl);
-            return url.pathname.replace(/^\\/([a-zA-Z]:)/u, "$1");
-        }
         function $__dirname(url) {
-            return $getDirname($fileUrlToPath(url));
+            return $getDirname($__filename(url));
         }
         console.log($__dirname(import.meta.url));
         export {};
@@ -586,7 +572,11 @@ describe('getGlobalsTransformer', () => {
 
     it('adds a shim when using both `__filename` and `__dirname`', async () => {
       expect(files['multiple.js']).toMatchInlineSnapshot(`
-        "function $getDirname(path) {
+        "function $__filename(fileUrl) {
+            const url = new URL(fileUrl);
+            return url.pathname.replace(/^\\/([a-zA-Z]:)/u, "$1");
+        }
+        function $getDirname(path) {
             const sanitisedPath = path.toString().replace(/\\\\/gu, "/").replace(/\\/$/u, "");
             const index = sanitisedPath.lastIndexOf("/");
             if (index === -1) {
@@ -597,14 +587,10 @@ describe('getGlobalsTransformer', () => {
             }
             return sanitisedPath.slice(0, index);
         }
-        function $fileUrlToPath(fileUrl) {
-            const url = new URL(fileUrl);
-            return url.pathname.replace(/^\\/([a-zA-Z]:)/u, "$1");
-        }
         function $__dirname(url) {
-            return $getDirname($fileUrlToPath(url));
+            return $getDirname($__filename(url));
         }
-        console.log($__dirname(import.meta.url), $fileUrlToPath(import.meta.url));
+        console.log($__dirname(import.meta.url), $__filename(import.meta.url));
         export {};
         "
       `);
@@ -612,26 +598,12 @@ describe('getGlobalsTransformer', () => {
 
     it('renames the shim when the name is already used in the scope', async () => {
       expect(files['rename.js']).toMatchInlineSnapshot(`
-        "function $getDirname(path) {
-            const sanitisedPath = path.toString().replace(/\\\\/gu, "/").replace(/\\/$/u, "");
-            const index = sanitisedPath.lastIndexOf("/");
-            if (index === -1) {
-                return path;
-            }
-            if (index === 0) {
-                return "/";
-            }
-            return sanitisedPath.slice(0, index);
-        }
-        function $fileUrlToPath(fileUrl) {
+        "function $__filename(fileUrl) {
             const url = new URL(fileUrl);
             return url.pathname.replace(/^\\/([a-zA-Z]:)/u, "$1");
         }
-        function $__dirname(url) {
-            return $getDirname($fileUrlToPath(url));
-        }
         const $dirname = 'foo';
-        console.log($dirname, $fileUrlToPath(import.meta.url));
+        console.log($dirname, $__filename(import.meta.url));
         export {};
         "
       `);

@@ -262,7 +262,8 @@ export function getExportExtensionTransformer(
 export function getGlobalsTransformer({ typeChecker }: TransformerOptions) {
   return (context: TransformationContext): Transformer<SourceFile> => {
     return (sourceFile: SourceFile) => {
-      let insertShim = false;
+      let insertFilenameShim = false;
+      let insertDirnameShim = false;
 
       const dirnameHelperFunctionName = getUniqueIdentifier(
         typeChecker,
@@ -273,7 +274,7 @@ export function getGlobalsTransformer({ typeChecker }: TransformerOptions) {
       const fileUrlToPathFunctionName = getUniqueIdentifier(
         typeChecker,
         sourceFile,
-        'fileUrlToPath',
+        '__filename',
       );
 
       const dirnameFunctionName = getUniqueIdentifier(
@@ -291,7 +292,7 @@ export function getGlobalsTransformer({ typeChecker }: TransformerOptions) {
           !isFunctionDeclaration(node.parent) &&
           isGlobal(typeChecker, node, '__filename')
         ) {
-          insertShim = true;
+          insertFilenameShim = true;
           return factory.createCallExpression(
             factory.createIdentifier(fileUrlToPathFunctionName),
             undefined,
@@ -307,7 +308,7 @@ export function getGlobalsTransformer({ typeChecker }: TransformerOptions) {
           !isFunctionDeclaration(node.parent) &&
           isGlobal(typeChecker, node.parent, '__dirname')
         ) {
-          insertShim = true;
+          insertDirnameShim = true;
           return factory.createCallExpression(
             factory.createIdentifier(dirnameFunctionName),
             undefined,
@@ -320,15 +321,25 @@ export function getGlobalsTransformer({ typeChecker }: TransformerOptions) {
 
       const modifiedSourceFile = visitNode(sourceFile, visitor) as SourceFile;
 
-      if (insertShim) {
-        return factory.updateSourceFile(modifiedSourceFile, [
-          getDirnameHelperFunction(dirnameHelperFunctionName),
-          getFileUrlToPathHelperFunction(fileUrlToPathFunctionName),
+      const statements = [];
+      if (insertDirnameShim) {
+        statements.push(getDirnameHelperFunction(dirnameHelperFunctionName));
+        statements.push(
           getDirnameGlobalFunction(
             dirnameFunctionName,
             fileUrlToPathFunctionName,
             dirnameHelperFunctionName,
           ),
+        );
+      }
+
+      if (insertFilenameShim || insertDirnameShim) {
+        statements.unshift(
+          getFileUrlToPathHelperFunction(fileUrlToPathFunctionName),
+        );
+
+        return factory.updateSourceFile(modifiedSourceFile, [
+          ...statements,
           ...modifiedSourceFile.statements,
         ]);
       }
