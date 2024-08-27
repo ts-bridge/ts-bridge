@@ -21,6 +21,7 @@ import {
   getUniqueIdentifier,
   isGlobal,
 } from './generator.js';
+import { getImportDefaultHelper } from './helpers.js';
 import { getModulePath, getModuleType, isCommonJs } from './module-resolver.js';
 import {
   getDirnameGlobalFunction,
@@ -515,10 +516,10 @@ export function getDefaultImportTransformer({
   return (context: TransformationContext): Transformer<SourceFile> => {
     return (sourceFile: SourceFile) => {
       let insertShim = false;
-      const helpersIdentifier = getUniqueIdentifier(
+      const importDefaultFunctionName = getUniqueIdentifier(
         typeChecker,
         sourceFile,
-        'helpers',
+        'importDefault',
       );
 
       const visitor = (node: Node): Node | Node[] | undefined => {
@@ -564,10 +565,7 @@ export function getDefaultImportTransformer({
                   undefined,
                   undefined,
                   factory.createCallExpression(
-                    factory.createPropertyAccessExpression(
-                      factory.createIdentifier(helpersIdentifier),
-                      factory.createIdentifier('importDefault'),
-                    ),
+                    factory.createIdentifier(importDefaultFunctionName),
                     undefined,
                     [factory.createIdentifier(name)],
                   ),
@@ -586,10 +584,10 @@ export function getDefaultImportTransformer({
 
       const modifiedSourceFile = visitNode(sourceFile, visitor) as SourceFile;
       if (insertShim) {
-        // return factory.updateSourceFile(modifiedSourceFile, [
-        //   getNamespaceImport(helpersIdentifier, ESM_HELPERS_PACKAGE),
-        //   ...modifiedSourceFile.statements,
-        // ]);
+        return factory.updateSourceFile(modifiedSourceFile, [
+          getImportDefaultHelper(importDefaultFunctionName),
+          ...modifiedSourceFile.statements,
+        ]);
       }
 
       return modifiedSourceFile;

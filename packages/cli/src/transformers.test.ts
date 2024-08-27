@@ -708,9 +708,14 @@ describe('getDefaultImportTransformer', () => {
 
     it('rewrites a default import for a CommonJS module import', async () => {
       expect(files['default-import.js']).toMatchInlineSnapshot(`
-        "import * as $helpers from "@ts-bridge/helpers/esm";
+        "function $importDefault(module) {
+            if (module?.__esModule) {
+                return module.default;
+            }
+            return module;
+        }
         import $foo from 'commonjs-module';
-        const foo = $helpers.importDefault($foo);
+        const foo = $importDefault($foo);
         console.log(foo);
         "
       `);
@@ -718,9 +723,14 @@ describe('getDefaultImportTransformer', () => {
 
     it('only rewrites default imports', async () => {
       expect(files['multiple-imports.js']).toMatchInlineSnapshot(`
-        "import * as $helpers from "@ts-bridge/helpers/esm";
+        "function $importDefault(module) {
+            if (module?.__esModule) {
+                return module.default;
+            }
+            return module;
+        }
         import $foo from 'commonjs-module';
-        const foo = $helpers.importDefault($foo);
+        const foo = $importDefault($foo);
         import { foo as bar } from 'commonjs-module';
         import baz from 'es-module';
         console.log(foo, bar, baz);

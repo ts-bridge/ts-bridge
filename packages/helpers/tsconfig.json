@@ -1,9 +1,0 @@
-{
-  "extends": "../../tsconfig.packages.json",
-  "compilerOptions": {
-    "baseUrl": "./",
-    "skipLibCheck": true,
-    "rootDir": "./"
-  },
-  "exclude": ["./dist", "./node_modules"]
-}
