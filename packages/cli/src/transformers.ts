@@ -499,9 +499,12 @@ export function getImportMetaTransformer({ typeChecker }: TransformerOptions) {
  * will be transformed to:
  *
  * ```ts
- * import * as $helpers from '@ts-bridge/helpers';
+ * function $importDefault(module) {
+ *   // ...;
+ * }
+ *
  * import $foo from 'module';
- * const foo = $helpers.importDefault($foo);
+ * const foo = $importDefault($foo);
  * ```
  *
  * @param options - The transformer options.
