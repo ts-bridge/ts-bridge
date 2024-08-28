@@ -14,9 +14,6 @@
       "path": "./packages/resolver"
     },
     {
-      "path": "./packages/shims"
-    },
-    {
       "path": "./packages/test-utils"
     }
   ]
