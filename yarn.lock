@@ -1275,17 +1275,6 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@ts-bridge/shims@workspace:packages/shims":
-  version: 0.0.0-use.local
-  resolution: "@ts-bridge/shims@workspace:packages/shims"
-  dependencies:
-    "@metamask/auto-changelog": "npm:^3.4.4"
-    typescript: "npm:^5.4.5"
-    vite-tsconfig-paths: "npm:^4.3.2"
-    vitest: "npm:^1.5.0"
-  languageName: unknown
-  linkType: soft
-
 "@ts-bridge/test-utils@workspace:^, @ts-bridge/test-utils@workspace:packages/test-utils":
   version: 0.0.0-use.local
   resolution: "@ts-bridge/test-utils@workspace:packages/test-utils"
