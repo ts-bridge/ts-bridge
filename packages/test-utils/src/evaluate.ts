@@ -135,10 +135,10 @@ function getRequireFunction(mainFile: string, fileSystem: Map<string, string>) {
  * @param fileSystem - The (virtual) file system to use.
  * @returns The namespace of the evaluated code (i.e., the exports).
  */
-export async function evaluateModule(
+export async function evaluateModule<Type>(
   code: string,
-  fileSystem: Map<string, string>,
-) {
+  fileSystem: Map<string, string> = new Map(),
+): Promise<Type> {
   const module = new SourceTextModule(code, {
     identifier: '/index.mjs',
     initializeImportMeta: getInitializeImportMeta('/index.mjs'),
@@ -147,7 +147,7 @@ export async function evaluateModule(
   await module.link(getModuleLinker(fileSystem));
   await module.evaluate();
 
-  return module.namespace;
+  return module.namespace as Type;
 }
 
 /**
