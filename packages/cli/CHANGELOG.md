@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.0]
+
+### Added
+
+- Add transform for default CommonJS imports when targeting ESM ([#19](https://github.com/ts-bridge/ts-bridge/pull/19), [#37](https://github.com/ts-bridge/ts-bridge/pull/37))
+  - Default CommonJS imports are transformed to use a helper function which
+    checks if the module has a `__esModule` property, and returns the default
+    export if it does.
+
+### Changed
+
+- Inline shims instead of importing from `@ts-bridge/shims` ([#35](https://github.com/ts-bridge/ts-bridge/pull/35), [#36](https://github.com/ts-bridge/ts-bridge/pull/36), [#37](https://github.com/ts-bridge/ts-bridge/pull/37))
+  - `@ts-bridge/shims` is now deprecated and no longer used by the tool.
+  - This reduces the number of dependencies and makes the tool more
+    self-contained.
+- Only transform undetected named CommonJS imports ([#34](https://github.com/ts-bridge/ts-bridge/pull/34))
+  - Named CommonJS imports are only transformed if they are not detected as
+    exports.
+    - This uses `cjs-module-lexer` to detect named exports, which is used by
+      Node.js and other tools to detect named exports as well.
+
 ## [0.3.0]
 
 ### Added
@@ -74,7 +95,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Initial release of the `@ts-bridge/cli` package.
 
-[Unreleased]: https://github.com/ts-bridge/ts-bridge/compare/@ts-bridge/cli@0.3.0...HEAD
+[Unreleased]: https://github.com/ts-bridge/ts-bridge/compare/@ts-bridge/cli@0.4.0...HEAD
+[0.4.0]: https://github.com/ts-bridge/ts-bridge/compare/@ts-bridge/cli@0.3.0...@ts-bridge/cli@0.4.0
 [0.3.0]: https://github.com/ts-bridge/ts-bridge/compare/@ts-bridge/cli@0.2.0...@ts-bridge/cli@0.3.0
 [0.2.0]: https://github.com/ts-bridge/ts-bridge/compare/@ts-bridge/cli@0.1.4...@ts-bridge/cli@0.2.0
 [0.1.4]: https://github.com/ts-bridge/ts-bridge/compare/@ts-bridge/cli@0.1.3...@ts-bridge/cli@0.1.4
