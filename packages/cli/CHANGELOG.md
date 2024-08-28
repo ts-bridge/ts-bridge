@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Uncategorized
+
+- Add tests for shims and helper functions ([#37](https://github.com/ts-bridge/ts-bridge/pull/37))
+- Update documentation about shims ([#36](https://github.com/ts-bridge/ts-bridge/pull/36))
+- Transform default CommonJS imports ([#19](https://github.com/ts-bridge/ts-bridge/pull/19))
+- Inline shims instead of importing from `@ts-bridge/shims` ([#35](https://github.com/ts-bridge/ts-bridge/pull/35))
+- Detect CommonJS exports using `cjs-module-lexer` ([#34](https://github.com/ts-bridge/ts-bridge/pull/34))
+
 ## [0.3.0]
 
 ### Added
