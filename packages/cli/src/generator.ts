@@ -250,11 +250,9 @@ export function getNamedImportNodes(
   }
 
   const moduleSpecifier = getIdentifierName(node.moduleSpecifier.text);
-  const importIdentifier = getUniqueIdentifier(
-    typeChecker,
-    sourceFile,
-    moduleSpecifier,
-  );
+  const importIdentifier =
+    node.importClause.name?.text ??
+    getUniqueIdentifier(typeChecker, sourceFile, moduleSpecifier);
 
   const statements: Statement[] = [];
 
