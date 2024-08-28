@@ -251,6 +251,8 @@ export function getNamedImportNodes(
 
   const moduleSpecifier = getIdentifierName(node.moduleSpecifier.text);
   const importIdentifier =
+    // If the import declaration has a name (default import), use that name, to
+    // avoid breaking the default import transformer.
     node.importClause.name?.text ??
     getUniqueIdentifier(typeChecker, sourceFile, moduleSpecifier);
 
