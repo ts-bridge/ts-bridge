@@ -11,7 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Add transform default CommonJS imports when targeting ESM ([#19](https://github.com/ts-bridge/ts-bridge/pull/19), [#37](https://github.com/ts-bridge/ts-bridge/pull/37))
+- Add transform for default CommonJS imports when targeting ESM ([#19](https://github.com/ts-bridge/ts-bridge/pull/19), [#37](https://github.com/ts-bridge/ts-bridge/pull/37))
   - Default CommonJS imports are transformed to use a helper function which
     checks if the module has a `__esModule` property, and returns the default
     export if it does.
