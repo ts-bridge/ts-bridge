@@ -738,6 +738,21 @@ describe('getDefaultImportTransformer', () => {
       `);
     });
 
+    it('only rewrites default imports in combined imports', async () => {
+      expect(files['combined-imports.js']).toMatchInlineSnapshot(`
+        "function $importDefault(module) {
+            if (module?.__esModule) {
+                return module.default;
+            }
+            return module;
+        }
+        import $foo, { foo as bar } from 'commonjs-module';
+        const foo = $importDefault($foo);
+        console.log(foo, bar);
+        "
+      `);
+    });
+
     it('does not rewrite an invalid import', async () => {
       expect(files['invalid.js']).toMatchInlineSnapshot(`
         "// @ts-expect-error - Invalid module specifier.
@@ -807,6 +822,28 @@ describe('getNamedImportTransformer', () => {
         import $commonjsmodule from 'commonjs-module';
         const { bar: barImport } = $commonjsmodule;
         console.log(fooImport, barImport);
+        "
+      `);
+    });
+
+    it('uses an existing default import if it exists', () => {
+      expect(files['combined-imports.js']).toMatchInlineSnapshot(`
+        "import $foo from 'commonjs-module';
+        const { bar } = $foo;
+        /**
+         * Default import helper.
+         *
+         * @param module - Module with default export.
+         * @returns Default export.
+         */
+        function $importDefault(module) {
+            if (module?.__esModule) {
+                return module.default;
+            }
+            return module;
+        }
+        const foo = $importDefault($foo);
+        console.log(foo, bar);
         "
       `);
     });
