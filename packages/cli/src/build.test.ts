@@ -395,6 +395,12 @@ describe('build', () => {
           'packages/project-2/dist/index.cjs',
           'packages/project-2/dist/index.d.cts.map',
           'packages/project-2/dist/index.d.cts',
+          'dist/index.mjs',
+          'dist/index.d.mts.map',
+          'dist/index.d.mts',
+          'dist/index.cjs',
+          'dist/index.d.cts.map',
+          'dist/index.d.cts',
         ]);
       });
 
@@ -462,6 +468,12 @@ describe('build', () => {
           'packages/project-2/dist/index.cjs',
           'packages/project-2/dist/index.d.cts.map',
           'packages/project-2/dist/index.d.cts',
+          'dist/index.mjs',
+          'dist/index.d.mts.map',
+          'dist/index.d.mts',
+          'dist/index.cjs',
+          'dist/index.d.cts.map',
+          'dist/index.d.cts',
         ]);
       });
     });
