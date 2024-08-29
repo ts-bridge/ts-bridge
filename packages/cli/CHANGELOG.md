@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.1]
+
+### Fixed
+
+- Re-use existing default import for importing undetected named imports ([#40](https://github.com/ts-bridge/ts-bridge/pull/40))
+  - This fixes a bug where the default import was not properly replaced,
+    resulting in undefined variables.
+
 ## [0.4.0]
 
 ### Added
@@ -95,7 +103,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Initial release of the `@ts-bridge/cli` package.
 
-[Unreleased]: https://github.com/ts-bridge/ts-bridge/compare/@ts-bridge/cli@0.4.0...HEAD
+[Unreleased]: https://github.com/ts-bridge/ts-bridge/compare/@ts-bridge/cli@0.4.1...HEAD
+[0.4.1]: https://github.com/ts-bridge/ts-bridge/compare/@ts-bridge/cli@0.4.0...@ts-bridge/cli@0.4.1
 [0.4.0]: https://github.com/ts-bridge/ts-bridge/compare/@ts-bridge/cli@0.3.0...@ts-bridge/cli@0.4.0
 [0.3.0]: https://github.com/ts-bridge/ts-bridge/compare/@ts-bridge/cli@0.2.0...@ts-bridge/cli@0.3.0
 [0.2.0]: https://github.com/ts-bridge/ts-bridge/compare/@ts-bridge/cli@0.1.4...@ts-bridge/cli@0.2.0
