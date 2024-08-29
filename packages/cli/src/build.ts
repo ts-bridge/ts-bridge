@@ -122,7 +122,6 @@ type GetInitialCompilerHostOptions = {
  * @param options.format - The formats to build.
  * @param options.compilerOptions - The compiler options to use.
  * @param options.system - The file system to use.
- * @param options.host - The compiler host to use.
  * @param options.projectReferences - The project references to use.
  * @returns The initial compiler host to use for the build.
  */
@@ -130,18 +129,12 @@ function getInitialCompilerHost({
   format,
   compilerOptions,
   system,
-  host,
   projectReferences,
 }: GetInitialCompilerHostOptions) {
-  if (host) {
-    return host;
-  }
-
   const mockProgram = createProgram({
     rootNames: [],
     options: {},
     projectReferences,
-    host,
   });
 
   return createProjectReferencesCompilerHost(
@@ -185,7 +178,6 @@ export function buildHandler(options: BuildHandlerOptions) {
     files: customFiles,
     clean,
     system,
-    host,
     verbose,
     references,
     shims = true,
@@ -208,7 +200,6 @@ export function buildHandler(options: BuildHandlerOptions) {
     format,
     compilerOptions: baseOptions,
     system,
-    host,
     projectReferences: tsConfig.projectReferences,
   });
 
@@ -227,7 +218,6 @@ export function buildHandler(options: BuildHandlerOptions) {
     format,
     files,
     system,
-    host,
     baseDirectory,
     tsConfig,
     verbose,
