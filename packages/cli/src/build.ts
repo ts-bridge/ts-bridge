@@ -106,6 +106,49 @@ export function getFiles(
   return tsConfigFiles;
 }
 
+type GetInitialCompilerHostOptions = {
+  format: BuildType[];
+  compilerOptions: CompilerOptions;
+  system: System;
+  host?: CompilerHost;
+  projectReferences?: readonly ProjectReference[];
+};
+
+/**
+ * Get the initial compiler host to use for the build. This function will return
+ * the host to use based on the build options.
+ *
+ * @param options - The options.
+ * @param options.format - The formats to build.
+ * @param options.compilerOptions - The compiler options to use.
+ * @param options.system - The file system to use.
+ * @param options.projectReferences - The project references to use.
+ * @returns The initial compiler host to use for the build.
+ */
+function getInitialCompilerHost({
+  format,
+  compilerOptions,
+  system,
+  projectReferences,
+}: GetInitialCompilerHostOptions) {
+  if (getDefinedArray(projectReferences).length === 0) {
+    return undefined;
+  }
+
+  const mockProgram = createProgram({
+    rootNames: [],
+    options: {},
+    projectReferences,
+  });
+
+  return createProjectReferencesCompilerHost(
+    format,
+    compilerOptions,
+    getDefinedArray(mockProgram.getResolvedProjectReferences()),
+    system,
+  );
+}
+
 /**
  * Options for the build handler. This is intended to be provided by the CLI,
  * and these types should match the CLI options.
@@ -139,7 +182,6 @@ export function buildHandler(options: BuildHandlerOptions) {
     files: customFiles,
     clean,
     system,
-    host,
     verbose,
     references,
     shims = true,
@@ -158,11 +200,18 @@ export function buildHandler(options: BuildHandlerOptions) {
 
   const files = getFiles(customFiles, tsConfig.fileNames);
 
+  const initialHost = getInitialCompilerHost({
+    format,
+    compilerOptions: baseOptions,
+    system,
+    projectReferences: tsConfig.projectReferences,
+  });
+
   const compilerOptions = getCompilerOptions(baseOptions);
   const program = getProgram({
     compilerOptions,
     files,
-    host,
+    host: initialHost,
     projectReferences: tsConfig.projectReferences,
   });
 
@@ -173,7 +222,6 @@ export function buildHandler(options: BuildHandlerOptions) {
     format,
     files,
     system,
-    host,
     baseDirectory,
     tsConfig,
     verbose,
@@ -334,22 +382,11 @@ export function buildNode16({
  * using the specified formats.
  *
  * @param options - The build options.
- * @param options.program - The base TypeScript program to use.
- * @param options.format - The formats to build.
- * @param options.system - The file system to use.
- * @param options.baseDirectory - The base directory of the project.
- * @param options.verbose - Whether to enable verbose logging.
- * @param options.shims - Whether to generate shims for environment-specific
- * APIs.
  */
-export function buildProjectReferences({
-  program,
-  format,
-  system,
-  baseDirectory,
-  verbose,
-  shims,
-}: BuilderOptions) {
+export function buildProjectReferences(options: BuilderOptions) {
+  const { program, tsConfig, format, system, baseDirectory, verbose, shims } =
+    options;
+
   const resolvedProjectReferences = getDefinedArray(
     program.getResolvedProjectReferences(),
   );
@@ -413,6 +450,11 @@ export function buildProjectReferences({
       shims,
     });
   }
+
+  info('All project references built. Building main project.');
+
+  const buildFunction = getBuildFunction(tsConfig, false);
+  buildFunction(options);
 }
 
 /**

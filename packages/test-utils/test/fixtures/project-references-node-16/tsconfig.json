@@ -1,5 +1,9 @@
 {
-  "files": [],
+  "compilerOptions": {
+    "outDir": "./dist",
+    "strictNullChecks": true
+  },
+  "include": ["src"],
   "references": [
     {
       "path": "./packages/project-1"
