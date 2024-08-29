@@ -9,9 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.1.1]
 
-### Uncategorized
+### Fixed
 
-- Remove `require` from default conditions ([#41](https://github.com/ts-bridge/ts-bridge/pull/41))
+- Remove `require` from default exports conditions ([#41](https://github.com/ts-bridge/ts-bridge/pull/41))
+  - Node.js does not use the `require` field when resolving CommonJS modules.
 
 ## [0.1.0]
 
