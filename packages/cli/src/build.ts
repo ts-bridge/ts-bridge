@@ -131,6 +131,10 @@ function getInitialCompilerHost({
   system,
   projectReferences,
 }: GetInitialCompilerHostOptions) {
+  if (getDefinedArray(projectReferences).length === 0) {
+    return undefined;
+  }
+
   const mockProgram = createProgram({
     rootNames: [],
     options: {},
