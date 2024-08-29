@@ -111,7 +111,6 @@ type GetInitialCompilerHostOptions = {
   compilerOptions: CompilerOptions;
   system: System;
   host?: CompilerHost;
-  useReferences?: boolean;
   projectReferences?: readonly ProjectReference[];
 };
 
@@ -124,19 +123,17 @@ type GetInitialCompilerHostOptions = {
  * @param options.compilerOptions - The compiler options to use.
  * @param options.system - The file system to use.
  * @param options.host - The compiler host to use.
- * @param options.useReferences - Whether to use project references.
  * @param options.projectReferences - The project references to use.
  * @returns The initial compiler host to use for the build.
  */
-export function getInitialCompilerHost({
+function getInitialCompilerHost({
   format,
   compilerOptions,
   system,
   host,
-  useReferences,
   projectReferences,
 }: GetInitialCompilerHostOptions) {
-  if (!useReferences) {
+  if (host) {
     return host;
   }
 
@@ -212,7 +209,6 @@ export function buildHandler(options: BuildHandlerOptions) {
     compilerOptions: baseOptions,
     system,
     host,
-    useReferences: references,
     projectReferences: tsConfig.projectReferences,
   });
 
