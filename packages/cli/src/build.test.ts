@@ -477,6 +477,34 @@ describe('build', () => {
         ]);
       });
     });
+
+    it('removes the output directory of all referenced projects if `clean` is enabled', () => {
+      const path = getFixture('project-references-node-16');
+      const dist = join(path, 'dist');
+
+      compile(
+        getFixture('project-references-node-16'),
+        ['commonjs', 'module'],
+        {
+          references: true,
+          clean: true,
+        },
+      );
+
+      expect(vi.mocked(removeDirectory)).toHaveBeenCalledWith(dist, path);
+      expect(vi.mocked(removeDirectory)).toHaveBeenCalledWith(
+        join(path, 'packages/project-1/dist'),
+        join(path, 'packages/project-1'),
+      );
+      expect(vi.mocked(removeDirectory)).toHaveBeenCalledWith(
+        join(path, 'packages/project-2/dist'),
+        join(path, 'packages/project-2'),
+      );
+      expect(vi.mocked(removeDirectory)).toHaveBeenCalledWith(
+        join(path, 'packages/project-3/dist'),
+        join(path, 'packages/project-3'),
+      );
+    });
   });
 
   it('removes the output directory if `clean` is enabled', () => {

@@ -94,7 +94,7 @@ export function getTypeScriptConfig(path: string, system = sys) {
 export function getBaseCompilerOptions(
   basePath: string,
   baseOptions: CompilerOptions,
-) {
+): CompilerOptions {
   const fallbackPath = getAbsolutePath(basePath, 'dist');
 
   return {
