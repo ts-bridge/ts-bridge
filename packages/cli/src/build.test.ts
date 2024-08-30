@@ -508,14 +508,19 @@ describe('build', () => {
   });
 
   it('removes the output directory if `clean` is enabled', () => {
+    const log = vi.spyOn(console, 'log').mockImplementation(noOp);
     const path = getFixture('node-16');
     const dist = join(path, 'dist');
 
     compile(path, ['module'], {
       clean: true,
+      verbose: true,
     });
 
     expect(vi.mocked(removeDirectory)).toHaveBeenCalledWith(dist, path);
+    expect(log).toHaveBeenCalledWith(
+      expect.stringContaining('Cleaning output directory'),
+    );
   });
 
   it('throws an error if the project fails to initialise', () => {
