@@ -150,6 +150,27 @@ function getInitialCompilerHost({
 }
 
 /**
+ * Clean the output directory before building the project.
+ *
+ * @param project - The path to the project's `tsconfig.json` file.
+ * @param options - The compiler options to use.
+ * @param clean - Whether to clean the output directory before building.
+ * @param verbose - Whether to enable verbose logging.
+ */
+function cleanOutputDirectory(
+  project: string,
+  options: CompilerOptions,
+  clean = false,
+  verbose?: boolean,
+) {
+  const baseDirectory = dirname(project);
+  if (clean && options.outDir) {
+    verbose && info(`Cleaning output directory "${options.outDir}".`);
+    removeDirectory(options.outDir, baseDirectory);
+  }
+}
+
+/**
  * Options for the build handler. This is intended to be provided by the CLI,
  * and these types should match the CLI options.
  *
@@ -194,9 +215,7 @@ export function buildHandler(options: BuildHandlerOptions) {
   );
 
   const baseDirectory = dirname(project);
-  if (clean && baseOptions.outDir) {
-    removeDirectory(baseOptions.outDir, baseDirectory);
-  }
+  cleanOutputDirectory(project, baseOptions, clean, verbose);
 
   const files = getFiles(customFiles, tsConfig.fileNames);
 
@@ -226,6 +245,7 @@ export function buildHandler(options: BuildHandlerOptions) {
     tsConfig,
     verbose,
     shims,
+    clean,
   };
 
   const buildFunction = getBuildFunction(tsConfig, references);
@@ -244,6 +264,7 @@ type BuilderOptions = {
   tsConfig: ParsedCommandLine;
   verbose?: boolean;
   shims: boolean;
+  clean?: boolean;
 };
 
 /**
@@ -384,8 +405,16 @@ export function buildNode16({
  * @param options - The build options.
  */
 export function buildProjectReferences(options: BuilderOptions) {
-  const { program, tsConfig, format, system, baseDirectory, verbose, shims } =
-    options;
+  const {
+    program,
+    tsConfig,
+    format,
+    system,
+    baseDirectory,
+    verbose,
+    shims,
+    clean,
+  } = options;
 
   const resolvedProjectReferences = getDefinedArray(
     program.getResolvedProjectReferences(),
@@ -418,6 +447,8 @@ export function buildProjectReferences(options: BuilderOptions) {
       dirname(sourceFile.fileName),
       childOptions,
     );
+
+    cleanOutputDirectory(sourceFile.fileName, baseChildOptions, clean, verbose);
 
     const compilerOptions = getCompilerOptions(baseChildOptions);
     const host = createProjectReferencesCompilerHost(
