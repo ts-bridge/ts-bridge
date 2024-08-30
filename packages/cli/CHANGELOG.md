@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.3]
+
+### Fixed
+
+- Clean dist folders of referenced projects if `clean` is enabled ([#46](https://github.com/ts-bridge/ts-bridge/pull/46))
+- Forward verbose option to build function when building for Node 16 ([#45](https://github.com/ts-bridge/ts-bridge/pull/45))
+
 ## [0.4.2]
 
 ### Fixed
@@ -109,7 +116,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Initial release of the `@ts-bridge/cli` package.
 
-[Unreleased]: https://github.com/ts-bridge/ts-bridge/compare/@ts-bridge/cli@0.4.2...HEAD
+[Unreleased]: https://github.com/ts-bridge/ts-bridge/compare/@ts-bridge/cli@0.4.3...HEAD
+[0.4.3]: https://github.com/ts-bridge/ts-bridge/compare/@ts-bridge/cli@0.4.2...@ts-bridge/cli@0.4.3
 [0.4.2]: https://github.com/ts-bridge/ts-bridge/compare/@ts-bridge/cli@0.4.1...@ts-bridge/cli@0.4.2
 [0.4.1]: https://github.com/ts-bridge/ts-bridge/compare/@ts-bridge/cli@0.4.0...@ts-bridge/cli@0.4.1
 [0.4.0]: https://github.com/ts-bridge/ts-bridge/compare/@ts-bridge/cli@0.3.0...@ts-bridge/cli@0.4.0
