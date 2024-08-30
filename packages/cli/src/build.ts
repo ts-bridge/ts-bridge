@@ -155,15 +155,17 @@ function getInitialCompilerHost({
  * @param project - The path to the project's `tsconfig.json` file.
  * @param options - The compiler options to use.
  * @param clean - Whether to clean the output directory before building.
+ * @param verbose - Whether to enable verbose logging.
  */
 function cleanOutputDirectory(
   project: string,
   options: CompilerOptions,
   clean = false,
+  verbose?: boolean,
 ) {
   const baseDirectory = dirname(project);
   if (clean && options.outDir) {
-    info(`Cleaning output directory "${options.outDir}".`);
+    verbose && info(`Cleaning output directory "${options.outDir}".`);
     removeDirectory(options.outDir, baseDirectory);
   }
 }
@@ -213,7 +215,7 @@ export function buildHandler(options: BuildHandlerOptions) {
   );
 
   const baseDirectory = dirname(project);
-  cleanOutputDirectory(project, baseOptions, clean);
+  cleanOutputDirectory(project, baseOptions, clean, verbose);
 
   const files = getFiles(customFiles, tsConfig.fileNames);
 
@@ -446,7 +448,7 @@ export function buildProjectReferences(options: BuilderOptions) {
       childOptions,
     );
 
-    cleanOutputDirectory(sourceFile.fileName, baseChildOptions, clean);
+    cleanOutputDirectory(sourceFile.fileName, baseChildOptions, clean, verbose);
 
     const compilerOptions = getCompilerOptions(baseChildOptions);
     const host = createProjectReferencesCompilerHost(
