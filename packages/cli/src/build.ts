@@ -362,14 +362,14 @@ export function buildNode16({
       name: 'Building ES module.',
       condition: () => format.includes('module'),
       task: () => {
-        build({ program, type: 'module', system, shims });
+        build({ program, type: 'module', system, shims, verbose });
       },
     },
     {
       name: 'Building CommonJS module.',
       condition: () => format.includes('commonjs'),
       task: () => {
-        build({ program, type: 'commonjs', system, shims });
+        build({ program, type: 'commonjs', system, shims, verbose });
       },
     },
   ];
