@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.4]
+
 ## [0.4.3]
 
 ### Fixed
@@ -116,7 +118,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Initial release of the `@ts-bridge/cli` package.
 
-[Unreleased]: https://github.com/ts-bridge/ts-bridge/compare/@ts-bridge/cli@0.4.3...HEAD
+[Unreleased]: https://github.com/ts-bridge/ts-bridge/compare/@ts-bridge/cli@0.4.4...HEAD
+[0.4.4]: https://github.com/ts-bridge/ts-bridge/compare/@ts-bridge/cli@0.4.3...@ts-bridge/cli@0.4.4
 [0.4.3]: https://github.com/ts-bridge/ts-bridge/compare/@ts-bridge/cli@0.4.2...@ts-bridge/cli@0.4.3
 [0.4.2]: https://github.com/ts-bridge/ts-bridge/compare/@ts-bridge/cli@0.4.1...@ts-bridge/cli@0.4.2
 [0.4.1]: https://github.com/ts-bridge/ts-bridge/compare/@ts-bridge/cli@0.4.0...@ts-bridge/cli@0.4.1
