@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Uncategorized
+
+- Resolve `index.js` file in `main` if `main` is a folder ([#48](https://github.com/ts-bridge/ts-bridge/pull/48))
+
 ## [0.1.1]
 
 ### Fixed
