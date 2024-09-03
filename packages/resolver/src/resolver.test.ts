@@ -1033,6 +1033,43 @@ describe('resolve', () => {
       });
     });
 
+    it('resolves an external CommonJS package with a `main` field pointing to a directory containing an `index.js` file', () => {
+      const fileSystem = getFileSystem({
+        '/foo/node_modules/bar': { type: 'directory' },
+        '/foo/node_modules/bar/src': { type: 'directory' },
+        '/foo/node_modules/bar/src/index.js': 'console.log("hello!");',
+        '/foo/node_modules/bar/package.json': JSON.stringify({
+          name: 'bar',
+          main: 'src',
+        }),
+      });
+
+      expect(
+        resolve('bar', 'file:///foo/bar/baz.js', fileSystem, false),
+      ).toStrictEqual({
+        path: '/foo/node_modules/bar/src/index.js',
+        format: 'commonjs',
+      });
+    });
+
+    it('does not resolve an external CommonJS package with a `main` field pointing to a directory containing an `index.cjs` file', () => {
+      const fileSystem = getFileSystem({
+        '/foo/node_modules/bar': { type: 'directory' },
+        '/foo/node_modules/bar/src': { type: 'directory' },
+        '/foo/node_modules/bar/src/index.cjs': 'console.log("hello!");',
+        '/foo/node_modules/bar/package.json': JSON.stringify({
+          name: 'bar',
+          main: 'src',
+        }),
+      });
+
+      expect(() =>
+        resolve('bar', 'file:///foo/bar/baz.js', fileSystem, false),
+      ).toThrow(
+        'The package or module requested does not exist: "file:///foo/node_modules/bar/src/index.js".',
+      );
+    });
+
     it('does not resolve an external package without a `package.json`', () => {
       const fileSystem = getFileSystem({
         '/foo/node_modules/bar': { type: 'directory' },

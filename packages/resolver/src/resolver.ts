@@ -776,6 +776,30 @@ function resolveSelf(
 }
 
 /**
+ * Resolve the `main` field of a `package.json` file. This function checks if
+ * the `main` field is a file or a directory, and returns the resolved URL. If
+ * it is a directory, it resolves the `index.js` file in the directory.
+ *
+ * @param packageUrl - The URL of the package.
+ * @param mainField - The value of the `main` field.
+ * @param fileSystem - The file system to use for resolution.
+ * @returns The resolved URL.
+ */
+function resolveMainField(
+  packageUrl: string,
+  mainField: string,
+  fileSystem: FileSystemInterface,
+): string {
+  if (fileSystem.isDirectory(resolvePath(packageUrl, mainField))) {
+    // If `main` is a folder, Node.js only resolves `index.js` in the folder. It
+    // does not resolve `index.cjs`.
+    return resolvePath(packageUrl, mainField, 'index.js');
+  }
+
+  return resolvePath(packageUrl, mainField);
+}
+
+/**
  * Resolve a package from the `node_modules` directory.
  *
  * This checks the current directory and all parent directories for the
@@ -818,7 +842,7 @@ function resolvePackageFromNodeModules(
         }
 
         if (packageSubpath === '.' && packageJson.main) {
-          return resolvePath(packageUrl, packageJson.main);
+          return resolveMainField(packageUrl, packageJson.main, fileSystem);
         }
 
         return resolvePath(packageUrl, packageSubpath);
