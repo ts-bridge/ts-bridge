@@ -1,6 +1,6 @@
 {
   "name": "@ts-bridge/resolver",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "An implementation of the Node.js module resolution algorithm.",
   "keywords": [
     "build-tool",
