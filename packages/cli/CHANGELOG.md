@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.4.4]
 
+### Fixed
+
+- Resolve `index.js` file in `main` if `main` is a folder ([#48](https://github.com/ts-bridge/ts-bridge/pull/48))
+  - Accomplished by bumping `@ts-bridge/resolver` to `0.1.2`.
+
 ## [0.4.3]
 
 ### Fixed
