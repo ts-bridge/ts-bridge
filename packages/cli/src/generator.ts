@@ -1,7 +1,6 @@
 import type {
   TypeChecker,
   Node,
-  Symbol,
   SourceFile,
   ImportDeclaration,
   Statement,
@@ -13,7 +12,7 @@ import type {
 import typescript from 'typescript';
 
 import { getCommonJsExports, isCommonJs } from './module-resolver.js';
-import { getIdentifierName } from './utils.js';
+import { getDefinedArray, getIdentifierName } from './utils.js';
 
 const {
   factory,
@@ -67,10 +66,16 @@ export function isGlobal(
     (symbol) =>
       symbol.escapedName === symbolName ||
       symbol.escapedName === `_${symbolName}`,
-    // eslint-disable-next-line @typescript-eslint/ban-types
-  ) as unknown as { parent?: Symbol };
+  );
 
-  return foundSymbol?.parent?.escapedName === '__global';
+  const declarations = getDefinedArray(foundSymbol?.getDeclarations());
+  for (const declaration of declarations) {
+    if (declaration.getSourceFile().isDeclarationFile) {
+      return true;
+    }
+  }
+
+  return false;
 }
 
 /**
