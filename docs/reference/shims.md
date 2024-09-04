@@ -25,7 +25,7 @@ The following shims are available:
 - **For ESM environments**:
   - `__dirname`
   - `__filename`
-  - `require`
+  - `require` (and `require.resolve`)
 
 ## Example
 

@@ -639,12 +639,18 @@ describe('getRequireTransformer', () => {
     it('adds a shim when using `require`', async () => {
       expect(files['require.js']).toMatchInlineSnapshot(`
         "import { createRequire as $createRequire } from "module";
-        function require(identifier, url) {
-            const fn = $createRequire(url);
-            return fn(identifier);
-        }
-        const { builtinModules } = require('module', import.meta.url);
+        const $require = $createRequire(import.meta.url);
+        const { builtinModules } = $require('module');
         console.log(builtinModules);
+        "
+      `);
+    });
+
+    it('adds a shim when using `require.resolve`', async () => {
+      expect(files['require-resolve.js']).toMatchInlineSnapshot(`
+        "import { createRequire as $createRequire } from "module";
+        const $require = $createRequire(import.meta.url);
+        console.log($require.resolve('path/to/file.js'));
         "
       `);
     });

@@ -405,23 +405,23 @@ export function getImportMetaUrlFunction(functionName: string) {
  * Get the AST for the `require` function, i.e.:
  *
  * ```ts
- * import { createRequire } from 'module';
+ * import { createRequire as $createRequire } from 'module';
  *
- * function require(identifier: string, url: string): any {
- *   const fn = createRequire(url);
- *   return fn(identifier);
- * }
+ * const $require = $createRequire(import.meta.url);
  * ```
  *
  * This is a shim for Node.js's `require` function, and is intended to be used
  * in ESM modules. Note that this function cannot be used to import ESM modules,
  * only CJS modules.
  *
- * @param functionName - The name of the function to create.
+ * @param functionName - The name of the require function to create.
+ * @param createRequireFunctionName - The name of the `createRequire` function
+ * to import.
  * @returns The AST for the `require` function.
  */
 export function getRequireHelperFunction(
   functionName: string,
+  createRequireFunctionName: string,
 ): [Statement, Statement] {
   return [
     factory.createImportDeclaration(
@@ -433,66 +433,37 @@ export function getRequireHelperFunction(
           factory.createImportSpecifier(
             false,
             factory.createIdentifier('createRequire'),
-            factory.createIdentifier(functionName),
+            factory.createIdentifier(createRequireFunctionName),
           ),
         ]),
       ),
       factory.createStringLiteral('module'),
       undefined,
     ),
-    factory.createFunctionDeclaration(
+    factory.createVariableStatement(
       undefined,
-      undefined,
-      factory.createIdentifier('require'),
-      undefined,
-      [
-        factory.createParameterDeclaration(
-          undefined,
-          undefined,
-          factory.createIdentifier('identifier'),
-          undefined,
-          factory.createKeywordTypeNode(SyntaxKind.StringKeyword),
-          undefined,
-        ),
-        factory.createParameterDeclaration(
-          undefined,
-          undefined,
-          factory.createIdentifier('url'),
-          undefined,
-          factory.createKeywordTypeNode(SyntaxKind.StringKeyword),
-          undefined,
-        ),
-      ],
-      factory.createKeywordTypeNode(SyntaxKind.AnyKeyword),
-      factory.createBlock(
+      factory.createVariableDeclarationList(
         [
-          factory.createVariableStatement(
+          factory.createVariableDeclaration(
+            factory.createIdentifier(functionName),
             undefined,
-            factory.createVariableDeclarationList(
+            undefined,
+            factory.createCallExpression(
+              factory.createIdentifier(createRequireFunctionName),
+              undefined,
               [
-                factory.createVariableDeclaration(
-                  factory.createIdentifier('fn'),
-                  undefined,
-                  undefined,
-                  factory.createCallExpression(
-                    factory.createIdentifier(functionName),
-                    undefined,
-                    [factory.createIdentifier('url')],
+                factory.createPropertyAccessExpression(
+                  factory.createMetaProperty(
+                    SyntaxKind.ImportKeyword,
+                    factory.createIdentifier('meta'),
                   ),
+                  factory.createIdentifier('url'),
                 ),
               ],
-              NodeFlags.Const,
-            ),
-          ),
-          factory.createReturnStatement(
-            factory.createCallExpression(
-              factory.createIdentifier('fn'),
-              undefined,
-              [factory.createIdentifier('identifier')],
             ),
           ),
         ],
-        true,
+        NodeFlags.Const,
       ),
     ),
   ];

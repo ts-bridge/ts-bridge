@@ -382,6 +382,12 @@ export const getRequireTransformer = ({ typeChecker }: TransformerOptions) => {
     return (sourceFile: SourceFile) => {
       let insertShim = false;
 
+      const requireFunctionName = getUniqueIdentifier(
+        typeChecker,
+        sourceFile,
+        'require',
+      );
+
       const createRequireFunctionName = getUniqueIdentifier(
         typeChecker,
         sourceFile,
@@ -398,9 +404,29 @@ export const getRequireTransformer = ({ typeChecker }: TransformerOptions) => {
         ) {
           insertShim = true;
           return factory.createCallExpression(
-            factory.createIdentifier('require'),
+            factory.createIdentifier(requireFunctionName),
             undefined,
-            [node.arguments[0], getImportMetaUrl()],
+            [node.arguments[0]],
+          );
+        }
+
+        if (
+          isCallExpression(node) &&
+          isPropertyAccessExpression(node.expression) &&
+          isIdentifier(node.expression.expression) &&
+          node.expression.expression.text === 'require' &&
+          node.expression.name.text === 'resolve' &&
+          isGlobal(typeChecker, node, 'require') &&
+          node.arguments[0]
+        ) {
+          insertShim = true;
+          return factory.createCallExpression(
+            factory.createPropertyAccessExpression(
+              factory.createIdentifier(requireFunctionName),
+              'resolve',
+            ),
+            undefined,
+            [node.arguments[0]],
           );
         }
 
@@ -411,7 +437,10 @@ export const getRequireTransformer = ({ typeChecker }: TransformerOptions) => {
 
       if (insertShim) {
         return factory.updateSourceFile(modifiedSourceFile, [
-          ...getRequireHelperFunction(createRequireFunctionName),
+          ...getRequireHelperFunction(
+            requireFunctionName,
+            createRequireFunctionName,
+          ),
           ...modifiedSourceFile.statements,
         ]);
       }

@@ -253,15 +253,12 @@ describe('getImportMetaUrlFunction', () => {
 
 describe('getRequireHelperFunction', () => {
   it('returns the `require` helper function', () => {
-    const ast = getRequireHelperFunction('createRequire');
+    const ast = getRequireHelperFunction('require', 'createRequire');
 
     expect(compile(ast)).toMatchInlineSnapshot(`
       ""use strict";
       import { createRequire as createRequire } from "module";
-      function require(identifier, url) {
-          const fn = createRequire(url);
-          return fn(identifier);
-      }
+      const require = createRequire(import.meta.url);
       "
     `);
   });
@@ -275,7 +272,7 @@ describe('getRequireHelperFunction', () => {
 
     beforeAll(async () => {
       const code = `
-        ${compile(getRequireHelperFunction('createRequire'))}
+        ${compile(getRequireHelperFunction('require', 'createRequire'))}
         export { require };
       `;
 
