@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Uncategorized
+
+- Fix detection of global symbols ([#50](https://github.com/ts-bridge/ts-bridge/pull/50))
+- Add shim for `require.resolve` ([#51](https://github.com/ts-bridge/ts-bridge/pull/51))
+
 ## [0.4.4]
 
 ### Fixed
