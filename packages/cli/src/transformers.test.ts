@@ -33,6 +33,7 @@ type CompileOptions = {
   program: Program;
   format: BuildType;
   transformer: TransformerFactory<SourceFile> | CustomTransformerFactory;
+  declarationsTransformers?: CustomTransformerFactory[];
 };
 
 /**
@@ -43,9 +44,16 @@ type CompileOptions = {
  * @param options.program - The TypeScript program to compile.
  * @param options.format - The format to compile the code to.
  * @param options.transformer - The transformer to use.
+ * @param options.declarationsTransformers - The transformers to use for
+ * declaration files.
  * @returns The compiled code.
  */
-function compile({ program, format, transformer }: CompileOptions) {
+function compile({
+  program,
+  format,
+  transformer,
+  declarationsTransformers = [],
+}: CompileOptions) {
   const { target } = getBuildTypeOptions(format);
   const files: Record<string, string> = {};
 
@@ -58,6 +66,7 @@ function compile({ program, format, transformer }: CompileOptions) {
     undefined,
     {
       before: [transformer, getTargetTransformer(target)],
+      afterDeclarations: declarationsTransformers,
     },
   );
 
@@ -67,6 +76,7 @@ function compile({ program, format, transformer }: CompileOptions) {
 type Compiler = ((
   format: BuildType,
   transformer: TransformerFactory<SourceFile> | CustomTransformerFactory,
+  declarationsTransformers?: CustomTransformerFactory[],
 ) => Record<string, string>) & {
   typeChecker: TypeChecker;
 };
@@ -91,8 +101,9 @@ function createCompiler(projectPath: string) {
   const fn: Compiler = (
     format: BuildType,
     transformer: TransformerFactory<SourceFile> | CustomTransformerFactory,
+    declarationsTransformers = [],
   ) => {
-    return compile({ program, format, transformer });
+    return compile({ program, format, transformer, declarationsTransformers });
   };
 
   fn.typeChecker = program.getTypeChecker();
@@ -249,13 +260,12 @@ describe('getDynamicImportExtensionTransformer', () => {
 
     beforeAll(() => {
       const compiler = createCompiler(getFixture('dynamic-imports'));
-      files = compiler(
-        'module',
-        getDynamicImportExtensionTransformer('.mjs', {
-          typeChecker: compiler.typeChecker,
-          system: sys,
-        }),
-      );
+      const transformer = getDynamicImportExtensionTransformer('.mjs', {
+        typeChecker: compiler.typeChecker,
+        system: sys,
+      });
+
+      files = compiler('module', transformer, [transformer]);
     });
 
     it('adds the `.mjs` extension to the import statement', async () => {
@@ -263,6 +273,23 @@ describe('getDynamicImportExtensionTransformer', () => {
         ""use strict";
         import("./dummy.mjs");
         "
+      `);
+    });
+
+    it('adds the `.mjs` extension to the import statement in a declaration file', async () => {
+      expect(files['declaration.d.ts']).toMatchInlineSnapshot(`
+        "/**
+         * This function results in a case where TypeScript emits the declaration file
+         * with a dynamic import.
+         *
+         * @returns A class that extends \`Foo\`.
+         */
+        export declare function bar(): {
+            new (): {
+                getValue(): import("./dummy.mjs").Value;
+            };
+        };
+        //# sourceMappingURL=declaration.d.ts.map"
       `);
     });
 
@@ -315,13 +342,12 @@ describe('getDynamicImportExtensionTransformer', () => {
 
     beforeAll(() => {
       const compiler = createCompiler(getFixture('dynamic-imports'));
-      files = compiler(
-        'commonjs',
-        getDynamicImportExtensionTransformer('.cjs', {
-          typeChecker: compiler.typeChecker,
-          system: sys,
-        }),
-      );
+      const transformer = getDynamicImportExtensionTransformer('.cjs', {
+        typeChecker: compiler.typeChecker,
+        system: sys,
+      });
+
+      files = compiler('commonjs', transformer, [transformer]);
     });
 
     it('adds the `.cjs` extension to the import statement', async () => {
@@ -329,6 +355,23 @@ describe('getDynamicImportExtensionTransformer', () => {
         ""use strict";
         import("./dummy.cjs");
         "
+      `);
+    });
+
+    it('adds the `.cjs` extension to the import statement in a declaration file', async () => {
+      expect(files['declaration.d.ts']).toMatchInlineSnapshot(`
+        "/**
+         * This function results in a case where TypeScript emits the declaration file
+         * with a dynamic import.
+         *
+         * @returns A class that extends \`Foo\`.
+         */
+        export declare function bar(): {
+            new (): {
+                getValue(): import("./dummy.cjs").Value;
+            };
+        };
+        //# sourceMappingURL=declaration.d.ts.map"
       `);
     });
 
