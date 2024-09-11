@@ -124,6 +124,68 @@ export function getImportExtensionTransformer(
 }
 
 /**
+ * Get a transformer that updates the dynamic import extensions to append the
+ * given extension.
+ *
+ * For example, the following import declaration:
+ * ```js
+ * import('./foo.js');
+ * ```
+ *
+ * will be transformed to (assuming the extension is `.mjs`):
+ * ```js
+ * import('./foo.mjs');
+ * ```
+ *
+ * @param extension - The extension to append to import paths.
+ * @param options - The transformer options.
+ * @param options.system - The compiler system to use.
+ * @param options.verbose - Whether to enable verbose logging.
+ * @returns The transformer function.
+ */
+export function getDynamicImportExtensionTransformer(
+  extension: string,
+  { system, verbose }: TransformerOptions,
+) {
+  return (context: TransformationContext): CustomTransformer => {
+    // This returns a custom transformer instead of a transformer factory, as
+    // this transformer is used for declaration files, which requires support
+    // for bundle transformations (even though we don't use it here).
+    return {
+      transformSourceFile(sourceFile: SourceFile): SourceFile {
+        const visitor = (node: Node): Node => {
+          if (
+            node.parent &&
+            isStringLiteral(node) &&
+            isCallExpression(node.parent) &&
+            node.parent.expression.kind === SyntaxKind.ImportKeyword
+          ) {
+            const importPath = getModulePath({
+              packageSpecifier: node.text,
+              parentUrl: sourceFile.fileName,
+              extension,
+              system,
+              verbose,
+            });
+
+            return factory.createStringLiteral(importPath);
+          }
+
+          return visitEachChild(node, visitor, context);
+        };
+
+        return visitNode(sourceFile, visitor) as SourceFile;
+      },
+
+      /* istanbul ignore next 3 */
+      transformBundle(bundle: Bundle): Bundle {
+        return bundle;
+      },
+    };
+  };
+}
+
+/**
  * Get a transformer that updates the `require` calls to use the given
  * extension.
  *

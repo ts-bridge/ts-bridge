@@ -15,6 +15,7 @@ import { getBuildTypeOptions } from './build-type.js';
 import { getTypeScriptConfig } from './config.js';
 import {
   getDefaultImportTransformer,
+  getDynamicImportExtensionTransformer,
   getExportExtensionTransformer,
   getGlobalsTransformer,
   getImportAttributeTransformer,
@@ -236,6 +237,140 @@ describe('getImportExtensionTransformer', () => {
         // @ts-expect-error - Invalid module specifier.
         const module_1 = require();
         module_1.foo;
+        "
+      `);
+    });
+  });
+});
+
+describe('getDynamicImportExtensionTransformer', () => {
+  describe('when targeting `module`', () => {
+    let files: Record<string, string>;
+
+    beforeAll(() => {
+      const compiler = createCompiler(getFixture('dynamic-imports'));
+      files = compiler(
+        'module',
+        getDynamicImportExtensionTransformer('.mjs', {
+          typeChecker: compiler.typeChecker,
+          system: sys,
+        }),
+      );
+    });
+
+    it('adds the `.mjs` extension to the import statement', async () => {
+      expect(files['add.js']).toMatchInlineSnapshot(`
+        ""use strict";
+        import("./dummy.mjs");
+        "
+      `);
+    });
+
+    it('rewrites the import to `index.mjs` when importing from a directory', async () => {
+      expect(files['import-folder.js']).toMatchInlineSnapshot(`
+        ""use strict";
+        import("./folder/index.mjs");
+        "
+      `);
+    });
+
+    it('overrides an existing extension', async () => {
+      expect(files['override.js']).toMatchInlineSnapshot(`
+        ""use strict";
+        import("./dummy.mjs");
+        "
+      `);
+    });
+
+    it('resolves external imports with paths', async () => {
+      expect(files['external.js']).toMatchInlineSnapshot(`
+        ""use strict";
+        import("semver");
+        import("semver/preload.js");
+        "
+      `);
+    });
+
+    it('does not add an extension if the module fails to resolve', async () => {
+      expect(files['unresolved.js']).toMatchInlineSnapshot(`
+        ""use strict";
+        // @ts-expect-error - Unresolved module.
+        import("./unresolved-module");
+        "
+      `);
+    });
+
+    it('does not add an extension if the module specifier is invalid', async () => {
+      expect(files['invalid.js']).toMatchInlineSnapshot(`
+        ""use strict";
+        // @ts-expect-error - Invalid module specifier.
+        import(0);
+        "
+      `);
+    });
+  });
+
+  describe('when targeting `commonjs`', () => {
+    let files: Record<string, string>;
+
+    beforeAll(() => {
+      const compiler = createCompiler(getFixture('dynamic-imports'));
+      files = compiler(
+        'commonjs',
+        getDynamicImportExtensionTransformer('.cjs', {
+          typeChecker: compiler.typeChecker,
+          system: sys,
+        }),
+      );
+    });
+
+    it('adds the `.cjs` extension to the import statement', async () => {
+      expect(files['add.js']).toMatchInlineSnapshot(`
+        ""use strict";
+        import("./dummy.cjs");
+        "
+      `);
+    });
+
+    it('rewrites the import to `index.cjs` when importing from a directory', async () => {
+      expect(files['import-folder.js']).toMatchInlineSnapshot(`
+        ""use strict";
+        import("./folder/index.cjs");
+        "
+      `);
+    });
+
+    it('overrides an existing extension', async () => {
+      expect(files['override.js']).toMatchInlineSnapshot(`
+        ""use strict";
+        import("./dummy.cjs");
+        "
+      `);
+    });
+
+    it('resolves external imports with paths', async () => {
+      expect(files['external.js']).toMatchInlineSnapshot(`
+        ""use strict";
+        import("semver");
+        import("semver/preload.js");
+        "
+      `);
+    });
+
+    it('does not add an extension if the module fails to resolve', async () => {
+      expect(files['unresolved.js']).toMatchInlineSnapshot(`
+        ""use strict";
+        // @ts-expect-error - Unresolved module.
+        import("./unresolved-module");
+        "
+      `);
+    });
+
+    it('does not add an extension if the module specifier is invalid', async () => {
+      expect(files['invalid.js']).toMatchInlineSnapshot(`
+        ""use strict";
+        // @ts-expect-error - Invalid module specifier.
+        import(0);
         "
       `);
     });
