@@ -1,6 +1,6 @@
 import { rmSync } from 'fs';
-import { sep, resolve, normalize } from 'path';
-import type { System, WriteFileCallback } from 'typescript';
+import { sep, resolve, normalize, relative, join } from 'path';
+import type { CompilerOptions, System, WriteFileCallback } from 'typescript';
 import typescript from 'typescript';
 
 import type { BuildType } from './build-type.js';
@@ -58,18 +58,40 @@ export function getNewFileName(
 }
 
 /**
+ * Given the output file path, map it back to its source file path.
+ *
+ * @param outputFilePath - The path to the output file.
+ * @param rootDir - The root directory where the source files are located.
+ * @param outDir - The output directory where the compiled files are placed.
+ * @returns The source file path corresponding to the output file.
+ */
+function getSourceFilePath(
+  outputFilePath: string,
+  rootDir: string,
+  outDir: string,
+): string {
+  const relativePath = relative(outDir, outputFilePath);
+  const sourceFilePath = join(rootDir, relativePath);
+  return sourceFilePath.replace(/\.jsx?$/u, '.ts');
+}
+
+/**
  * Get a function that writes files to the file system, after transforming them.
  *
  * This function is called by the TypeScript compiler API to write transformed
  * files to the file system.
  *
  * @param type - The build type to use.
+ * @param compilerOptions - The compiler options to use.
  * @param system - The system to use for file operations.
+ * @param verbose - Whether to log verbose output.
  * @returns The function that writes files to the file system.
  */
 export function getWriteFileFunction(
   type: BuildType,
+  compilerOptions: CompilerOptions,
   system: System,
+  verbose = false,
 ): WriteFileCallback {
   const { extension, declarationExtension } = getBuildTypeOptions(type);
 
@@ -80,11 +102,20 @@ export function getWriteFileFunction(
       declarationExtension,
     );
 
+    const sourceFilePath = getSourceFilePath(
+      fileName,
+      compilerOptions.rootDir ?? '.',
+      compilerOptions.outDir ?? './dist',
+    );
+
     const updatedContent = transformFile(
       fileName,
+      sourceFilePath,
       content,
       extension,
       declarationExtension,
+      system,
+      verbose,
     );
 
     system.writeFile(fileNameWithExtension, updatedContent, writeByteOrderMark);

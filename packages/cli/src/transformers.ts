@@ -924,29 +924,19 @@ export function transformSourceMap(sourceMap: string, extension: string) {
 }
 
 /**
- * Transform the file content to update the source map path or the source file
- * extension.
+ * Transform the source map URL to match the new file extension of the source
+ * file.
  *
- * @param fileName - The name of the source file.
  * @param content - The content of the source file.
  * @param extension - The new file extension.
  * @param declarationExtension - The new file extension for declaration files.
  * @returns The transformed content.
  */
-export function transformFile(
-  fileName: string,
+function transformSourceMapUrl(
   content: string,
   extension: string,
   declarationExtension: string,
-): string {
-  if (fileName.endsWith('.d.ts.map')) {
-    return transformSourceMap(content, declarationExtension);
-  }
-
-  if (fileName.endsWith('.map')) {
-    return transformSourceMap(content, extension);
-  }
-
+) {
   // This is a bit hacky, but TypeScript doesn't provide a way to transform
   // the source map comment in the source file.
   return content
@@ -958,4 +948,114 @@ export function transformFile(
       /^\/\/# sourceMappingURL=(.*)\.d\.ts\.map$/mu,
       `//# sourceMappingURL=$1${declarationExtension}.map`,
     );
+}
+
+/**
+ * The regular expression to match dynamic imports. The aim of `ts-bridge` is to
+ * avoid regular expressions as much as possible, but this is a special case
+ * where we need to match dynamic imports created by the TypeScript compiler,
+ * after AST transformation.
+ *
+ * This regular expression matches dynamic imports, but only if they are not
+ * part of a larger identifier. This is to avoid matching `import.meta.url`,
+ * `foo.import`, etc.
+ *
+ * The following imports will be matched:
+ *
+ * ```ts
+ * import('./foo.js')
+ * import('./foo/bar.js').SomeClass
+ * ```
+ *
+ * The following imports will not be matched:
+ *
+ * ```ts
+ * import.meta.url
+ * foo.import('./foo.js')
+ * _import('./foo.js')
+ * ```
+ */
+const DYNAMIC_IMPORT_REGEX = /(?<![\w.])import\(['"](\..+)['"]\)/gu;
+
+/**
+ * Transform the dynamic imports in the declaration file to use the new file
+ * extension.
+ *
+ * @param content - The content of the declaration file.
+ * @param extension - The new file extension.
+ * @param parentUrl - The URL of the parent module.
+ * @param system - The TypeScript system.
+ * @param verbose - Whether to show verbose output.
+ * @returns The transformed content.
+ */
+export function transformDeclarationImports(
+  content: string,
+  extension: string,
+  parentUrl: string,
+  system: System,
+  verbose: boolean,
+) {
+  return content.replace(
+    DYNAMIC_IMPORT_REGEX,
+    (match: string, path: string) => {
+      const importPath = getModulePath({
+        packageSpecifier: path,
+        parentUrl,
+        extension,
+        system,
+        verbose,
+      });
+
+      return match.replace(path, importPath);
+    },
+  );
+}
+
+/**
+ * Transform the file content to update the source map path or the source file
+ * extension.
+ *
+ * @param fileName - The name of the file.
+ * @param sourceFileName - The name of the source file.
+ * @param content - The content of the source file.
+ * @param extension - The new file extension.
+ * @param declarationExtension - The new file extension for declaration files.
+ * @param system - The TypeScript system.
+ * @param verbose - Whether to show verbose output.
+ * @returns The transformed content.
+ */
+export function transformFile(
+  fileName: string,
+  sourceFileName: string,
+  content: string,
+  extension: string,
+  declarationExtension: string,
+  system: System,
+  verbose: boolean,
+): string {
+  if (fileName.endsWith('.d.ts.map')) {
+    return transformSourceMap(content, declarationExtension);
+  }
+
+  if (fileName.endsWith('.map')) {
+    return transformSourceMap(content, extension);
+  }
+
+  const updatedContent = transformSourceMapUrl(
+    content,
+    extension,
+    declarationExtension,
+  );
+
+  if (fileName.endsWith('.d.ts')) {
+    return transformDeclarationImports(
+      updatedContent,
+      extension,
+      sourceFileName,
+      system,
+      verbose,
+    );
+  }
+
+  return updatedContent;
 }

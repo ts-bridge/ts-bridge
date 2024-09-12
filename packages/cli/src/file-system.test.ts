@@ -2,7 +2,7 @@ import { getVirtualEnvironment, noOp } from '@ts-bridge/test-utils';
 import { existsSync, mkdirSync } from 'fs';
 import { tmpdir } from 'os';
 import { resolve } from 'path';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import {
   getCanonicalFileName,
@@ -11,6 +11,15 @@ import {
   readJsonFile,
   removeDirectory,
 } from './file-system.js';
+
+// TODO: Change these tests to use the real file system, to avoid the need for
+// mocking the resolver.
+vi.mock('@ts-bridge/resolver', () => ({
+  resolve: vi.fn().mockImplementation(() => ({
+    format: 'commonjs',
+    path: '/fake.js',
+  })),
+}));
 
 describe('removeDirectory', () => {
   const TEMPORARY_DIRECTORY = tmpdir();
@@ -84,7 +93,7 @@ describe('getWriteFileFunction', () => {
       },
     });
 
-    const writeFile = getWriteFileFunction('module', system);
+    const writeFile = getWriteFileFunction('module', {}, system);
     writeFile('/foo.ts', 'console.log("Hello, world!");', false);
 
     expect(system.fileExists('/foo.ts')).toBe(true);
@@ -97,7 +106,7 @@ describe('getWriteFileFunction', () => {
       },
     });
 
-    const writeFile = getWriteFileFunction('module', system);
+    const writeFile = getWriteFileFunction('module', {}, system);
     writeFile('/foo.js', 'console.log("Hello, world!");', false);
 
     expect(system.fileExists('/foo.mjs')).toBe(true);
@@ -110,7 +119,7 @@ describe('getWriteFileFunction', () => {
       },
     });
 
-    const writeFile = getWriteFileFunction('module', system);
+    const writeFile = getWriteFileFunction('module', {}, system);
     writeFile('/foo.d.ts', 'console.log("Hello, world!");', false);
 
     expect(system.fileExists('/foo.d.mts')).toBe(true);
@@ -123,7 +132,7 @@ describe('getWriteFileFunction', () => {
       },
     });
 
-    const writeFile = getWriteFileFunction('module', system);
+    const writeFile = getWriteFileFunction('module', {}, system);
     writeFile('/foo.d.ts.map', JSON.stringify({ file: '/index.js' }), false);
 
     expect(system.fileExists('/foo.d.mts.map')).toBe(true);
@@ -139,15 +148,70 @@ describe('getWriteFileFunction', () => {
       },
     });
 
-    const writeFile = getWriteFileFunction('module', {
-      ...system,
-      // The virtual file system does not have a `createDirectory` method, so we
-      // need to add a no-op method to avoid an error.
-      createDirectory: noOp,
-    });
+    const writeFile = getWriteFileFunction(
+      'module',
+      {},
+      {
+        ...system,
+        // The virtual file system does not have a `createDirectory` method, so we
+        // need to add a no-op method to avoid an error.
+        createDirectory: noOp,
+      },
+    );
 
     writeFile('/foo/bar/baz.ts', 'console.log("Hello, world!");', false);
     expect(system.fileExists('/foo/bar/baz.ts')).toBe(true);
+  });
+
+  it('transforms dynamic imports in declaration files before writing them to the file system', () => {
+    const code = `
+      /**
+       * This function results in a case where TypeScript emits the declaration file
+       * with a dynamic import.
+       *
+       * @returns A class that extends \`Foo\`.
+       */
+      export declare function bar(): {
+          new (): {
+              getFoo(): import("./dummy").Value;
+          };
+      };
+      //# sourceMappingURL=declaration.d.ts.map
+    `;
+
+    const { system } = getVirtualEnvironment({
+      files: {
+        '/index.ts': '// no-op',
+      },
+    });
+
+    const writeFile = getWriteFileFunction(
+      'module',
+      {
+        rootDir: '/',
+        outDir: '/dist',
+      },
+      system,
+    );
+    writeFile('/foo.d.ts', code, false);
+
+    expect(system.fileExists('/foo.d.mts')).toBe(true);
+    expect(system.readFile('/foo.d.mts')).toMatchInlineSnapshot(`
+      "
+            /**
+             * This function results in a case where TypeScript emits the declaration file
+             * with a dynamic import.
+             *
+             * @returns A class that extends \`Foo\`.
+             */
+            export declare function bar(): {
+                new (): {
+                    getFoo(): import("./dummy.mjs").Value;
+                };
+            };
+            //# sourceMappingURL=declaration.d.ts.map
+          "
+    `);
   });
 });
 

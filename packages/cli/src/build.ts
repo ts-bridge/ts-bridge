@@ -580,7 +580,7 @@ export function build({
 
   const { diagnostics } = program.emit(
     undefined,
-    getWriteFileFunction(type, system),
+    getWriteFileFunction(type, program.getCompilerOptions(), system, verbose),
     undefined,
     undefined,
     {

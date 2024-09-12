@@ -1,5 +1,5 @@
 import { getFixture } from '@ts-bridge/test-utils';
-import { basename } from 'path';
+import { basename, dirname, resolve } from 'path';
 import type {
   CustomTransformerFactory,
   Program,
@@ -8,6 +8,7 @@ import type {
   TypeChecker,
 } from 'typescript';
 import { createProgram, sys } from 'typescript';
+import { fileURLToPath } from 'url';
 import { beforeAll, describe, expect, it } from 'vitest';
 
 import type { BuildType } from './build-type.js';
@@ -27,7 +28,20 @@ import {
   getRequireTransformer,
   getTargetTransformer,
   getTypeImportExportTransformer,
+  transformDeclarationImports,
 } from './transformers.js';
+
+const BASE_DIRECTORY = resolve(
+  dirname(fileURLToPath(import.meta.url)),
+  '..',
+  '..',
+  'test-utils',
+  'test',
+  'fixtures',
+  'import-resolver',
+);
+
+const PARENT_URL = resolve(BASE_DIRECTORY, 'src', 'index.ts');
 
 type CompileOptions = {
   program: Program;
@@ -276,23 +290,6 @@ describe('getDynamicImportExtensionTransformer', () => {
       `);
     });
 
-    it('adds the `.mjs` extension to the import statement in a declaration file', async () => {
-      expect(files['declaration.d.ts']).toMatchInlineSnapshot(`
-        "/**
-         * This function results in a case where TypeScript emits the declaration file
-         * with a dynamic import.
-         *
-         * @returns A class that extends \`Foo\`.
-         */
-        export declare function bar(): {
-            new (): {
-                getValue(): import("./dummy.mjs").Value;
-            };
-        };
-        //# sourceMappingURL=declaration.d.ts.map"
-      `);
-    });
-
     it('rewrites the import to `index.mjs` when importing from a directory', async () => {
       expect(files['import-folder.js']).toMatchInlineSnapshot(`
         ""use strict";
@@ -355,23 +352,6 @@ describe('getDynamicImportExtensionTransformer', () => {
         ""use strict";
         import("./dummy.cjs");
         "
-      `);
-    });
-
-    it('adds the `.cjs` extension to the import statement in a declaration file', async () => {
-      expect(files['declaration.d.ts']).toMatchInlineSnapshot(`
-        "/**
-         * This function results in a case where TypeScript emits the declaration file
-         * with a dynamic import.
-         *
-         * @returns A class that extends \`Foo\`.
-         */
-        export declare function bar(): {
-            new (): {
-                getValue(): import("./dummy.cjs").Value;
-            };
-        };
-        //# sourceMappingURL=declaration.d.ts.map"
       `);
     });
 
@@ -1160,5 +1140,82 @@ describe('getRemoveImportAttributeTransformer', () => {
         "
       `);
     });
+  });
+});
+
+describe('transformDeclarationImports', () => {
+  it.each([
+    `import { foo } from './dummy';`,
+    `import type { foo } from './dummy';`,
+    `foo.import('./dummy');`,
+    `import('dummy');`,
+    `require('./dummy');`,
+    `import.meta.url;`,
+    `import.meta.resolve('dummy');`,
+  ])('does not alter the import statement `%s`', (code) => {
+    expect(
+      transformDeclarationImports(code, '.mjs', PARENT_URL, sys, false),
+    ).toBe(code);
+  });
+
+  it('adds an extension to a relative dynamic import', () => {
+    expect(
+      transformDeclarationImports(
+        `import('./dummy');`,
+        '.mjs',
+        PARENT_URL,
+        sys,
+        false,
+      ),
+    ).toBe(`import('./dummy.mjs');`);
+  });
+
+  it('adds an extension to a relative dynamic import of a folder', () => {
+    expect(
+      transformDeclarationImports(
+        `import('./folder');`,
+        '.mjs',
+        PARENT_URL,
+        sys,
+        false,
+      ),
+    ).toBe(`import('./folder/index.mjs');`);
+  });
+
+  it('adds an extension to multiple relative dynamic imports', () => {
+    const code = `
+      /**
+       * This function results in a case where TypeScript emits the declaration file
+       * with a dynamic import.
+       *
+       * @returns A class that extends \`Foo\`.
+       */
+      export declare function bar(): {
+          new (): {
+              getFoo(): import("./dummy").Value;
+              getBar(): import("./folder").Value;
+          };
+      };
+      //# sourceMappingURL=declaration.d.ts.map
+    `;
+
+    expect(transformDeclarationImports(code, '.mjs', PARENT_URL, sys, false))
+      .toMatchInlineSnapshot(`
+      "
+            /**
+             * This function results in a case where TypeScript emits the declaration file
+             * with a dynamic import.
+             *
+             * @returns A class that extends \`Foo\`.
+             */
+            export declare function bar(): {
+                new (): {
+                    getFoo(): import("./dummy.mjs").Value;
+                    getBar(): import("./folder/index.mjs").Value;
+                };
+            };
+            //# sourceMappingURL=declaration.d.ts.map
+          "
+    `);
   });
 });

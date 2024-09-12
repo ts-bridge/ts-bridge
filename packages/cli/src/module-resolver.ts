@@ -184,6 +184,17 @@ export type GetModulePathOptions = {
 };
 
 /**
+ * Replace the extension of a path.
+ *
+ * @param path - The path to replace the extension of.
+ * @param extension - The new extension.
+ * @returns The path with the new extension.
+ */
+export function replaceExtension(path: string, extension: string) {
+  return path.replace(SOURCE_EXTENSIONS_REGEX, extension);
+}
+
+/**
  * Get the path to a module.
  *
  * @param options - The options for resolving the module.
@@ -215,7 +226,7 @@ export function getModulePath({
   }
 
   if (isRelative(packageSpecifier)) {
-    return resolution.specifier.replace(SOURCE_EXTENSIONS_REGEX, extension);
+    return replaceExtension(resolution.specifier, extension);
   }
 
   return resolution.specifier;
