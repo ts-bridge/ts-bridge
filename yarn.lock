@@ -1155,6 +1155,14 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"@ts-bridge/dynamic-imports-fixture@workspace:packages/test-utils/test/fixtures/dynamic-imports":
+  version: 0.0.0-use.local
+  resolution: "@ts-bridge/dynamic-imports-fixture@workspace:packages/test-utils/test/fixtures/dynamic-imports"
+  dependencies:
+    semver: "npm:^7.6.2"
+  languageName: unknown
+  linkType: soft
+
 "@ts-bridge/export-resolver-fixture@workspace:packages/test-utils/test/fixtures/export-resolver":
   version: 0.0.0-use.local
   resolution: "@ts-bridge/export-resolver-fixture@workspace:packages/test-utils/test/fixtures/export-resolver"

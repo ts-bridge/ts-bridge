@@ -28,6 +28,7 @@ import type { Steps } from './steps.js';
 import { executeSteps } from './steps.js';
 import type { TransformerOptions } from './transformers.js';
 import {
+  getDynamicImportExtensionTransformer,
   getTypeImportExportTransformer,
   getExportExtensionTransformer,
   getImportExtensionTransformer,
@@ -579,7 +580,7 @@ export function build({
 
   const { diagnostics } = program.emit(
     undefined,
-    getWriteFileFunction(type, system),
+    getWriteFileFunction(type, program.getCompilerOptions(), system, verbose),
     undefined,
     undefined,
     {
@@ -587,12 +588,14 @@ export function build({
         getLoggingTransformer(verbose),
         getRequireExtensionTransformer(extension, options),
         getImportExtensionTransformer(extension, options),
+        getDynamicImportExtensionTransformer(extension, options),
         getExportExtensionTransformer(extension, options),
         getTypeImportExportTransformer(options),
         ...getTransformers(type, options, shims),
       ],
       afterDeclarations: [
         getImportExtensionTransformer(extension, options),
+        getDynamicImportExtensionTransformer(extension, options),
         getExportExtensionTransformer(extension, options),
       ],
     },

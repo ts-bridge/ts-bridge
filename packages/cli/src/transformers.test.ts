@@ -1,5 +1,5 @@
 import { getFixture } from '@ts-bridge/test-utils';
-import { basename } from 'path';
+import { basename, dirname, resolve } from 'path';
 import type {
   CustomTransformerFactory,
   Program,
@@ -8,6 +8,7 @@ import type {
   TypeChecker,
 } from 'typescript';
 import { createProgram, sys } from 'typescript';
+import { fileURLToPath } from 'url';
 import { beforeAll, describe, expect, it } from 'vitest';
 
 import type { BuildType } from './build-type.js';
@@ -15,6 +16,7 @@ import { getBuildTypeOptions } from './build-type.js';
 import { getTypeScriptConfig } from './config.js';
 import {
   getDefaultImportTransformer,
+  getDynamicImportExtensionTransformer,
   getExportExtensionTransformer,
   getGlobalsTransformer,
   getImportAttributeTransformer,
@@ -26,12 +28,26 @@ import {
   getRequireTransformer,
   getTargetTransformer,
   getTypeImportExportTransformer,
+  transformDeclarationImports,
 } from './transformers.js';
+
+const BASE_DIRECTORY = resolve(
+  dirname(fileURLToPath(import.meta.url)),
+  '..',
+  '..',
+  'test-utils',
+  'test',
+  'fixtures',
+  'import-resolver',
+);
+
+const PARENT_URL = resolve(BASE_DIRECTORY, 'src', 'index.ts');
 
 type CompileOptions = {
   program: Program;
   format: BuildType;
   transformer: TransformerFactory<SourceFile> | CustomTransformerFactory;
+  declarationsTransformers?: CustomTransformerFactory[];
 };
 
 /**
@@ -42,9 +58,16 @@ type CompileOptions = {
  * @param options.program - The TypeScript program to compile.
  * @param options.format - The format to compile the code to.
  * @param options.transformer - The transformer to use.
+ * @param options.declarationsTransformers - The transformers to use for
+ * declaration files.
  * @returns The compiled code.
  */
-function compile({ program, format, transformer }: CompileOptions) {
+function compile({
+  program,
+  format,
+  transformer,
+  declarationsTransformers = [],
+}: CompileOptions) {
   const { target } = getBuildTypeOptions(format);
   const files: Record<string, string> = {};
 
@@ -57,6 +80,7 @@ function compile({ program, format, transformer }: CompileOptions) {
     undefined,
     {
       before: [transformer, getTargetTransformer(target)],
+      afterDeclarations: declarationsTransformers,
     },
   );
 
@@ -66,6 +90,7 @@ function compile({ program, format, transformer }: CompileOptions) {
 type Compiler = ((
   format: BuildType,
   transformer: TransformerFactory<SourceFile> | CustomTransformerFactory,
+  declarationsTransformers?: CustomTransformerFactory[],
 ) => Record<string, string>) & {
   typeChecker: TypeChecker;
 };
@@ -90,8 +115,9 @@ function createCompiler(projectPath: string) {
   const fn: Compiler = (
     format: BuildType,
     transformer: TransformerFactory<SourceFile> | CustomTransformerFactory,
+    declarationsTransformers = [],
   ) => {
-    return compile({ program, format, transformer });
+    return compile({ program, format, transformer, declarationsTransformers });
   };
 
   fn.typeChecker = program.getTypeChecker();
@@ -236,6 +262,138 @@ describe('getImportExtensionTransformer', () => {
         // @ts-expect-error - Invalid module specifier.
         const module_1 = require();
         module_1.foo;
+        "
+      `);
+    });
+  });
+});
+
+describe('getDynamicImportExtensionTransformer', () => {
+  describe('when targeting `module`', () => {
+    let files: Record<string, string>;
+
+    beforeAll(() => {
+      const compiler = createCompiler(getFixture('dynamic-imports'));
+      const transformer = getDynamicImportExtensionTransformer('.mjs', {
+        typeChecker: compiler.typeChecker,
+        system: sys,
+      });
+
+      files = compiler('module', transformer, [transformer]);
+    });
+
+    it('adds the `.mjs` extension to the import statement', async () => {
+      expect(files['add.js']).toMatchInlineSnapshot(`
+        ""use strict";
+        import("./dummy.mjs");
+        "
+      `);
+    });
+
+    it('rewrites the import to `index.mjs` when importing from a directory', async () => {
+      expect(files['import-folder.js']).toMatchInlineSnapshot(`
+        ""use strict";
+        import("./folder/index.mjs");
+        "
+      `);
+    });
+
+    it('overrides an existing extension', async () => {
+      expect(files['override.js']).toMatchInlineSnapshot(`
+        ""use strict";
+        import("./dummy.mjs");
+        "
+      `);
+    });
+
+    it('resolves external imports with paths', async () => {
+      expect(files['external.js']).toMatchInlineSnapshot(`
+        ""use strict";
+        import("semver");
+        import("semver/preload.js");
+        "
+      `);
+    });
+
+    it('does not add an extension if the module fails to resolve', async () => {
+      expect(files['unresolved.js']).toMatchInlineSnapshot(`
+        ""use strict";
+        // @ts-expect-error - Unresolved module.
+        import("./unresolved-module");
+        "
+      `);
+    });
+
+    it('does not add an extension if the module specifier is invalid', async () => {
+      expect(files['invalid.js']).toMatchInlineSnapshot(`
+        ""use strict";
+        // @ts-expect-error - Invalid module specifier.
+        import(0);
+        "
+      `);
+    });
+  });
+
+  describe('when targeting `commonjs`', () => {
+    let files: Record<string, string>;
+
+    beforeAll(() => {
+      const compiler = createCompiler(getFixture('dynamic-imports'));
+      const transformer = getDynamicImportExtensionTransformer('.cjs', {
+        typeChecker: compiler.typeChecker,
+        system: sys,
+      });
+
+      files = compiler('commonjs', transformer, [transformer]);
+    });
+
+    it('adds the `.cjs` extension to the import statement', async () => {
+      expect(files['add.js']).toMatchInlineSnapshot(`
+        ""use strict";
+        import("./dummy.cjs");
+        "
+      `);
+    });
+
+    it('rewrites the import to `index.cjs` when importing from a directory', async () => {
+      expect(files['import-folder.js']).toMatchInlineSnapshot(`
+        ""use strict";
+        import("./folder/index.cjs");
+        "
+      `);
+    });
+
+    it('overrides an existing extension', async () => {
+      expect(files['override.js']).toMatchInlineSnapshot(`
+        ""use strict";
+        import("./dummy.cjs");
+        "
+      `);
+    });
+
+    it('resolves external imports with paths', async () => {
+      expect(files['external.js']).toMatchInlineSnapshot(`
+        ""use strict";
+        import("semver");
+        import("semver/preload.js");
+        "
+      `);
+    });
+
+    it('does not add an extension if the module fails to resolve', async () => {
+      expect(files['unresolved.js']).toMatchInlineSnapshot(`
+        ""use strict";
+        // @ts-expect-error - Unresolved module.
+        import("./unresolved-module");
+        "
+      `);
+    });
+
+    it('does not add an extension if the module specifier is invalid', async () => {
+      expect(files['invalid.js']).toMatchInlineSnapshot(`
+        ""use strict";
+        // @ts-expect-error - Invalid module specifier.
+        import(0);
         "
       `);
     });
@@ -982,5 +1140,95 @@ describe('getRemoveImportAttributeTransformer', () => {
         "
       `);
     });
+  });
+});
+
+describe('transformDeclarationImports', () => {
+  it.each([
+    `import { foo } from './dummy';`,
+    `import type { foo } from './dummy';`,
+    `foo.import('./dummy');`,
+    `import('dummy');`,
+    `require('./dummy');`,
+    `import.meta.url;`,
+    `import.meta.resolve('dummy');`,
+  ])('does not alter the import statement `%s`', (code) => {
+    expect(
+      transformDeclarationImports(code, '.mjs', PARENT_URL, sys, false),
+    ).toBe(code);
+  });
+
+  it('adds an extension to a relative dynamic import', () => {
+    expect(
+      transformDeclarationImports(
+        `import('./dummy');`,
+        '.mjs',
+        PARENT_URL,
+        sys,
+        false,
+      ),
+    ).toBe(`import('./dummy.mjs');`);
+  });
+
+  it('adds an extension to a relative dynamic import of a folder', () => {
+    expect(
+      transformDeclarationImports(
+        `import('./folder');`,
+        '.mjs',
+        PARENT_URL,
+        sys,
+        false,
+      ),
+    ).toBe(`import('./folder/index.mjs');`);
+  });
+
+  it('adds an extension to multiple relative dynamic imports', () => {
+    const code = `
+      /**
+       * This function results in a case where TypeScript emits the declaration file
+       * with a dynamic import.
+       *
+       * @returns A class that extends \`Foo\`.
+       */
+      export declare function bar(): {
+          new (): {
+              getFoo(): import("./dummy").Value;
+              getBar(): import("./folder").Value;
+          };
+      };
+      //# sourceMappingURL=declaration.d.ts.map
+    `;
+
+    expect(transformDeclarationImports(code, '.mjs', PARENT_URL, sys, false))
+      .toMatchInlineSnapshot(`
+      "
+            /**
+             * This function results in a case where TypeScript emits the declaration file
+             * with a dynamic import.
+             *
+             * @returns A class that extends \`Foo\`.
+             */
+            export declare function bar(): {
+                new (): {
+                    getFoo(): import("./dummy.mjs").Value;
+                    getBar(): import("./folder/index.mjs").Value;
+                };
+            };
+            //# sourceMappingURL=declaration.d.ts.map
+          "
+    `);
+  });
+
+  it('adds an extension to multiple relative dynamic imports on one line', () => {
+    const code = `
+      import("./dummy").Value; import("./folder").Value;
+    `;
+
+    expect(transformDeclarationImports(code, '.mjs', PARENT_URL, sys, false))
+      .toMatchInlineSnapshot(`
+        "
+              import("./dummy.mjs").Value; import("./folder/index.mjs").Value;
+            "
+      `);
   });
 });
