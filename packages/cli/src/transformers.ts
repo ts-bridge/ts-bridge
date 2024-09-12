@@ -975,7 +975,7 @@ function transformSourceMapUrl(
  * _import('./foo.js')
  * ```
  */
-const DYNAMIC_IMPORT_REGEX = /(?<![\w.])import\(['"](\..+)['"]\)/gu;
+const DYNAMIC_IMPORT_REGEX = /(?<![\w.])import\(['"](\..+?)['"]\)/gu;
 
 /**
  * Transform the dynamic imports in the declaration file to use the new file

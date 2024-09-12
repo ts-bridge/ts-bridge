@@ -1218,4 +1218,17 @@ describe('transformDeclarationImports', () => {
           "
     `);
   });
+
+  it('adds an extension to multiple relative dynamic imports on one line', () => {
+    const code = `
+      import("./dummy").Value; import("./folder").Value;
+    `;
+
+    expect(transformDeclarationImports(code, '.mjs', PARENT_URL, sys, false))
+      .toMatchInlineSnapshot(`
+        "
+              import("./dummy.mjs").Value; import("./folder/index.mjs").Value;
+            "
+      `);
+  });
 });
