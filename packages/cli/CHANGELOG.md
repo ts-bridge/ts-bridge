@@ -9,9 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.5.1]
 
-### Uncategorized
+### Fixed
 
 - Transform dynamic imports ([#53](https://github.com/ts-bridge/ts-bridge/pull/53))
+  - This fixes a bug where dynamic imports were not transformed correctly,
+    resulting in unresolved imports in some cases.
 
 ## [0.5.0]
 
