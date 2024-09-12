@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Uncategorized
+
+- Transform dynamic imports ([#53](https://github.com/ts-bridge/ts-bridge/pull/53))
+
 ## [0.5.0]
 
 ### Added
