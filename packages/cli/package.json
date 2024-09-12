@@ -1,6 +1,6 @@
 {
   "name": "@ts-bridge/cli",
-  "version": "0.5.0",
+  "version": "0.5.1",
   "description": "Bridge the gap between ES modules and CommonJS modules with an easy-to-use alternative to `tsc`.",
   "keywords": [
     "build-tool",
