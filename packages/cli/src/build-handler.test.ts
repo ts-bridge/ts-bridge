@@ -11,7 +11,7 @@ import typescript from 'typescript';
 import { beforeAll, describe, expect, it, vi } from 'vitest';
 
 import type { BuildHandlerOptions } from './build-handler.js';
-import { getFiles, buildHandler } from './build-handler.js';
+import { buildHandler } from './build-handler.js';
 import type { BuildType } from './build-type.js';
 import { removeDirectory } from './file-system.js';
 
@@ -468,25 +468,5 @@ describe('build', () => {
     expect(error).toHaveBeenCalledWith(
       expect.stringContaining('Failed to write file.'),
     );
-  });
-});
-
-describe('getFiles', () => {
-  it('returns the files from the `tsconfig.json` if custom files is empty', () => {
-    const files = getFiles([], ['foo', 'bar']);
-
-    expect(files).toStrictEqual(['foo', 'bar']);
-  });
-
-  it('returns the files from the `tsconfig.json` if custom files is undefined', () => {
-    const files = getFiles(undefined, ['foo', 'bar']);
-
-    expect(files).toStrictEqual(['foo', 'bar']);
-  });
-
-  it('returns the custom files', () => {
-    const files = getFiles(['baz'], ['foo', 'bar']);
-
-    expect(files).toStrictEqual(['baz']);
   });
 });
