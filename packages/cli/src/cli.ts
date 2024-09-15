@@ -63,8 +63,8 @@ export async function main(argv: string[]) {
             description: 'Generate shims for environment-specific APIs.',
             default: true,
           }),
-      ({ format, ...options }) => {
-        return buildHandler({
+      async ({ format, ...options }) => {
+        return await buildHandler({
           format: format as BuildType[],
           ...options,
           system: sys,

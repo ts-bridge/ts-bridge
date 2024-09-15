@@ -3,6 +3,7 @@ import type { Diagnostic } from 'typescript';
 import typescript from 'typescript';
 
 import { getCanonicalFileName } from './file-system.js';
+import { getErrorMessage } from './logging.js';
 import { isObject } from './utils.js';
 
 const { formatDiagnosticsWithColorAndContext, sys } = typescript;
@@ -79,7 +80,18 @@ export class TypeScriptError extends Error {
   }
 }
 
+/**
+ * An error thrown when a Node.js operation fails. This will try and get a
+ * human-readable error message from the error code.
+ */
 export class NodeError extends Error {
+  /**
+   * Create a new Node.js error from the given message and original error. This
+   * will try and get a human-readable error message from the error code.
+   *
+   * @param message - The error message.
+   * @param originalError - The original error.
+   */
   constructor(message: string, originalError: unknown) {
     const code = getErrorCode(originalError);
     const errorMessage = code
@@ -87,5 +99,21 @@ export class NodeError extends Error {
       : 'An unknown error occurred.';
 
     super(`${chalk.red(message)}\n${errorMessage}`);
+  }
+}
+
+/**
+ * An error thrown when a worker fails. This will include the original error
+ * message in the error message.
+ */
+export class WorkerError extends Error {
+  /**
+   * Create a new worker error from the given message and original error.
+   *
+   * @param message - The error message.
+   * @param originalError - The original error.
+   */
+  constructor(message: string, originalError: unknown) {
+    super(`${chalk.red(message)}: ${getErrorMessage(originalError)}`);
   }
 }

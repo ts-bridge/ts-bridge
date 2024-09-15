@@ -52,6 +52,7 @@
   },
   "devDependencies": {
     "@metamask/auto-changelog": "^3.4.4",
+    "@metamask/utils": "^9.2.1",
     "@ts-bridge/test-utils": "workspace:^",
     "@types/node": "^20.12.7",
     "@types/yargs": "^17.0.32",
