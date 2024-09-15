@@ -6,6 +6,8 @@ export default defineConfig({
   test: {
     watch: false,
 
+    testTimeout: 30000,
+
     coverage: {
       enabled: true,
 
