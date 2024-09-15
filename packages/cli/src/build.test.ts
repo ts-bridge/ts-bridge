@@ -1,8 +1,9 @@
 import { getFixture, noOp, parseJson } from '@ts-bridge/test-utils';
 import chalk from 'chalk';
-import { join, relative } from 'path';
+import { dirname, join, relative } from 'path';
 import type { System } from 'typescript';
 import typescript from 'typescript';
+import { fileURLToPath } from 'url';
 import { beforeAll, describe, expect, it, vi } from 'vitest';
 import type { WorkerOptions } from 'worker_threads';
 
@@ -36,10 +37,19 @@ vi.mock('worker_threads', async (importOriginal) => {
     import { workerData } from 'worker_threads';
 
     const filename = '${import.meta.url}';
+    const tsconfig = '${join(
+      dirname(fileURLToPath(import.meta.url)),
+      '..',
+      'tsconfig.json',
+    )}';
+
     const require = createRequire(filename);
     const { tsImport } = require('tsx/esm/api');
 
-    tsImport(workerData.fileName, filename);
+    tsImport(workerData.fileName, {
+      parentURL: import.meta.url,
+      tsconfig,
+    });
   `;
 
   /**

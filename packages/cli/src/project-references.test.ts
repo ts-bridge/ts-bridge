@@ -2,7 +2,7 @@ import { createDeferredPromise } from '@metamask/utils';
 import { getFixture, getRelativePath, sleep } from '@ts-bridge/test-utils';
 import assert from 'assert';
 import chalk from 'chalk';
-import { dirname } from 'path';
+import { dirname, join } from 'path';
 import type { Program, ResolvedProjectReference } from 'typescript';
 import { factory, ScriptTarget, sys } from 'typescript';
 import { fileURLToPath } from 'url';
@@ -38,10 +38,19 @@ vi.mock('worker_threads', async (importOriginal) => {
     import { workerData } from 'worker_threads';
 
     const filename = '${import.meta.url}';
+    const tsconfig = '${join(
+      dirname(fileURLToPath(import.meta.url)),
+      '..',
+      'tsconfig.json',
+    )}';
+
     const require = createRequire(filename);
     const { tsImport } = require('tsx/esm/api');
 
-    tsImport(workerData.fileName, filename);
+    tsImport(workerData.fileName, {
+      parentURL: import.meta.url,
+      tsconfig,
+    });
   `;
 
   /**
