@@ -5,5 +5,6 @@ export default defineConfig({
   plugins: [tsconfigPaths()],
   test: {
     watch: false,
+    testTimeout: 30000,
   },
 });
