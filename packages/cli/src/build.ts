@@ -6,9 +6,9 @@ import { getBaseCompilerOptions, getTypeScriptConfig } from './config.js';
 import { success } from './logging.js';
 import type { BuilderOptions } from './shared.js';
 import {
-  getInitialProgram,
   cleanOutputDirectory,
   getBuildFunction,
+  getInitialProgram,
 } from './shared.js';
 
 /**
