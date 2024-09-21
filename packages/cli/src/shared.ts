@@ -19,7 +19,6 @@ import {
   createGraph,
   createProjectReferencesCompilerHost,
   getResolvedProjectReferences,
-  parallelise,
 } from './project-references.js';
 import type { Steps } from './steps.js';
 import { executeSteps } from './steps.js';
@@ -31,7 +30,7 @@ import {
   getRequireExtensionTransformer,
   getTypeImportExportTransformer,
 } from './transformers.js';
-import { getDefinedArray } from './utils.js';
+import { getDefinedArray, parallelise } from './utils.js';
 import { getBuildWorkerFunction } from './worker-utils.js';
 
 const { createProgram, getPreEmitDiagnostics, ModuleResolutionKind } =

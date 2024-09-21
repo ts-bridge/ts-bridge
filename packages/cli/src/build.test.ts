@@ -1,11 +1,14 @@
-import { getFixture, noOp, parseJson } from '@ts-bridge/test-utils';
+import {
+  getFixture,
+  getMockWorker,
+  noOp,
+  parseJson,
+} from '@ts-bridge/test-utils';
 import chalk from 'chalk';
-import { dirname, join, relative } from 'path';
+import { join, relative } from 'path';
 import type { System } from 'typescript';
 import typescript from 'typescript';
-import { fileURLToPath } from 'url';
 import { beforeAll, describe, expect, it, vi } from 'vitest';
-import type { WorkerOptions } from 'worker_threads';
 
 import type { BuildType } from './build-type.js';
 import type { BuildHandlerOptions } from './build.js';
@@ -28,52 +31,9 @@ vi.mock('worker_threads', async (importOriginal) => {
   // eslint-disable-next-line @typescript-eslint/consistent-type-imports
   const original = await importOriginal<typeof import('worker_threads')>();
 
-  /**
-   * The worker code that runs TypeScript code. This is executed in the worker by
-   * using it as a data URL.
-   */
-  const WORKER_CODE = `
-    import { createRequire } from 'module';
-    import { workerData } from 'worker_threads';
-
-    const filename = '${import.meta.url}';
-    const tsconfig = '${join(
-      dirname(fileURLToPath(import.meta.url)),
-      '..',
-      'tsconfig.json',
-    )}';
-
-    const require = createRequire(filename);
-    const { tsImport } = require('tsx/esm/api');
-
-    tsImport(workerData.fileName, {
-      parentURL: import.meta.url,
-      tsconfig,
-    });
-  `;
-
-  /**
-   * A worker that runs TypeScript code.
-   */
-  class TypeScriptWorker extends original.Worker {
-    /**
-     * Creates a new TypeScript worker.
-     *
-     * @param fileName - The file name of worker to run.
-     * @param options - The worker options.
-     * @returns The TypeScript worker.
-     */
-    constructor(fileName: string | URL, options: WorkerOptions = {}) {
-      options.workerData ??= {};
-      options.workerData.fileName = fileName.toString().replace('.js', '.ts');
-
-      super(new URL(`data:text/javascript,${WORKER_CODE}`), options);
-    }
-  }
-
   return {
     ...original,
-    Worker: TypeScriptWorker,
+    Worker: getMockWorker(original.Worker),
   };
 });
 
