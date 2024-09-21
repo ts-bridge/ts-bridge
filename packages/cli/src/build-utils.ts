@@ -31,7 +31,7 @@ import {
   getTypeImportExportTransformer,
 } from './transformers.js';
 import { getDefinedArray, parallelise } from './utils.js';
-import { getBuildWorkerFunction } from './worker-utils.js';
+import { getWorkerBuildFunction } from './worker-utils.js';
 
 const { createProgram, getPreEmitDiagnostics, ModuleResolutionKind } =
   typescript;
@@ -373,7 +373,7 @@ export async function buildProjectReferences(options: BuilderOptions) {
     resolvedProjectReferences,
   );
 
-  const fn = getBuildWorkerFunction({
+  const fn = getWorkerBuildFunction({
     parentBaseDirectory: baseDirectory,
     format,
     verbose,

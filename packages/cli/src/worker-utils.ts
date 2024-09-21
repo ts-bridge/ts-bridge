@@ -41,13 +41,13 @@ export type GetBuildWorkerFunctionOptions = Omit<
  * @param options - The options to use for the worker.
  * @returns The build worker function.
  */
-export function getBuildWorkerFunction(options: GetBuildWorkerFunctionOptions) {
+export function getWorkerBuildFunction(options: GetBuildWorkerFunctionOptions) {
   /**
    * Build a project reference using a worker thread.
    *
    * @param projectReference - The project reference to build.
    */
-  return async function buildWorker(
+  return async function workerBuild(
     projectReference: ResolvedProjectReference,
   ) {
     return await new Promise<void>((resolve, reject) => {

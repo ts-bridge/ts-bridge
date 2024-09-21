@@ -8,7 +8,7 @@ import { getProgram } from './build-utils.js';
 import { getTypeScriptConfig } from './config.js';
 import { removeDirectory } from './file-system.js';
 import { getDefinedArray } from './utils.js';
-import { getBuildWorkerFunction, main } from './worker-utils.js';
+import { getWorkerBuildFunction, main } from './worker-utils.js';
 
 beforeAll(() => {
   chalk.level = 0;
@@ -46,9 +46,9 @@ const FIXTURE_NAME = 'project-references-node-16';
 const FIXTURE_PATH = getFixture(FIXTURE_NAME);
 const FIXTURE_TS_CONFIG = getFixture(FIXTURE_NAME, 'tsconfig.json');
 
-describe('getBuildWorkerFunction', () => {
+describe('getWorkerBuildFunction', () => {
   it('creates a worker function', async () => {
-    const fn = getBuildWorkerFunction({
+    const fn = getWorkerBuildFunction({
       parentBaseDirectory: FIXTURE_PATH,
       format: ['commonjs'],
       shims: false,
@@ -63,7 +63,7 @@ describe('getBuildWorkerFunction', () => {
       vi.clearAllMocks();
     });
 
-    const fn = getBuildWorkerFunction({
+    const fn = getWorkerBuildFunction({
       parentBaseDirectory: FIXTURE_PATH,
       format: ['commonjs'],
       shims: false,
