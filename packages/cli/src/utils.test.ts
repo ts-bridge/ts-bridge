@@ -125,8 +125,8 @@ describe('parallelise', () => {
     // `e` is the only node without dependencies, so it should be resolve
     // first.
     expect(set.has('e')).toBe(true);
-    expect(set.has('d')).not.toBe(true);
-    expect(set.has('c')).not.toBe(true);
+    expect(set.has('d')).toBe(false);
+    expect(set.has('c')).toBe(false);
 
     resolveE();
     await delay(1);
@@ -141,7 +141,7 @@ describe('parallelise', () => {
 
     // `b` depends on `d` and `e`, so it should be resolved once they are.
     expect(set.has('b')).toBe(true);
-    expect(set.has('a')).not.toBe(true);
+    expect(set.has('a')).toBe(false);
 
     resolveC();
     resolveB();
@@ -192,15 +192,15 @@ describe('parallelise', () => {
 
     // `a` is the first node in the graph, so it should be resolved first.
     expect(set.has('a')).toBe(true);
-    expect(set.has('b')).not.toBe(true);
-    expect(set.has('c')).not.toBe(true);
+    expect(set.has('b')).toBe(false);
+    expect(set.has('c')).toBe(false);
 
     resolveA();
     await delay(1);
 
     // `b` is the next node in the graph, so it should be resolved next.
     expect(set.has('b')).toBe(true);
-    expect(set.has('c')).not.toBe(true);
+    expect(set.has('c')).toBe(false);
 
     resolveB();
     await delay(1);
@@ -256,8 +256,8 @@ describe('parallelise', () => {
     // `e` is the only node without dependencies, so it should be resolve
     // first.
     expect(set.has('e')).toBe(true);
-    expect(set.has('d')).not.toBe(true);
-    expect(set.has('c')).not.toBe(true);
+    expect(set.has('d')).toBe(false);
+    expect(set.has('c')).toBe(false);
 
     resolveE();
     await delay(1);
@@ -272,7 +272,7 @@ describe('parallelise', () => {
 
     // `b` depends on `d` and `e`, so it should be resolved once they are.
     expect(set.has('b')).toBe(true);
-    expect(set.has('a')).not.toBe(true);
+    expect(set.has('a')).toBe(false);
 
     resolveC();
     resolveB();
