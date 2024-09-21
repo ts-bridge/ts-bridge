@@ -1,5 +1,5 @@
 import { createDeferredPromise } from '@metamask/utils';
-import { getFixture, getRelativePath, sleep } from '@ts-bridge/test-utils';
+import { getFixture, getRelativePath, delay } from '@ts-bridge/test-utils';
 import assert from 'assert';
 import chalk from 'chalk';
 import { dirname, join } from 'path';
@@ -243,7 +243,7 @@ describe('parallelise', () => {
     expect(set.has('c')).not.toBe(true);
 
     resolveE();
-    await sleep(1);
+    await delay(1);
 
     // `d` and `c` are the next nodes in the graph, so they should be resolved
     // next.
@@ -251,7 +251,7 @@ describe('parallelise', () => {
     expect(set.has('c')).toBe(true);
 
     resolveD();
-    await sleep(1);
+    await delay(1);
 
     // `b` depends on `d` and `e`, so it should be resolved once they are.
     expect(set.has('b')).toBe(true);
@@ -259,7 +259,7 @@ describe('parallelise', () => {
 
     resolveC();
     resolveB();
-    await sleep(1);
+    await delay(1);
 
     // `a` depends on `b` and `c`, so it should be resolved once they are.
     expect(set.has('a')).toBe(true);
@@ -310,14 +310,14 @@ describe('parallelise', () => {
     expect(set.has('c')).not.toBe(true);
 
     resolveA();
-    await sleep(1);
+    await delay(1);
 
     // `b` is the next node in the graph, so it should be resolved next.
     expect(set.has('b')).toBe(true);
     expect(set.has('c')).not.toBe(true);
 
     resolveB();
-    await sleep(1);
+    await delay(1);
 
     // `c` is the last node in the graph, so it should be resolved last.
     expect(set.has('c')).toBe(true);
@@ -374,7 +374,7 @@ describe('parallelise', () => {
     expect(set.has('c')).not.toBe(true);
 
     resolveE();
-    await sleep(1);
+    await delay(1);
 
     // `d` and `c` are the next nodes in the graph, so they should be resolved
     // next.
@@ -382,7 +382,7 @@ describe('parallelise', () => {
     expect(set.has('c')).toBe(true);
 
     resolveD();
-    await sleep(1);
+    await delay(1);
 
     // `b` depends on `d` and `e`, so it should be resolved once they are.
     expect(set.has('b')).toBe(true);
@@ -390,7 +390,7 @@ describe('parallelise', () => {
 
     resolveC();
     resolveB();
-    await sleep(1);
+    await delay(1);
 
     // `a` depends on `b` and `c`, so it should be resolved once they are.
     expect(set.has('a')).toBe(true);
