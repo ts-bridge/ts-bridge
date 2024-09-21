@@ -3,8 +3,8 @@ import typescript from 'typescript';
 import { hideBin } from 'yargs/helpers';
 import yargs from 'yargs/yargs';
 
+import { buildHandler } from './build-handler.js';
 import type { BuildType } from './build-type.js';
-import { buildHandler } from './build.js';
 import { error } from './logging.js';
 
 const { sys } = typescript;

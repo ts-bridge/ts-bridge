@@ -1,7 +1,7 @@
 import { sys } from 'typescript';
 import { describe, expect, it } from 'vitest';
 
-import { getTransformers } from './shared.js';
+import { getTransformers } from './build-utils.js';
 
 describe('getTransformers', () => {
   it('returns the correct transformers for the `module` format', () => {

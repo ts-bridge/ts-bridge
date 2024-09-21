@@ -4,9 +4,9 @@ import chalk from 'chalk';
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Worker } from 'worker_threads';
 
+import { getProgram } from './build-utils.js';
 import { getTypeScriptConfig } from './config.js';
 import { removeDirectory } from './file-system.js';
-import { getProgram } from './shared.js';
 import { getDefinedArray } from './utils.js';
 import { getBuildWorkerFunction, main } from './worker-utils.js';
 
@@ -30,9 +30,9 @@ vi.mock('worker_threads', async (importOriginal) => {
   };
 });
 
-vi.mock('./shared.js', async (importOriginal) => ({
+vi.mock('./build-utils.js', async (importOriginal) => ({
   // eslint-disable-next-line @typescript-eslint/consistent-type-imports
-  ...(await importOriginal<typeof import('./shared.js')>()),
+  ...(await importOriginal<typeof import('./build-utils.js')>()),
   getBuildFunction: vi.fn().mockImplementation(() => vi.fn()),
 }));
 

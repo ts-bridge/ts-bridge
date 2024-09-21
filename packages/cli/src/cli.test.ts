@@ -2,7 +2,7 @@ import { noOp } from '@ts-bridge/test-utils';
 import { resolve } from 'path';
 import { describe, expect, it, vi } from 'vitest';
 
-import { buildHandler } from './build.js';
+import { buildHandler } from './build-handler.js';
 import { main } from './cli.js';
 
 describe('cli', () => {
@@ -22,7 +22,7 @@ describe('cli', () => {
   });
 
   it('calls the build handler with the provided arguments', async () => {
-    vi.mock('./build.js', () => ({
+    vi.mock('./build-handler.js', () => ({
       buildHandler: vi.fn(),
     }));
 

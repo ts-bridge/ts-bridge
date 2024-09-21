@@ -3,15 +3,15 @@ import type { ResolvedProjectReference } from 'typescript';
 import typescript from 'typescript';
 import { Worker } from 'worker_threads';
 
-import { WorkerError } from './errors.js';
-import { success } from './logging.js';
-import { createProjectReferencesCompilerHost } from './project-references.js';
-import type { BuilderOptions } from './shared.js';
+import type { BuilderOptions } from './build-utils.js';
 import {
   cleanOutputDirectory,
   getBuildFunction,
   getInitialProgram,
-} from './shared.js';
+} from './build-utils.js';
+import { WorkerError } from './errors.js';
+import { success } from './logging.js';
+import { createProjectReferencesCompilerHost } from './project-references.js';
 import { getDefinedArray } from './utils.js';
 
 const { sys } = typescript;

@@ -10,9 +10,9 @@ import type { System } from 'typescript';
 import typescript from 'typescript';
 import { beforeAll, describe, expect, it, vi } from 'vitest';
 
+import type { BuildHandlerOptions } from './build-handler.js';
+import { getFiles, buildHandler } from './build-handler.js';
 import type { BuildType } from './build-type.js';
-import type { BuildHandlerOptions } from './build.js';
-import { getFiles, buildHandler } from './build.js';
 import { removeDirectory } from './file-system.js';
 
 const { sys } = typescript;

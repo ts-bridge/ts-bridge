@@ -11,6 +11,7 @@ import { factory, ScriptTarget, sys } from 'typescript';
 import { fileURLToPath } from 'url';
 import { beforeAll, describe, expect, it, vi } from 'vitest';
 
+import { buildProjectReferences, getProgram } from './build-utils.js';
 import { getTypeScriptConfig } from './config.js';
 import type { DependencyGraph } from './project-references.js';
 import {
@@ -19,7 +20,6 @@ import {
   getResolvedProjectReferences,
   topologicalSort,
 } from './project-references.js';
-import { buildProjectReferences, getProgram } from './shared.js';
 import { getDefinedArray } from './utils.js';
 
 beforeAll(() => {

@@ -2,14 +2,14 @@ import { dirname, relative } from 'path';
 import type { CompilerHost, System } from 'typescript';
 
 import type { BuildType } from './build-type.js';
-import { getBaseCompilerOptions, getTypeScriptConfig } from './config.js';
-import { success } from './logging.js';
-import type { BuilderOptions } from './shared.js';
+import type { BuilderOptions } from './build-utils.js';
 import {
   cleanOutputDirectory,
   getBuildFunction,
   getInitialProgram,
-} from './shared.js';
+} from './build-utils.js';
+import { getBaseCompilerOptions, getTypeScriptConfig } from './config.js';
+import { success } from './logging.js';
 
 /**
  * Get the files to include in the build. This function will return the custom
