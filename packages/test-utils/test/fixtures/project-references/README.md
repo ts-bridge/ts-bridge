@@ -7,7 +7,7 @@ graph is as follows:
 ```mermaid
 %%{
   init: {
-	  "flowchart": {
+    "flowchart": {
       "curve": "bumpX"
     }
   }
