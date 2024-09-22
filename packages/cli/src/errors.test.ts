@@ -1,7 +1,17 @@
+import chalk from 'chalk';
 import typescript from 'typescript';
-import { describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it } from 'vitest';
 
-import { getErrorCode, NodeError, TypeScriptError } from './errors.js';
+import {
+  getErrorCode,
+  NodeError,
+  TypeScriptError,
+  WorkerError,
+} from './errors.js';
+
+beforeAll(() => {
+  chalk.level = 0;
+});
 
 const { DiagnosticCategory } = typescript;
 
@@ -93,5 +103,14 @@ describe('NodeError', () => {
     const error = new NodeError('Node.js error.', originalError);
     expect(error.message).toContain('Node.js error.');
     expect(error.message).toContain('An unknown error occurred.');
+  });
+});
+
+describe('WorkerError', () => {
+  it('creates an error from a worker error', () => {
+    const originalError = new Error('Wrapped error message.');
+
+    const error = new WorkerError('Worker error', originalError);
+    expect(error.message).toBe('Worker error: Wrapped error message.');
   });
 });

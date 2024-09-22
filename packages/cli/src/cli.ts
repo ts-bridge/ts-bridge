@@ -3,8 +3,8 @@ import typescript from 'typescript';
 import { hideBin } from 'yargs/helpers';
 import yargs from 'yargs/yargs';
 
+import { buildHandler } from './build-handler.js';
 import type { BuildType } from './build-type.js';
-import { buildHandler } from './build.js';
 import { error } from './logging.js';
 
 const { sys } = typescript;
@@ -63,8 +63,8 @@ export async function main(argv: string[]) {
             description: 'Generate shims for environment-specific APIs.',
             default: true,
           }),
-      ({ format, ...options }) => {
-        return buildHandler({
+      async ({ format, ...options }) => {
+        return await buildHandler({
           format: format as BuildType[],
           ...options,
           system: sys,

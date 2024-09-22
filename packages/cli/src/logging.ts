@@ -53,12 +53,21 @@ export function info(message: string) {
 }
 
 /**
+ * Log a success message. The message is prefixed with a green checkmark.
+ *
+ * @param message - The success message to log.
+ */
+export function success(message: string) {
+  console.log(`${chalk.green('✔')} ${chalk.reset(message)}`);
+}
+
+/**
  * Log a generic message. The message is prefixed with a green arrow.
  *
  * @param message - The message to log.
  */
 export function log(message: string) {
-  console.log(`${chalk.green('→')} ${chalk.reset(message)}`);
+  console.log(`${chalk.green('→')} ${chalk.dim(message)}`);
 }
 
 /**

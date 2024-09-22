@@ -1,5 +1,3 @@
-import chalk from 'chalk';
-
 import { error, info } from './logging.js';
 
 /**
@@ -38,7 +36,7 @@ export function executeSteps<Context extends Record<string, unknown>>(
         continue;
       }
 
-      verbose && info(chalk.bold(step.name));
+      verbose && info(step.name);
       step.task(context);
     }
   } catch (_error) {

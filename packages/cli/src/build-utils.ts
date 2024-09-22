@@ -1,5 +1,4 @@
-import chalk from 'chalk';
-import { dirname, relative } from 'path';
+import { dirname } from 'path';
 import type {
   CompilerHost,
   CompilerOptions,
@@ -12,15 +11,12 @@ import typescript from 'typescript';
 
 import type { BuildType } from './build-type.js';
 import { getBuildTypeOptions } from './build-type.js';
-import {
-  getBaseCompilerOptions,
-  getCompilerOptions,
-  getTypeScriptConfig,
-} from './config.js';
+import { getBaseCompilerOptions, getCompilerOptions } from './config.js';
 import { TypeScriptError } from './errors.js';
 import { getWriteFileFunction, removeDirectory } from './file-system.js';
 import { getLoggingTransformer, info } from './logging.js';
 import {
+  createGraph,
   createProjectReferencesCompilerHost,
   getResolvedProjectReferences,
 } from './project-references.js';
@@ -29,12 +25,13 @@ import { executeSteps } from './steps.js';
 import type { TransformerOptions } from './transformers.js';
 import {
   getDynamicImportExtensionTransformer,
-  getTypeImportExportTransformer,
   getExportExtensionTransformer,
   getImportExtensionTransformer,
   getRequireExtensionTransformer,
+  getTypeImportExportTransformer,
 } from './transformers.js';
-import { getDefinedArray } from './utils.js';
+import { getDefinedArray, parallelise } from './utils.js';
+import { getWorkerBuildFunction } from './worker-utils.js';
 
 const { createProgram, getPreEmitDiagnostics, ModuleResolutionKind } =
   typescript;
@@ -88,25 +85,6 @@ export function getProgram({
   return program;
 }
 
-/**
- * Get the files to include in the build. This function will return the custom
- * files if provided, or the files from the `tsconfig.json` file if not.
- *
- * @param customFiles - The custom files to include in the build.
- * @param tsConfigFiles - The files from the `tsconfig.json` file.
- * @returns The files to include in the build.
- */
-export function getFiles(
-  customFiles: string[] | undefined,
-  tsConfigFiles: string[],
-) {
-  if (customFiles && customFiles.length > 0) {
-    return customFiles;
-  }
-
-  return tsConfigFiles;
-}
-
 type GetInitialCompilerHostOptions = {
   format: BuildType[];
   compilerOptions: CompilerOptions;
@@ -150,75 +128,34 @@ function getInitialCompilerHost({
   );
 }
 
-/**
- * Clean the output directory before building the project.
- *
- * @param project - The path to the project's `tsconfig.json` file.
- * @param options - The compiler options to use.
- * @param clean - Whether to clean the output directory before building.
- * @param verbose - Whether to enable verbose logging.
- */
-function cleanOutputDirectory(
-  project: string,
-  options: CompilerOptions,
-  clean = false,
-  verbose?: boolean,
-) {
-  const baseDirectory = dirname(project);
-  if (clean && options.outDir) {
-    verbose && info(`Cleaning output directory "${options.outDir}".`);
-    removeDirectory(options.outDir, baseDirectory);
-  }
-}
-
-/**
- * Options for the build handler. This is intended to be provided by the CLI,
- * and these types should match the CLI options.
- *
- * @property format - The formats to build.
- * @property project - The path to the project's `tsconfig.json` file.
- * @property files - The files to include in the build.
- * @property clean - Whether to clean the output directory before building.
- */
-export type BuildHandlerOptions = {
-  format: BuildType[];
+export type InitialProgramOptions = {
   project: string;
-  files?: string[];
-  clean: boolean;
+  format: BuildType[];
   system: System;
-  host?: CompilerHost;
-  verbose?: boolean;
-  references?: boolean;
-  shims?: boolean;
+  tsConfig: ParsedCommandLine;
 };
 
 /**
- * Handle the `build` command. This is intended to be called by the CLI.
+ * Get the initial program for the project. This function will create the
+ * initial program using the provided options.
  *
- * @param options - The build command options.
+ * @param options - The options.
+ * @param options.project - The path to the project's `tsconfig.json` file.
+ * @param options.format - The formats to build.
+ * @param options.system - The system to use.
+ * @param options.tsConfig - The TypeScript configuration.
+ * @returns The initial program for the project.
  */
-export function buildHandler(options: BuildHandlerOptions) {
-  const {
-    format,
-    project,
-    files: customFiles,
-    clean,
-    system,
-    verbose,
-    references,
-    shims = true,
-  } = options;
-
-  const tsConfig = getTypeScriptConfig(project, system);
+export function getInitialProgram({
+  project,
+  format,
+  system,
+  tsConfig,
+}: InitialProgramOptions) {
   const baseOptions = getBaseCompilerOptions(
     dirname(project),
     tsConfig.options,
   );
-
-  const baseDirectory = dirname(project);
-  cleanOutputDirectory(project, baseOptions, clean, verbose);
-
-  const files = getFiles(customFiles, tsConfig.fileNames);
 
   const initialHost = getInitialCompilerHost({
     format,
@@ -228,32 +165,37 @@ export function buildHandler(options: BuildHandlerOptions) {
   });
 
   const compilerOptions = getCompilerOptions(baseOptions);
-  const program = getProgram({
+  return getProgram({
     compilerOptions,
-    files,
+    files: tsConfig.fileNames,
     host: initialHost,
     projectReferences: tsConfig.projectReferences,
   });
-
-  const buildOptions: BuilderOptions = {
-    projectReferences: tsConfig.projectReferences,
-    program,
-    compilerOptions,
-    format,
-    files,
-    system,
-    baseDirectory,
-    tsConfig,
-    verbose,
-    shims,
-    clean,
-  };
-
-  const buildFunction = getBuildFunction(tsConfig, references);
-  buildFunction(buildOptions);
 }
 
-type BuilderOptions = {
+/**
+ * Clean the output directory before building the project.
+ *
+ * @param project - The path to the project's `tsconfig.json` file.
+ * @param options - The compiler options to use.
+ * @param clean - Whether to clean the output directory before building.
+ * @param verbose - Whether to enable verbose logging.
+ */
+export function cleanOutputDirectory(
+  project: string,
+  options: CompilerOptions,
+  clean?: boolean,
+  verbose?: boolean,
+) {
+  const baseDirectory = dirname(project);
+  if (clean && options.outDir) {
+    verbose && info(`Cleaning output directory "${options.outDir}".`);
+    removeDirectory(options.outDir, baseDirectory);
+  }
+}
+
+export type BuilderOptions = {
+  name: string;
   program: Program;
   projectReferences?: readonly ProjectReference[];
   compilerOptions: CompilerOptions;
@@ -275,6 +217,7 @@ type BuilderOptions = {
  * for each format.
  *
  * @param options - The build options.
+ * @param options.name - The name of the project to build.
  * @param options.program - The TypeScript program to build.
  * @param options.projectReferences - The project references to use.
  * @param options.compilerOptions - The compiler options to use.
@@ -287,6 +230,7 @@ type BuilderOptions = {
  * APIs.
  */
 export function buildNode10({
+  name,
   program,
   projectReferences,
   compilerOptions,
@@ -299,7 +243,7 @@ export function buildNode10({
 }: BuilderOptions) {
   const buildSteps: Steps<Record<string, never>> = [
     {
-      name: 'Building ES module.',
+      name: `Building ES module "${name}".`,
       condition: () => format.includes('module'),
       task: () => {
         const newProgram = getProgram({
@@ -328,7 +272,7 @@ export function buildNode10({
       },
     },
     {
-      name: 'Building CommonJS module.',
+      name: `Building CommonJS module "${name}".`,
       condition: () => format.includes('commonjs'),
       task: () => {
         const newProgram = getProgram({
@@ -365,6 +309,7 @@ export function buildNode10({
  * Build the project using the Node.js 16 module resolution strategy.
  *
  * @param options - The build options.
+ * @param options.name - The name of the project to build.
  * @param options.program - The TypeScript program to build.
  * @param options.format - The formats to build.
  * @param options.system - The file system to use.
@@ -373,6 +318,7 @@ export function buildNode10({
  * APIs.
  */
 export function buildNode16({
+  name,
   program,
   format,
   system,
@@ -381,14 +327,14 @@ export function buildNode16({
 }: BuilderOptions) {
   const buildSteps: Steps<Record<string, never>> = [
     {
-      name: 'Building ES module.',
+      name: `Building ES module "${name}".`,
       condition: () => format.includes('module'),
       task: () => {
         build({ program, type: 'module', system, shims, verbose });
       },
     },
     {
-      name: 'Building CommonJS module.',
+      name: `Building CommonJS module "${name}".`,
       condition: () => format.includes('commonjs'),
       task: () => {
         build({ program, type: 'commonjs', system, shims, verbose });
@@ -405,12 +351,12 @@ export function buildNode16({
  *
  * @param options - The build options.
  */
-export function buildProjectReferences(options: BuilderOptions) {
+export async function buildProjectReferences(options: BuilderOptions) {
   const {
-    program,
+    name,
     tsConfig,
+    program,
     format,
-    system,
     baseDirectory,
     verbose,
     shims,
@@ -421,72 +367,27 @@ export function buildProjectReferences(options: BuilderOptions) {
     program.getResolvedProjectReferences(),
   );
 
+  const graph = createGraph(resolvedProjectReferences);
   const sortedProjectReferences = getResolvedProjectReferences(
     baseDirectory,
     resolvedProjectReferences,
   );
 
-  for (const {
-    sourceFile,
-    commandLine,
-    references,
-  } of sortedProjectReferences) {
-    verbose &&
-      info(
-        `Building referenced project "${chalk.underline(
-          relative(baseDirectory, sourceFile.fileName),
-        )}".`,
-      );
+  const fn = getWorkerBuildFunction({
+    parentBaseDirectory: baseDirectory,
+    format,
+    verbose,
+    shims,
+    clean,
+  });
 
-    const {
-      fileNames,
-      options: childOptions,
-      projectReferences: childProjectReferences,
-    } = commandLine;
+  await parallelise(sortedProjectReferences, graph, fn);
 
-    const baseChildOptions = getBaseCompilerOptions(
-      dirname(sourceFile.fileName),
-      childOptions,
-    );
-
-    cleanOutputDirectory(sourceFile.fileName, baseChildOptions, clean, verbose);
-
-    const compilerOptions = getCompilerOptions(baseChildOptions);
-    const host = createProjectReferencesCompilerHost(
-      format,
-      compilerOptions,
-      getDefinedArray(references),
-      system,
-    );
-
-    const childProgram = getProgram({
-      compilerOptions,
-      host,
-      projectReferences: childProjectReferences,
-      files: fileNames,
-      oldProgram: program,
-    });
-
-    const buildFunction = getBuildFunction(commandLine);
-    buildFunction({
-      host,
-      program: childProgram,
-      projectReferences: childProjectReferences,
-      compilerOptions,
-      format,
-      files: fileNames,
-      system,
-      baseDirectory: dirname(sourceFile.fileName),
-      tsConfig: commandLine,
-      verbose,
-      shims,
-    });
-  }
-
-  info('All project references built. Building main project.');
+  verbose &&
+    info(`All project references built. Building main project "${name}".`);
 
   const buildFunction = getBuildFunction(tsConfig, false);
-  buildFunction(options);
+  await buildFunction(options);
 }
 
 /**
@@ -501,7 +402,7 @@ export function buildProjectReferences(options: BuilderOptions) {
 export function getBuildFunction(
   tsConfig: ParsedCommandLine,
   useReferences = false,
-): (options: BuilderOptions) => void {
+): (options: BuilderOptions) => void | Promise<void> {
   if (useReferences && tsConfig.projectReferences) {
     return buildProjectReferences;
   }

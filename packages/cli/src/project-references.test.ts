@@ -1,12 +1,17 @@
-import { getFixture, getRelativePath } from '@ts-bridge/test-utils';
+import {
+  getFixture,
+  getMockWorker,
+  getRelativePath,
+} from '@ts-bridge/test-utils';
 import assert from 'assert';
+import chalk from 'chalk';
 import { dirname } from 'path';
 import type { Program, ResolvedProjectReference } from 'typescript';
 import { factory, ScriptTarget, sys } from 'typescript';
 import { fileURLToPath } from 'url';
-import { beforeAll, describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it, vi } from 'vitest';
 
-import { buildProjectReferences, getProgram } from './build.js';
+import { buildProjectReferences, getProgram } from './build-utils.js';
 import { getTypeScriptConfig } from './config.js';
 import type { DependencyGraph } from './project-references.js';
 import {
@@ -16,6 +21,22 @@ import {
   topologicalSort,
 } from './project-references.js';
 import { getDefinedArray } from './utils.js';
+
+beforeAll(() => {
+  chalk.level = 0;
+});
+
+// This mock is necessary for the `createProjectReferencesCompilerHost` tests
+// to work.
+vi.mock('worker_threads', async (importOriginal) => {
+  // eslint-disable-next-line @typescript-eslint/consistent-type-imports
+  const original = await importOriginal<typeof import('worker_threads')>();
+
+  return {
+    ...original,
+    Worker: getMockWorker(original.Worker),
+  };
+});
 
 const FIXTURE_NAME = 'project-references-node-16';
 const FIXTURE_PATH = getFixture(FIXTURE_NAME);
@@ -179,7 +200,7 @@ describe('createProjectReferencesCompilerHost', () => {
   let program: Program;
   const tsConfig = getTypeScriptConfig(FIXTURE_TS_CONFIG);
 
-  beforeAll(() => {
+  beforeAll(async () => {
     program = getProgram({
       compilerOptions: tsConfig.options,
       files: tsConfig.fileNames,
@@ -188,7 +209,8 @@ describe('createProjectReferencesCompilerHost', () => {
 
     // To test the modified `getSourceFile` method, the project references need
     // to be built.
-    buildProjectReferences({
+    await buildProjectReferences({
+      name: FIXTURE_PATH,
       program,
       tsConfig,
       compilerOptions: tsConfig.options,

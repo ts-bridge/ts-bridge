@@ -52,10 +52,12 @@
   },
   "devDependencies": {
     "@metamask/auto-changelog": "^3.4.4",
+    "@metamask/utils": "^9.2.1",
     "@ts-bridge/test-utils": "workspace:^",
     "@types/node": "^20.12.7",
     "@types/yargs": "^17.0.32",
     "@typescript/vfs": "^1.5.0",
+    "tsx": "^4.19.1",
     "typescript": "^5.4.5",
     "vite-tsconfig-paths": "^4.3.2",
     "vitest": "^1.5.0"

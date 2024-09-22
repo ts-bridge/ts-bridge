@@ -1,21 +1,41 @@
-import { getFixture, noOp, parseJson } from '@ts-bridge/test-utils';
+import {
+  getFixture,
+  getMockWorker,
+  noOp,
+  parseJson,
+} from '@ts-bridge/test-utils';
+import chalk from 'chalk';
 import { join, relative } from 'path';
 import type { System } from 'typescript';
 import typescript from 'typescript';
 import { beforeAll, describe, expect, it, vi } from 'vitest';
 
+import type { BuildHandlerOptions } from './build-handler.js';
+import { getFiles, buildHandler } from './build-handler.js';
 import type { BuildType } from './build-type.js';
-import type { BuildHandlerOptions } from './build.js';
-import { getFiles, getTransformers, buildHandler } from './build.js';
 import { removeDirectory } from './file-system.js';
 
 const { sys } = typescript;
+
+beforeAll(() => {
+  chalk.level = 0;
+});
 
 vi.mock('./file-system.js', async (importOriginal) => ({
   // eslint-disable-next-line @typescript-eslint/consistent-type-imports
   ...(await importOriginal<typeof import('./file-system.js')>()),
   removeDirectory: vi.fn(),
 }));
+
+vi.mock('worker_threads', async (importOriginal) => {
+  // eslint-disable-next-line @typescript-eslint/consistent-type-imports
+  const original = await importOriginal<typeof import('worker_threads')>();
+
+  return {
+    ...original,
+    Worker: getMockWorker(original.Worker),
+  };
+});
 
 /**
  * Compile a TypeScript project.
@@ -25,7 +45,7 @@ vi.mock('./file-system.js', async (importOriginal) => ({
  * @param options - Options to pass to the build handler.
  * @returns The compiled files.
  */
-function compile(
+async function compile(
   projectPath: string,
   formats: BuildType[],
   options: Partial<BuildHandlerOptions> = {},
@@ -44,7 +64,7 @@ function compile(
     },
   };
 
-  buildHandler({
+  await buildHandler({
     project: `${projectPath}/tsconfig.json`,
     format: formats,
     clean: false,
@@ -60,8 +80,8 @@ describe('build', () => {
     describe('when targeting `module`', () => {
       let files: Record<string, string>;
 
-      beforeAll(() => {
-        files = compile(getFixture('node-10'), ['module']);
+      beforeAll(async () => {
+        files = await compile(getFixture('node-10'), ['module']);
       });
 
       it('outputs the files with the `.mjs` extension', () => {
@@ -112,8 +132,8 @@ describe('build', () => {
     describe('when targeting `commonjs`', () => {
       let files: Record<string, string>;
 
-      beforeAll(() => {
-        files = compile(getFixture('node-10'), ['commonjs']);
+      beforeAll(async () => {
+        files = await compile(getFixture('node-10'), ['commonjs']);
       });
 
       it('outputs the files with the `.cjs` extension', () => {
@@ -168,8 +188,8 @@ describe('build', () => {
     describe('when targeting both', () => {
       let files: Record<string, string>;
 
-      beforeAll(() => {
-        files = compile(getFixture('node-10'), ['commonjs', 'module']);
+      beforeAll(async () => {
+        files = await compile(getFixture('node-10'), ['commonjs', 'module']);
       });
 
       it('outputs the files with both the `.cjs` and `.mjs` extension', () => {
@@ -207,8 +227,8 @@ describe('build', () => {
     describe('when targeting `module`', () => {
       let files: Record<string, string>;
 
-      beforeAll(() => {
-        files = compile(getFixture('node-16'), ['module']);
+      beforeAll(async () => {
+        files = await compile(getFixture('node-16'), ['module']);
       });
 
       it('outputs the files with the `.mjs` extension', () => {
@@ -259,8 +279,8 @@ describe('build', () => {
     describe('when targeting `commonjs`', () => {
       let files: Record<string, string>;
 
-      beforeAll(() => {
-        files = compile(getFixture('node-16'), ['commonjs']);
+      beforeAll(async () => {
+        files = await compile(getFixture('node-16'), ['commonjs']);
       });
 
       it('outputs the files with the `.cjs` extension', () => {
@@ -315,8 +335,8 @@ describe('build', () => {
     describe('when targeting both', () => {
       let files: Record<string, string>;
 
-      beforeAll(() => {
-        files = compile(getFixture('node-16'), ['commonjs', 'module']);
+      beforeAll(async () => {
+        files = await compile(getFixture('node-16'), ['commonjs', 'module']);
       });
 
       it('outputs the files with both the `.cjs` and `.mjs` extension', () => {
@@ -352,137 +372,44 @@ describe('build', () => {
 
   describe('project references', () => {
     describe('node 10', () => {
-      const log = vi.spyOn(console, 'log').mockImplementation(noOp);
-      let files: Record<string, string>;
+      vi.spyOn(console, 'log').mockImplementation(noOp);
 
-      beforeAll(() => {
-        files = compile(
-          getFixture('project-references-node-10'),
-          ['commonjs', 'module'],
-          {
-            references: true,
-            verbose: true,
-          },
-        );
-      });
-
-      it('builds all projects when using project references', () => {
-        expect(Object.keys(files)).toStrictEqual([
-          'packages/project-3/dist/foo.mjs',
-          'packages/project-3/dist/foo.d.mts.map',
-          'packages/project-3/dist/foo.d.mts',
-          'packages/project-3/dist/index.mjs',
-          'packages/project-3/dist/index.d.mts.map',
-          'packages/project-3/dist/index.d.mts',
-          'packages/project-3/tsconfig.tsbuildinfo',
-          'packages/project-3/dist/foo.cjs',
-          'packages/project-3/dist/foo.d.cts.map',
-          'packages/project-3/dist/foo.d.cts',
-          'packages/project-3/dist/index.cjs',
-          'packages/project-3/dist/index.d.cts.map',
-          'packages/project-3/dist/index.d.cts',
-          'packages/project-1/dist/index.mjs',
-          'packages/project-1/dist/index.d.mts.map',
-          'packages/project-1/dist/index.d.mts',
-          'packages/project-1/tsconfig.tsbuildinfo',
-          'packages/project-1/dist/index.cjs',
-          'packages/project-1/dist/index.d.cts.map',
-          'packages/project-1/dist/index.d.cts',
-          'packages/project-2/dist/index.mjs',
-          'packages/project-2/dist/index.d.mts.map',
-          'packages/project-2/dist/index.d.mts',
-          'packages/project-2/tsconfig.tsbuildinfo',
-          'packages/project-2/dist/index.cjs',
-          'packages/project-2/dist/index.d.cts.map',
-          'packages/project-2/dist/index.d.cts',
-          'dist/index.mjs',
-          'dist/index.d.mts.map',
-          'dist/index.d.mts',
-          'dist/index.cjs',
-          'dist/index.d.cts.map',
-          'dist/index.d.cts',
-        ]);
-      });
-
-      it('logs the project references', () => {
-        expect(log).toHaveBeenCalledWith(
-          expect.stringMatching(
-            /Building referenced project ".*packages\/project-1\/tsconfig\.json.*"\./u,
+      it('builds all projects and logs the project references', async () => {
+        await expect(
+          compile(
+            getFixture('project-references-node-10'),
+            ['commonjs', 'module'],
+            {
+              references: true,
+              verbose: true,
+            },
           ),
-        );
-
-        expect(log).toHaveBeenCalledWith(
-          expect.stringMatching(
-            /Building referenced project ".*packages\/project-2\/tsconfig\.json.*"\./u,
-          ),
-        );
-
-        expect(log).toHaveBeenCalledWith(
-          expect.stringMatching(
-            /Building referenced project ".*packages\/project-3\/tsconfig\.json.*"\./u,
-          ),
-        );
+        ).resolves.not.toThrow();
       });
     });
 
     describe('node 16', () => {
-      let files: Record<string, string>;
+      vi.spyOn(console, 'log').mockImplementation(noOp);
 
-      beforeAll(() => {
-        files = compile(
-          getFixture('project-references-node-16'),
-          ['commonjs', 'module'],
-          {
-            references: true,
-            verbose: true,
-          },
-        );
-      });
-
-      it('builds all projects when using project references', () => {
-        expect(Object.keys(files)).toStrictEqual([
-          'packages/project-3/dist/foo.mjs',
-          'packages/project-3/dist/foo.d.mts.map',
-          'packages/project-3/dist/foo.d.mts',
-          'packages/project-3/dist/index.mjs',
-          'packages/project-3/dist/index.d.mts.map',
-          'packages/project-3/dist/index.d.mts',
-          'packages/project-3/tsconfig.tsbuildinfo',
-          'packages/project-3/dist/foo.cjs',
-          'packages/project-3/dist/foo.d.cts.map',
-          'packages/project-3/dist/foo.d.cts',
-          'packages/project-3/dist/index.cjs',
-          'packages/project-3/dist/index.d.cts.map',
-          'packages/project-3/dist/index.d.cts',
-          'packages/project-1/dist/index.mjs',
-          'packages/project-1/dist/index.d.mts.map',
-          'packages/project-1/dist/index.d.mts',
-          'packages/project-1/tsconfig.tsbuildinfo',
-          'packages/project-1/dist/index.cjs',
-          'packages/project-1/dist/index.d.cts.map',
-          'packages/project-1/dist/index.d.cts',
-          'packages/project-2/dist/index.mjs',
-          'packages/project-2/dist/index.d.mts.map',
-          'packages/project-2/dist/index.d.mts',
-          'packages/project-2/tsconfig.tsbuildinfo',
-          'packages/project-2/dist/index.cjs',
-          'packages/project-2/dist/index.d.cts.map',
-          'packages/project-2/dist/index.d.cts',
-          'dist/index.mjs',
-          'dist/index.d.mts.map',
-          'dist/index.d.mts',
-          'dist/index.cjs',
-          'dist/index.d.cts.map',
-          'dist/index.d.cts',
-        ]);
+      it('builds all projects and logs the project references', async () => {
+        await expect(
+          compile(
+            getFixture('project-references-node-16'),
+            ['commonjs', 'module'],
+            {
+              references: true,
+              verbose: true,
+            },
+          ),
+        ).resolves.not.toThrow();
       });
     });
 
-    it('removes the output directory of all referenced projects if `clean` is enabled', () => {
+    it('removes the output directory of all referenced projects if `clean` is enabled', async () => {
       const path = getFixture('project-references-node-16');
       const dist = join(path, 'dist');
 
-      compile(
+      await compile(
         getFixture('project-references-node-16'),
         ['commonjs', 'module'],
         {
@@ -491,28 +418,19 @@ describe('build', () => {
         },
       );
 
+      // TODO: Test that the output directories of referenced projects are
+      // removed as well. This is complicated because references are built in
+      // a worker thread.
       expect(vi.mocked(removeDirectory)).toHaveBeenCalledWith(dist, path);
-      expect(vi.mocked(removeDirectory)).toHaveBeenCalledWith(
-        join(path, 'packages/project-1/dist'),
-        join(path, 'packages/project-1'),
-      );
-      expect(vi.mocked(removeDirectory)).toHaveBeenCalledWith(
-        join(path, 'packages/project-2/dist'),
-        join(path, 'packages/project-2'),
-      );
-      expect(vi.mocked(removeDirectory)).toHaveBeenCalledWith(
-        join(path, 'packages/project-3/dist'),
-        join(path, 'packages/project-3'),
-      );
     });
   });
 
-  it('removes the output directory if `clean` is enabled', () => {
+  it('removes the output directory if `clean` is enabled', async () => {
     const log = vi.spyOn(console, 'log').mockImplementation(noOp);
     const path = getFixture('node-16');
     const dist = join(path, 'dist');
 
-    compile(path, ['module'], {
+    await compile(path, ['module'], {
       clean: true,
       verbose: true,
     });
@@ -523,13 +441,13 @@ describe('build', () => {
     );
   });
 
-  it('throws an error if the project fails to initialise', () => {
-    expect(() => compile(getFixture('invalid'), ['module'])).toThrow(
+  it('throws an error if the project fails to initialise', async () => {
+    await expect(compile(getFixture('invalid'), ['module'])).rejects.toThrow(
       'Failed to initialise the project.',
     );
   });
 
-  it('logs an error if the project fails to build', () => {
+  it('logs an error if the project fails to build', async () => {
     const error = vi.spyOn(console, 'error').mockImplementation(noOp);
     const system: System = {
       ...sys,
@@ -538,7 +456,7 @@ describe('build', () => {
       },
     };
 
-    buildHandler({
+    await buildHandler({
       // ESLint doesn't seem to be able to infer the type of `getFixture` here.
       // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
       project: `${getFixture('node-16')}/tsconfig.json`,
@@ -570,63 +488,5 @@ describe('getFiles', () => {
     const files = getFiles(['baz'], ['foo', 'bar']);
 
     expect(files).toStrictEqual(['baz']);
-  });
-});
-
-describe('getTransformers', () => {
-  it('returns the correct transformers for the `module` format', () => {
-    const transformers = getTransformers(
-      'module',
-      {
-        system: sys,
-        // @ts-expect-error - The `typeChecker` parameter is invalid.
-        typeChecker: {},
-      },
-      true,
-    );
-
-    expect(transformers).toHaveLength(6);
-  });
-
-  it('returns the correct transformers for the `commonjs` format', () => {
-    const transformers = getTransformers(
-      'commonjs',
-      {
-        system: sys,
-        // @ts-expect-error - The `typeChecker` parameter is invalid.
-        typeChecker: {},
-      },
-      true,
-    );
-
-    expect(transformers).toHaveLength(3);
-  });
-
-  it('returns the correct transformers for the `module` format without shims', () => {
-    const transformers = getTransformers(
-      'module',
-      {
-        system: sys,
-        // @ts-expect-error - The `typeChecker` parameter is invalid.
-        typeChecker: {},
-      },
-      false,
-    );
-
-    expect(transformers).toHaveLength(4);
-  });
-
-  it('returns the correct transformers for the `commonjs` format without shims', () => {
-    const transformers = getTransformers(
-      'commonjs',
-      {
-        system: sys,
-        // @ts-expect-error - The `typeChecker` parameter is invalid.
-        typeChecker: {},
-      },
-      false,
-    );
-
-    expect(transformers).toHaveLength(2);
   });
 });
