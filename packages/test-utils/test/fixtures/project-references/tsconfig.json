@@ -1,0 +1,27 @@
+{
+  "compilerOptions": {
+    "outDir": "./dist",
+    "strictNullChecks": true
+  },
+  "include": ["src"],
+  "references": [
+    {
+      "path": "./packages/project-1"
+    },
+    {
+      "path": "./packages/project-2"
+    },
+    {
+      "path": "./packages/project-3"
+    },
+    {
+      "path": "./packages/project-4"
+    },
+    {
+      "path": "./packages/project-5"
+    },
+    {
+      "path": "./packages/project-6"
+    }
+  ]
+}

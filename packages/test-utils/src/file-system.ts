@@ -1,4 +1,5 @@
-import { resolve as resolvePath } from 'path';
+import { readdir, rm } from 'fs/promises';
+import { join, relative, resolve as resolvePath } from 'path';
 import { fileURLToPath } from 'url';
 
 type FileEntry = {
@@ -98,4 +99,49 @@ const ROOT_PATH = resolvePath(fileURLToPath(import.meta.url), '../../../..');
  */
 export function getPathFromRoot(path: string): string {
   return resolvePath(ROOT_PATH, path);
+}
+
+/**
+ * Remove a directory and all its contents.
+ *
+ * @param path - The path to the directory to remove.
+ * @throws If the directory cannot be removed.
+ */
+export async function removeDirectory(path: string) {
+  try {
+    await rm(path, { recursive: true });
+  } catch (error) {
+    if (
+      typeof error === 'object' &&
+      error !== null &&
+      'code' in error &&
+      error.code !== 'ENOENT'
+    ) {
+      // eslint-disable-next-line @typescript-eslint/no-throw-literal
+      throw error;
+    }
+  }
+}
+
+/**
+ * Read all entries in the given directories.
+ *
+ * @param baseDirectory - The base directory of the directories.
+ * @param directories - The directories to read.
+ * @returns The entries in the directories.
+ */
+export async function readAllDirectories(
+  baseDirectory: string,
+  directories: string[],
+) {
+  const entries: string[] = [];
+  for (const directory of directories) {
+    const entriesInDirectory = await readdir(directory);
+
+    entriesInDirectory
+      .map((entry) => relative(baseDirectory, join(directory, entry)))
+      .forEach((entry) => entries.push(entry));
+  }
+
+  return entries;
 }
