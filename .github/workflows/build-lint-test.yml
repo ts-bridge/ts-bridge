@@ -140,6 +140,6 @@ jobs:
       - name: Install Yarn dependencies
         run: yarn --immutable --immutable-cache
       - name: Install TypeScript ${{ matrix.typescript-version }}
-        run: yarn set resolution typescript@npm:${{ needs.get-supported-versions.outputs.current-version }} ${{ matrix.typescript-version }}
+        run: yarn set resolution typescript@npm:${{ needs.get-supported-versions.outputs.current-version }} npm:${{ matrix.typescript-version }}
       - name: Test
         run: yarn test --coverage false
