@@ -119,7 +119,7 @@ jobs:
         run: echo "typescript-versions=$(yarn get-typescript-versions)" >> "$GITHUB_OUTPUT"
       - name: Get current TypeScript version
         id: get-current-version
-        run: echo "current-version=$(jq -r .devDependencies.typescript < package.json)" >> "$GITHUB_OUTPUT"
+        run: echo "current-version=$(jq --raw-output '.devDependencies.typescript' packages/cli/package.json)" >> "$GITHUB_OUTPUT"
 
   compatibility-test:
     name: Compatibility test
