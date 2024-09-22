@@ -103,7 +103,7 @@ jobs:
       - prepare
     outputs:
       typescript-versions: ${{ steps.get-supported-versions.outputs.typescript-versions }}
-      current-version: ${{ steps.get-supported-versions.outputs.current-version }}
+      current-version: ${{ steps.get-current-version.outputs.current-version }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
