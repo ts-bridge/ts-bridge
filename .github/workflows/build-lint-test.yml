@@ -103,6 +103,7 @@ jobs:
       - prepare
     outputs:
       typescript-versions: ${{ steps.get-supported-versions.outputs.typescript-versions }}
+      current-version: ${{ steps.get-supported-versions.outputs.current-version }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -116,6 +117,9 @@ jobs:
       - name: Get supported TypeScript versions
         id: get-supported-versions
         run: echo "typescript-versions=$(yarn get-typescript-versions)" >> "$GITHUB_OUTPUT"
+      - name: Get current TypeScript version
+        id: get-current-version
+        run: echo "current-version=$(jq -r .devDependencies.typescript < package.json)" >> "$GITHUB_OUTPUT"
 
   compatibility-test:
     name: Compatibility test
@@ -136,6 +140,6 @@ jobs:
       - name: Install Yarn dependencies
         run: yarn --immutable --immutable-cache
       - name: Install TypeScript ${{ matrix.typescript-version }}
-        run: yarn workspaces foreach -A add -D typescript@${{ matrix.typescript-version }}
+        run: yarn set resolution typescript@npm:${{ needs.get-supported-versions.outputs.current-version }} ${{ matrix.typescript-version }}
       - name: Test
         run: yarn test --coverage false
