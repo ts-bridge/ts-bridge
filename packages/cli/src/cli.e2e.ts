@@ -10,19 +10,22 @@ import { beforeEach, describe, expect, it } from 'vitest';
 describe('cli', () => {
   describe('build', () => {
     describe('node 10', () => {
+      const FIXTURE_PATH = getFixture('node-10');
+      const FIXTURE_DIST_PATH = getFixture('node-10', 'dist');
+
       beforeEach(async () => {
-        await removeDirectory(getFixture('node-10', 'dist'));
+        await removeDirectory(FIXTURE_DIST_PATH);
       });
 
       it('builds the project', async () => {
-        const runner = run('build', [], getFixture('node-10'));
+        const runner = run('build', [], FIXTURE_PATH);
 
         const exitCode = await runner.wait();
         expect(exitCode).toBe(0);
         expect(runner.stdout).toHaveLength(0);
         expect(runner.stderr).toHaveLength(0);
 
-        const files = await readdir(getFixture('node-10', 'dist'));
+        const files = await readdir(FIXTURE_DIST_PATH);
         expect(files).toMatchInlineSnapshot(`
           [
             "file-1.cjs",
@@ -54,7 +57,7 @@ describe('cli', () => {
       });
 
       it('builds the project with verbose logging', async () => {
-        const runner = run('build', ['--verbose'], getFixture('node-10'));
+        const runner = run('build', ['--verbose'], FIXTURE_PATH);
 
         const exitCode = await runner.wait();
         expect(exitCode).toBe(0);
@@ -75,19 +78,22 @@ describe('cli', () => {
     });
 
     describe('node 16', () => {
+      const FIXTURE_PATH = getFixture('node-16');
+      const FIXTURE_DIST_PATH = getFixture('node-16', 'dist');
+
       beforeEach(async () => {
-        await removeDirectory(getFixture('node-16', 'dist'));
+        await removeDirectory(FIXTURE_DIST_PATH);
       });
 
       it('builds the project', async () => {
-        const runner = run('build', [], getFixture('node-16'));
+        const runner = run('build', [], FIXTURE_PATH);
 
         const exitCode = await runner.wait();
         expect(exitCode).toBe(0);
         expect(runner.stdout).toHaveLength(0);
         expect(runner.stderr).toHaveLength(0);
 
-        const files = await readdir(getFixture('node-16', 'dist'));
+        const files = await readdir(FIXTURE_DIST_PATH);
         expect(files).toMatchInlineSnapshot(`
           [
             "file-1.cjs",
@@ -119,7 +125,7 @@ describe('cli', () => {
       });
 
       it('builds the project with verbose logging', async () => {
-        const runner = run('build', ['--verbose'], getFixture('node-16'));
+        const runner = run('build', ['--verbose'], FIXTURE_PATH);
 
         const exitCode = await runner.wait();
         expect(exitCode).toBe(0);
@@ -163,7 +169,6 @@ describe('cli', () => {
         const runner = run('build', [], FIXTURE_PATH);
 
         const exitCode = await runner.wait();
-        console.log(runner.output);
         expect(exitCode).toBe(0);
         expect(runner.stdout).toHaveLength(0);
         expect(runner.stderr).toHaveLength(0);
