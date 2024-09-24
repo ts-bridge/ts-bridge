@@ -20,7 +20,7 @@ describe('cli', () => {
       it('builds the project', async () => {
         const runner = run('build', [], FIXTURE_PATH);
 
-        const exitCode = await runner.wait();
+        const exitCode = await runner.waitForExit();
         expect(exitCode).toBe(0);
         expect(runner.stdout).toHaveLength(0);
         expect(runner.stderr).toHaveLength(0);
@@ -59,7 +59,7 @@ describe('cli', () => {
       it('builds the project with verbose logging', async () => {
         const runner = run('build', ['--verbose'], FIXTURE_PATH);
 
-        const exitCode = await runner.wait();
+        const exitCode = await runner.waitForExit();
         expect(exitCode).toBe(0);
         expect(runner.stderr).toHaveLength(0);
         expect(runner.output).toMatchInlineSnapshot(`
@@ -88,7 +88,7 @@ describe('cli', () => {
       it('builds the project', async () => {
         const runner = run('build', [], FIXTURE_PATH);
 
-        const exitCode = await runner.wait();
+        const exitCode = await runner.waitForExit();
         expect(exitCode).toBe(0);
         expect(runner.stdout).toHaveLength(0);
         expect(runner.stderr).toHaveLength(0);
@@ -127,7 +127,7 @@ describe('cli', () => {
       it('builds the project with verbose logging', async () => {
         const runner = run('build', ['--verbose'], FIXTURE_PATH);
 
-        const exitCode = await runner.wait();
+        const exitCode = await runner.waitForExit();
         expect(exitCode).toBe(0);
         expect(runner.stderr).toHaveLength(0);
         expect(runner.output).toMatchInlineSnapshot(`
@@ -168,7 +168,7 @@ describe('cli', () => {
       it('builds the project', async () => {
         const runner = run('build', [], FIXTURE_PATH);
 
-        const exitCode = await runner.wait();
+        const exitCode = await runner.waitForExit();
         expect(exitCode).toBe(0);
         expect(runner.stdout).toHaveLength(0);
         expect(runner.stderr).toHaveLength(0);
@@ -228,7 +228,7 @@ describe('cli', () => {
       it('builds the project with verbose logging', async () => {
         const runner = run('build', ['--verbose'], FIXTURE_PATH);
 
-        const exitCode = await runner.wait();
+        const exitCode = await runner.waitForExit();
         expect(exitCode).toBe(0);
         expect(runner.stderr).toHaveLength(0);
 
@@ -295,7 +295,7 @@ describe('cli', () => {
       const runner = run('build', ['--help']);
 
       const manual = await runner.expectStdout();
-      const exitCode = await runner.wait();
+      const exitCode = await runner.waitForExit();
 
       expect(exitCode).toBe(0);
       expect(manual).toMatchInlineSnapshot(`

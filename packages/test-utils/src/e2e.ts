@@ -98,7 +98,7 @@ class CommandLineRunner extends EventEmitter {
    *
    * @returns The exit code.
    */
-  async wait() {
+  async waitForExit() {
     if (!this.running) {
       return this.#exitCode;
     }
