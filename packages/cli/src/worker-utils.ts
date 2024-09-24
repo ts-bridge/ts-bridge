@@ -149,7 +149,6 @@ export async function main({
     tsConfig,
     baseDirectory,
     compilerOptions: program.getCompilerOptions(),
-    files: tsConfig.fileNames,
     format,
     system: sys,
     verbose,
