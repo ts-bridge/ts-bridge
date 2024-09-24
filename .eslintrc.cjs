@@ -58,7 +58,7 @@ module.exports = {
     },
 
     {
-      files: ['*.test.ts', '*.test.js'],
+      files: ['*.test.ts', '*.e2e.ts'],
       extends: ['@metamask/eslint-config-nodejs'],
     },
 
