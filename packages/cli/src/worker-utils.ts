@@ -46,6 +46,7 @@ export function getWorkerBuildFunction(options: GetBuildWorkerFunctionOptions) {
    * Build a project reference using a worker thread.
    *
    * @param projectReference - The project reference to build.
+   * @returns A promise that resolves when the project reference has been built.
    */
   return async function workerBuild(
     projectReference: ResolvedProjectReference,

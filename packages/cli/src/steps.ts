@@ -12,9 +12,8 @@ export type Step<Context extends Record<string, unknown>> = {
 /**
  * A list of steps to execute in series.
  */
-export type Steps<Context extends Record<string, unknown>> = Readonly<
-  Step<Context>[]
->;
+export type Steps<Context extends Record<string, unknown>> =
+  readonly Step<Context>[];
 
 /**
  * Execute a list of steps in series. Each step receives the context object,
