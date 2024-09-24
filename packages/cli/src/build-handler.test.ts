@@ -457,8 +457,6 @@ describe('build', () => {
     };
 
     await buildHandler({
-      // ESLint doesn't seem to be able to infer the type of `getFixture` here.
-      // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
       project: `${getFixture('node-16')}/tsconfig.json`,
       format: ['module'],
       clean: false,

@@ -15,6 +15,8 @@ import type {
  * @returns `true` if the string is a valid URL, `false` otherwise.
  */
 export function isURL(url: string): boolean {
+  // TODO: Look into this.
+  // eslint-disable-next-line n/no-unsupported-features/node-builtins
   return URL.canParse(url);
 }
 

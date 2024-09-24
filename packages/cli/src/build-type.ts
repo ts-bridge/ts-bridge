@@ -29,25 +29,49 @@ export type BuildType = 'module' | 'commonjs';
 
 /**
  * Options for different build types.
- *
- * @property extension - The file extension for the output files.
- * @property declarationExtension - The file extension for the declaration
- * files.
- * @property compilerOptions - The compiler options to use for the build type.
- * This will be merged with the project's `tsconfig.json` file.
- * @property getTransformers - Get the transformers to use for the build type.
- * @property getShimsTransformers - Get the transformers to use for the build
- * when the `@ts-bridge/shims` package is installed.
  */
 export type BuildTypeOptions = {
+  /**
+   * The name of the package.
+   */
   name: string;
+
+  /**
+   * The file extension for the output files.
+   */
   extension: string;
+
+  /**
+   * The file extension for the declaration files.
+   */
   declarationExtension: string;
+
+  /**
+   * The file extension for the source files.
+   */
   sourceExtension: string;
+
+  /**
+   * The target module kind.
+   */
   target: ResolutionMode;
+
+  /**
+   * Get the transformers to use for the build type.
+   *
+   * @param options - The transformer options to use.
+   * @returns The transformers to use.
+   */
   getTransformers: (
     options: TransformerOptions,
   ) => TransformerFactory<SourceFile>[];
+
+  /**
+   * Get the transformers to use for the build when shims are enabled.
+   *
+   * @param options - The transformer options to use.
+   * @returns The transformers to use.
+   */
   getShimsTransformers: (
     options: TransformerOptions,
   ) => TransformerFactory<SourceFile>[];

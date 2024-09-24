@@ -33,21 +33,51 @@ export function getFiles(
 /**
  * Options for the build handler. This is intended to be provided by the CLI,
  * and these types should match the CLI options.
- *
- * @property format - The formats to build.
- * @property project - The path to the project's `tsconfig.json` file.
- * @property files - The files to include in the build.
- * @property clean - Whether to clean the output directory before building.
  */
 export type BuildHandlerOptions = {
+  /**
+   * The formats to build.
+   */
   format: BuildType[];
+
+  /**
+   * The path to the project's `tsconfig.json` file.
+   */
   project: string;
+
+  /**
+   * The files to include in the build.
+   */
   files?: string[];
+
+  /**
+   * Whether to clean the output directory before building.
+   */
   clean: boolean;
+
+  /**
+   * The system to use for file operations.
+   */
   system: System;
+
+  /**
+   * The compiler host to use.
+   */
   host?: CompilerHost;
+
+  /**
+   * Whether to log verbose output.
+   */
   verbose?: boolean;
+
+  /**
+   * Whether to use project references.
+   */
   references?: boolean;
+
+  /**
+   * Whether to use shims for the build.
+   */
   shims?: boolean;
 };
 

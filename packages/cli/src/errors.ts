@@ -95,7 +95,7 @@ export class NodeError extends Error {
   constructor(message: string, originalError: unknown) {
     const code = getErrorCode(originalError);
     const errorMessage = code
-      ? NODE_ERROR_CODES[code] ?? 'An unknown error occurred.'
+      ? (NODE_ERROR_CODES[code] ?? 'An unknown error occurred.')
       : 'An unknown error occurred.';
 
     super(`${chalk.red(message)}\n${errorMessage}`);

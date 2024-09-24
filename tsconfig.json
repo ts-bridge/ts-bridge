@@ -2,7 +2,8 @@
   "compilerOptions": {
     "noEmit": true,
     "strict": true,
-    "strictNullChecks": true
+    "strictNullChecks": true,
+    "exactOptionalPropertyTypes": true
   },
   "include": ["./vitest.config.mts", "./vitest.workspace.mts"],
   "files": [],

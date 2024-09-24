@@ -1,5 +1,6 @@
 import { createRequire } from 'module';
 import { dirname, join } from 'path';
+// eslint-disable-next-line n/no-unsupported-features/node-builtins
 import { createContext, Script, SyntheticModule, SourceTextModule } from 'vm';
 
 /**
@@ -31,7 +32,6 @@ function getSyntheticModule(importedModule: Record<string, unknown>) {
 
   return new SyntheticModule(exportNames, function () {
     exportNames.forEach((key) => {
-      // eslint-disable-next-line no-invalid-this
       this.setExport(key, importedModule[key]);
     });
   });

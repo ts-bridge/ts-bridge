@@ -51,14 +51,21 @@ const {
 
 /**
  * The options for the transformer functions.
- *
- * @property typeChecker - The type checker to use.
- * @property system - The compiler system to use.
- * @property baseDirectory - The base directory to start resolving from.
  */
 export type TransformerOptions = {
+  /**
+   * The type checker to use.
+   */
   typeChecker: TypeChecker;
+
+  /**
+   * The compiler system to use.
+   */
   system: System;
+
+  /**
+   * The base directory to start resolving from.
+   */
   verbose?: boolean;
 };
 
@@ -665,7 +672,7 @@ export function getDefaultImportTransformer({
                   ),
                 ),
               ],
-              // eslint-disable-next-line no-bitwise
+
               NodeFlags.Const,
             ),
           );

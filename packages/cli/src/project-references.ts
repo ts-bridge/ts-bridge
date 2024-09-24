@@ -175,6 +175,7 @@ function getOutputPaths(files: string[], options: ParsedCommandLine) {
   );
 }
 
+/* eslint-disable jsdoc/check-tag-names */
 /**
  * A tuple containing an array of input files and an array of output files.
  *
@@ -182,6 +183,7 @@ function getOutputPaths(files: string[], options: ParsedCommandLine) {
  * @property 1 - The array of output files.
  */
 type ReferencedFiles = [string[], string[]];
+/* eslint-enable jsdoc/check-tag-names */
 
 /**
  * Resolve the input and output file paths of the project references. This not

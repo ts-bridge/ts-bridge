@@ -38,6 +38,7 @@ const WORKER_CODE = `
 export type Worker = new (
   filename: string | URL,
   options?: WorkerOptions | undefined,
+  // eslint-disable-next-line @typescript-eslint/no-empty-object-type
 ) => {
   // This is intentionally empty. The `Worker` class is only used for typing.
 };

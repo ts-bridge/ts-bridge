@@ -5,6 +5,9 @@
     "@metamask/auto-changelog",
     "@metamask/create-release-branch",
     "@vitest/coverage-istanbul",
+    "eslint-config-*",
+    "eslint-import-resolver-typescript",
+    "eslint-plugin-*",
     "semver",
     "prettier-plugin-packagejson"
   ]

@@ -426,7 +426,7 @@ function resolveArrayPackageTarget(
         continue;
       }
 
-      // eslint-disable-next-line @typescript-eslint/no-throw-literal
+      // eslint-disable-next-line @typescript-eslint/only-throw-error
       throw error;
     }
 
@@ -754,6 +754,7 @@ function resolveSelf(
   const packageJson = getPackageJson(packageUrl, fileSystem);
 
   // 4. If pjson is null or if pjson.exports is null or undefined, then
+  // eslint-disable-next-line @typescript-eslint/prefer-optional-chain
   if (packageJson === null || !packageJson.exports) {
     // 1. Return undefined
     return null;
@@ -1100,7 +1101,6 @@ function getPackageFormat(
 
     // 2. If --experimental-detect-module is enabled and the result of
     //    DETECT_MODULE_SYNTAX(source) is true, then
-    // eslint-disable-next-line no-constant-condition
     // if (isFlagEnabled('--experimental-detect-module')) {
     //   TODO: Experimental module detection.
     // }

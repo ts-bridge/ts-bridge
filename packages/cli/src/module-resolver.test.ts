@@ -254,10 +254,12 @@ describe('getFileSystemFromTypeScript', () => {
   it("returns the file system interface from TypeScript's `system`", () => {
     const fileSystem = getFileSystemFromTypeScript(sys);
 
+    /* eslint-disable @typescript-eslint/unbound-method */
     expect(fileSystem.isFile).toBeInstanceOf(Function);
     expect(fileSystem.isDirectory).toBeInstanceOf(Function);
     expect(fileSystem.readFile).toBeInstanceOf(Function);
     expect(fileSystem.readBytes).toBeInstanceOf(Function);
+    /* eslint-enable @typescript-eslint/unbound-method */
   });
 
   describe('isFile', () => {

@@ -39,6 +39,8 @@ export function isUnique(
   symbolName: string,
 ) {
   const symbols = typeChecker.getSymbolsInScope(node, SymbolFlags.All);
+
+  /* eslint-disable @typescript-eslint/no-unsafe-enum-comparison */
   return (
     symbols.find(
       (symbol) =>
@@ -46,6 +48,7 @@ export function isUnique(
         symbol.escapedName === `_${symbolName}`,
     ) === undefined
   );
+  /* eslint-enable @typescript-eslint/no-unsafe-enum-comparison */
 }
 
 /**
@@ -62,11 +65,14 @@ export function isGlobal(
   symbolName: string,
 ) {
   const symbols = typeChecker.getSymbolsInScope(node, SymbolFlags.All);
+
+  /* eslint-disable @typescript-eslint/no-unsafe-enum-comparison */
   const foundSymbol = symbols.find(
     (symbol) =>
       symbol.escapedName === symbolName ||
       symbol.escapedName === `_${symbolName}`,
   );
+  /* eslint-enable @typescript-eslint/no-unsafe-enum-comparison */
 
   const declarations = getDefinedArray(foundSymbol?.getDeclarations());
   for (const declaration of declarations) {
@@ -313,7 +319,7 @@ export function getNamedImportNodes(
           factory.createIdentifier(importIdentifier),
         ),
       ],
-      // eslint-disable-next-line no-bitwise
+
       NodeFlags.Const,
     ),
   );
