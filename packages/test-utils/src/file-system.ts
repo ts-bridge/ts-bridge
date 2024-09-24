@@ -124,13 +124,13 @@ export async function removeDirectory(path: string) {
 }
 
 /**
- * Read all entries in the given directories.
+ * Read all entries in the given directories, non-recursively.
  *
  * @param baseDirectory - The base directory of the directories.
  * @param directories - The directories to read.
  * @returns The entries in the directories.
  */
-export async function readAllDirectories(
+export async function readDirectories(
   baseDirectory: string,
   directories: string[],
 ) {

@@ -1,6 +1,6 @@
 import {
   getFixture,
-  readAllDirectories,
+  readDirectories,
   removeDirectory,
   run,
 } from '@ts-bridge/test-utils';
@@ -173,7 +173,7 @@ describe('cli', () => {
         expect(runner.stdout).toHaveLength(0);
         expect(runner.stderr).toHaveLength(0);
 
-        const files = await readAllDirectories(
+        const files = await readDirectories(
           FIXTURE_PATH,
           ALL_FIXTURE_DIST_PATHS,
         );
