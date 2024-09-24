@@ -200,7 +200,6 @@ export type BuilderOptions = {
   projectReferences?: readonly ProjectReference[];
   compilerOptions: CompilerOptions;
   format: BuildType[];
-  files: string[];
   system: System;
   host?: CompilerHost;
   baseDirectory: string;
@@ -222,12 +221,12 @@ export type BuilderOptions = {
  * @param options.projectReferences - The project references to use.
  * @param options.compilerOptions - The compiler options to use.
  * @param options.format - The formats to build.
- * @param options.files - The files to include in the program.
  * @param options.system - The file system to use.
  * @param options.host - The compiler host to use.
  * @param options.verbose - Whether to enable verbose logging.
  * @param options.shims - Whether to generate shims for environment-specific
  * APIs.
+ * @param options.tsConfig - The TypeScript configuration.
  */
 export function buildNode10({
   name,
@@ -235,11 +234,11 @@ export function buildNode10({
   projectReferences,
   compilerOptions,
   format,
-  files,
   system,
   host,
   verbose,
   shims,
+  tsConfig,
 }: BuilderOptions) {
   const buildSteps: Steps<Record<string, never>> = [
     {
@@ -257,7 +256,7 @@ export function buildNode10({
             moduleResolution: ModuleResolutionKind.NodeJs,
           },
           projectReferences,
-          files,
+          files: tsConfig.fileNames,
           oldProgram: program,
           host,
         });
@@ -286,7 +285,7 @@ export function buildNode10({
             moduleResolution: ModuleResolutionKind.NodeJs,
           },
           projectReferences,
-          files,
+          files: tsConfig.fileNames,
           oldProgram: program,
           host,
         });

@@ -19,7 +19,6 @@ export async function main(argv: string[]) {
   await yargs(hideBin(argv))
     .command(
       ['build', '$0'],
-      // ['build [files ...]', '$0 [files ...]'],
       'Build the project using the TypeScript compiler. This is the default command.',
       (builder) =>
         builder

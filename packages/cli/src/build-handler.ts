@@ -12,25 +12,6 @@ import { getBaseCompilerOptions, getTypeScriptConfig } from './config.js';
 import { success } from './logging.js';
 
 /**
- * Get the files to include in the build. This function will return the custom
- * files if provided, or the files from the `tsconfig.json` file if not.
- *
- * @param customFiles - The custom files to include in the build.
- * @param tsConfigFiles - The files from the `tsconfig.json` file.
- * @returns The files to include in the build.
- */
-export function getFiles(
-  customFiles: string[] | undefined,
-  tsConfigFiles: string[],
-) {
-  if (customFiles && customFiles.length > 0) {
-    return customFiles;
-  }
-
-  return tsConfigFiles;
-}
-
-/**
  * Options for the build handler. This is intended to be provided by the CLI,
  * and these types should match the CLI options.
  *
@@ -87,7 +68,6 @@ export async function buildHandler(options: BuildHandlerOptions) {
     name: relative(process.cwd(), project),
     projectReferences: tsConfig.projectReferences,
     compilerOptions: program.getCompilerOptions(),
-    files: tsConfig.fileNames,
     program,
     format,
     system,

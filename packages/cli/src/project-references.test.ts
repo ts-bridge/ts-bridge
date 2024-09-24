@@ -214,7 +214,6 @@ describe('createProjectReferencesCompilerHost', () => {
       program,
       tsConfig,
       compilerOptions: tsConfig.options,
-      files: tsConfig.fileNames,
       format: ['commonjs', 'module'],
       baseDirectory: FIXTURE_PATH,
       system: sys,
