@@ -112,12 +112,11 @@ export async function removeDirectory(path: string) {
     await rm(path, { recursive: true });
   } catch (error) {
     if (
-      typeof error === 'object' &&
-      error !== null &&
-      'code' in error &&
+      typeof error !== 'object' ||
+      error === null ||
+      !('code' in error) ||
       error.code !== 'ENOENT'
     ) {
-      // eslint-disable-next-line @typescript-eslint/no-throw-literal
       throw error;
     }
   }
