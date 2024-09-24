@@ -227,6 +227,7 @@ export type BuilderOptions = {
  * @param options.shims - Whether to generate shims for environment-specific
  * APIs.
  * @param options.tsConfig - The TypeScript configuration.
+ * @param options.baseDirectory - The base directory of the project.
  */
 export function buildNode10({
   name,
@@ -239,6 +240,7 @@ export function buildNode10({
   verbose,
   shims,
   tsConfig,
+  baseDirectory,
 }: BuilderOptions) {
   const buildSteps: Steps<Record<string, never>> = [
     {
@@ -267,6 +269,7 @@ export function buildNode10({
           system,
           verbose,
           shims,
+          baseDirectory,
         });
       },
     },
@@ -296,6 +299,7 @@ export function buildNode10({
           system,
           verbose,
           shims,
+          baseDirectory,
         });
       },
     },
@@ -315,6 +319,7 @@ export function buildNode10({
  * @param options.verbose - Whether to enable verbose logging.
  * @param options.shims - Whether to generate shims for environment-specific
  * APIs.
+ * @param options.baseDirectory - The base directory of the project.
  */
 export function buildNode16({
   name,
@@ -323,20 +328,35 @@ export function buildNode16({
   system,
   verbose,
   shims,
+  baseDirectory,
 }: BuilderOptions) {
   const buildSteps: Steps<Record<string, never>> = [
     {
       name: `Building ES module "${name}".`,
       condition: () => format.includes('module'),
       task: () => {
-        build({ program, type: 'module', system, shims, verbose });
+        build({
+          program,
+          type: 'module',
+          system,
+          shims,
+          verbose,
+          baseDirectory,
+        });
       },
     },
     {
       name: `Building CommonJS module "${name}".`,
       condition: () => format.includes('commonjs'),
       task: () => {
-        build({ program, type: 'commonjs', system, shims, verbose });
+        build({
+          program,
+          type: 'commonjs',
+          system,
+          shims,
+          verbose,
+          baseDirectory,
+        });
       },
     },
   ];
@@ -449,6 +469,7 @@ type BuildOptions = {
   system: System;
   verbose?: boolean;
   shims: boolean;
+  baseDirectory: string;
 };
 
 /**
@@ -462,6 +483,7 @@ type BuildOptions = {
  * @param options.verbose - Whether to enable verbose logging.
  * @param options.shims - Whether to generate shims for environment-specific
  * APIs.
+ * @param options.baseDirectory - The base directory of the project.
  * @returns A promise that resolves when the build is complete.
  */
 export function build({
@@ -470,6 +492,7 @@ export function build({
   system,
   verbose,
   shims,
+  baseDirectory,
 }: BuildOptions): Program {
   const { name, extension } = getBuildTypeOptions(type);
 
@@ -485,7 +508,7 @@ export function build({
     undefined,
     {
       before: [
-        getLoggingTransformer(verbose),
+        getLoggingTransformer(baseDirectory, verbose),
         getRequireExtensionTransformer(extension, options),
         getImportExtensionTransformer(extension, options),
         getDynamicImportExtensionTransformer(extension, options),

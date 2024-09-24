@@ -1,4 +1,5 @@
 import chalk from 'chalk';
+import { relative } from 'path';
 import type { SourceFile, Transformer } from 'typescript';
 
 /**
@@ -76,15 +77,21 @@ export function log(message: string) {
  * This transformer does not actually transform the source file. It just uses
  * TypeScript's transformer API to check which files are being transformed.
  *
+ * @param baseDirectory - The base directory of the project.
  * @param verbose - Whether to enable verbose logging.
  * @returns The transformer function.
  */
-export function getLoggingTransformer(verbose?: boolean) {
+export function getLoggingTransformer(
+  baseDirectory: string,
+  verbose?: boolean,
+) {
   return (): Transformer<SourceFile> => {
     return (sourceFile: SourceFile) => {
       verbose &&
         log(
-          `Transforming source file "${chalk.underline(sourceFile.fileName)}".`,
+          `Transforming source file "${chalk.underline(
+            relative(baseDirectory, sourceFile.fileName),
+          )}".`,
         );
 
       return sourceFile;

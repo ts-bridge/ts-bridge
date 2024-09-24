@@ -17,7 +17,7 @@ export default defineConfig({
       include: ['packages/*/src/**'],
 
       // Exclude certain files from the coverage.
-      exclude: ['packages/test-utils/**'],
+      exclude: ['packages/test-utils/**', '**/*.e2e.ts'],
 
       // Hide files with 100% coverage.
       skipFull: true,

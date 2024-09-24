@@ -1,4 +1,5 @@
 export * from './delay.js';
+export * from './e2e.js';
 export * from './evaluate.js';
 export * from './file-system.js';
 export * from './fixtures.js';

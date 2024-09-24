@@ -42,7 +42,8 @@
     "allow-scripts": "yarn workspace @ts-bridge/root allow-scripts",
     "build": "tsc --project tsconfig.build.json",
     "lint:changelog": "../../scripts/validate-changelog.sh @ts-bridge/cli",
-    "test": "NODE_OPTIONS=\"--experimental-vm-modules\" vitest"
+    "test": "NODE_OPTIONS=\"--experimental-vm-modules\" vitest",
+    "test:e2e": "NODE_OPTIONS=\"--experimental-vm-modules\" vitest --config ./vitest.config.e2e.mts"
   },
   "dependencies": {
     "@ts-bridge/resolver": "workspace:^",
