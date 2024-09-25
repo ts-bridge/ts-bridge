@@ -19,7 +19,9 @@
   ],
   "scripts": {
     "build": "tsc --build ./tsconfig.build.json",
+    "build:clean": "yarn clean && yarn build",
     "build:docs": "retype build",
+    "clean": "yarn build --clean",
     "get-typescript-versions": "./scripts/get-typescript-versions.sh",
     "postinstall": "simple-git-hooks",
     "lint": "yarn lint:eslint && yarn lint:constraints && yarn lint:misc --check && yarn lint:dependencies --check && yarn lint:changelogs",
