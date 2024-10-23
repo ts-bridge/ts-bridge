@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0]
+
 ### Uncategorized
 
 - Remove test files from dist ([#65](https://github.com/ts-bridge/ts-bridge/pull/65))
@@ -31,7 +33,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Initial release of the `@ts-bridge/resolver` package ([#20](https://github.com/ts-bridge/ts-bridge/pull/20), [#24](https://github.com/ts-bridge/ts-bridge/pull/24))
 
-[Unreleased]: https://github.com/ts-bridge/ts-bridge/compare/@ts-bridge/resolver@0.1.2...HEAD
+[Unreleased]: https://github.com/ts-bridge/ts-bridge/compare/@ts-bridge/resolver@0.2.0...HEAD
+[0.2.0]: https://github.com/ts-bridge/ts-bridge/compare/@ts-bridge/resolver@0.1.2...@ts-bridge/resolver@0.2.0
 [0.1.2]: https://github.com/ts-bridge/ts-bridge/compare/@ts-bridge/resolver@0.1.1...@ts-bridge/resolver@0.1.2
 [0.1.1]: https://github.com/ts-bridge/ts-bridge/compare/@ts-bridge/resolver@0.1.0...@ts-bridge/resolver@0.1.1
 [0.1.0]: https://github.com/ts-bridge/ts-bridge/releases/tag/@ts-bridge/resolver@0.1.0

@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.0]
+
 ### Uncategorized
 
 - Remove test files from dist ([#65](https://github.com/ts-bridge/ts-bridge/pull/65))
@@ -151,7 +153,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Initial release of the `@ts-bridge/cli` package.
 
-[Unreleased]: https://github.com/ts-bridge/ts-bridge/compare/@ts-bridge/cli@0.5.1...HEAD
+[Unreleased]: https://github.com/ts-bridge/ts-bridge/compare/@ts-bridge/cli@0.6.0...HEAD
+[0.6.0]: https://github.com/ts-bridge/ts-bridge/compare/@ts-bridge/cli@0.5.1...@ts-bridge/cli@0.6.0
 [0.5.1]: https://github.com/ts-bridge/ts-bridge/compare/@ts-bridge/cli@0.5.0...@ts-bridge/cli@0.5.1
 [0.5.0]: https://github.com/ts-bridge/ts-bridge/compare/@ts-bridge/cli@0.4.4...@ts-bridge/cli@0.5.0
 [0.4.4]: https://github.com/ts-bridge/ts-bridge/compare/@ts-bridge/cli@0.4.3...@ts-bridge/cli@0.4.4
