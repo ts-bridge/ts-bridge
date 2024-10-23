@@ -9,10 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.2.0]
 
-### Uncategorized
+### Changed
 
-- Remove test files from dist ([#65](https://github.com/ts-bridge/ts-bridge/pull/65))
-- BREAKING: Add support for Node.js 22 and drop support for Node.js 21 ([#57](https://github.com/ts-bridge/ts-bridge/pull/57))
+- **BREAKING:** Add support for Node.js 22 and drop support for Node.js 21 ([#57](https://github.com/ts-bridge/ts-bridge/pull/57))
 
 ## [0.1.2]
 
