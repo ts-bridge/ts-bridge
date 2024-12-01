@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Uncategorized
+
+- Properly handle re-exports when detecting CJS exports ([#69](https://github.com/ts-bridge/ts-bridge/pull/69))
+
 ## [0.6.0]
 
 ### Changed
