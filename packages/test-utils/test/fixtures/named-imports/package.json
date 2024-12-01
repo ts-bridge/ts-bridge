@@ -6,6 +6,7 @@
     "packages/*"
   ],
   "dependencies": {
-    "commonjs-module": "workspace:^"
+    "commonjs-module": "workspace:^",
+    "reexport-module": "workspace:^"
   }
 }

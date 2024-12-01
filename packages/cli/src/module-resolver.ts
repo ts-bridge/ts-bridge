@@ -142,18 +142,30 @@ export function resolveRelativePackageSpecifier(
  * @param packageSpecifier - The specifier for the module.
  * @param parentUrl - The URL of the parent module.
  * @param system - The TypeScript system.
+ * @param extensions - The extensions to use for resolving the module.
  * @returns The resolved module, or `null` if the module could not be resolved.
  */
 function resolveModule(
   packageSpecifier: string,
   parentUrl: string,
   system: System,
+  extensions?: string[],
 ): ResolvedModule | null {
   if (isRelative(packageSpecifier)) {
-    return resolveRelativePackageSpecifier(packageSpecifier, parentUrl, system);
+    return resolveRelativePackageSpecifier(
+      packageSpecifier,
+      parentUrl,
+      system,
+      extensions,
+    );
   }
 
-  return resolvePackageSpecifier(packageSpecifier, parentUrl, system);
+  return resolvePackageSpecifier(
+    packageSpecifier,
+    parentUrl,
+    system,
+    extensions,
+  );
 }
 
 export type GetModulePathOptions = {
@@ -326,18 +338,34 @@ export function getCommonJsExports(
   packageSpecifier: string,
   system: System,
   parentUrl: string,
-): string[] {
-  const resolution = resolveModule(packageSpecifier, parentUrl, system);
+): Set<string> {
+  const relative = isRelative(packageSpecifier);
+  const resolution = resolveModule(
+    packageSpecifier,
+    parentUrl,
+    system,
+    // We assume that if the packageSpecifier is relative, we are traversing a specific file looking for CJS imports
+    relative ? DEFAULT_EXTENSIONS : undefined,
+  );
+
   if (!resolution || resolution.format !== 'commonjs') {
-    return [];
+    return new Set();
   }
 
   const { path } = resolution;
   const code = system.readFile(path);
   if (!code) {
-    return [];
+    return new Set();
   }
 
   const { exports, reexports } = parse(code);
-  return [...exports, ...reexports];
+
+  // Re-exports are paths to exports that must be resolved themselves
+  const resolvedReexports = reexports.reduce((accumulator, reexport) => {
+    const exportSet = getCommonJsExports(reexport, system, path);
+    exportSet.forEach((exportName) => accumulator.add(exportName));
+    return accumulator;
+  }, new Set<string>());
+
+  return new Set([...exports, ...resolvedReexports]);
 }
