@@ -338,7 +338,7 @@ export function getCommonJsExports(
   packageSpecifier: string,
   system: System,
   parentUrl: string,
-): string[] {
+): Set<string> {
   const relative = isRelative(packageSpecifier);
   const resolution = resolveModule(
     packageSpecifier,
@@ -347,21 +347,25 @@ export function getCommonJsExports(
     // We assume that if the packageSpecifier is relative, we are traversing a specific file looking for CJS imports
     relative ? DEFAULT_EXTENSIONS : undefined,
   );
+
   if (!resolution || resolution.format !== 'commonjs') {
-    return [];
+    return new Set();
   }
 
   const { path } = resolution;
   const code = system.readFile(path);
   if (!code) {
-    return [];
+    return new Set();
   }
 
   const { exports, reexports } = parse(code);
 
   // Re-exports are paths to exports that must be resolved themselves
-  const resolvedReexports = reexports.flatMap((reexport: string) =>
-    getCommonJsExports(reexport, system, path),
-  );
-  return [...new Set([...exports, ...resolvedReexports])];
+  const resolvedReexports = reexports.reduce((accumulator, reexport) => {
+    const exportSet = getCommonJsExports(reexport, system, path);
+    exportSet.forEach((exportName) => accumulator.add(exportName));
+    return accumulator;
+  }, new Set<string>());
+
+  return new Set([...exports, ...resolvedReexports]);
 }

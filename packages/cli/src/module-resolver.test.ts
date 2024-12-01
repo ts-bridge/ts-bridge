@@ -355,22 +355,22 @@ describe('getFileSystemFromTypeScript', () => {
 
 describe('getCommonJsExports', () => {
   it('returns the exports for a CommonJS module', () => {
-    expect(getCommonJsExports('semver', sys, PARENT_URL)).toStrictEqual(
+    expect([...getCommonJsExports('semver', sys, PARENT_URL)]).toStrictEqual(
       expect.arrayContaining(['parse', 'valid', 'clean']),
     );
   });
 
-  it('returns an empty array if the module is not CommonJS', () => {
-    expect(getCommonJsExports('chalk', sys, PARENT_URL)).toStrictEqual([]);
+  it('returns an empty set if the module is not CommonJS', () => {
+    expect(getCommonJsExports('chalk', sys, PARENT_URL).size).toStrictEqual(0);
   });
 
-  it('returns an empty array if the module does not resolve', () => {
-    expect(getCommonJsExports('foo', sys, PARENT_URL)).toStrictEqual([]);
+  it('returns an empty set if the module does not resolve', () => {
+    expect(getCommonJsExports('foo', sys, PARENT_URL).size).toStrictEqual(0);
   });
 
-  it('returns an empty array if the code is empty', () => {
+  it('returns an empty set if the code is empty', () => {
     expect(
-      getCommonJsExports('commonjs-module/empty', sys, PARENT_URL),
-    ).toStrictEqual([]);
+      getCommonJsExports('commonjs-module/empty', sys, PARENT_URL).size,
+    ).toStrictEqual(0);
   });
 });

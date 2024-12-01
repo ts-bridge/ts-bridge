@@ -168,7 +168,7 @@ export function getImports(
       const propertyName = element.propertyName?.text;
       const exportName = propertyName ?? name;
 
-      if (exports.includes(exportName)) {
+      if (exports.has(exportName)) {
         return {
           ...accumulator,
           detected: [...accumulator.detected, { name, propertyName }],
