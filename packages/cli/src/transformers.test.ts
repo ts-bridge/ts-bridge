@@ -1012,6 +1012,14 @@ describe('getNamedImportTransformer', () => {
       `);
     });
 
+    it('supports reexports', async () => {
+      expect(files['reexport.js']).toMatchInlineSnapshot(`
+        "import { baz } from 'reexport-module';
+        console.log(baz);
+        "
+      `);
+    });
+
     it('does not rewrite a named import for a detected CommonJS module import', async () => {
       expect(files['detected.js']).toMatchInlineSnapshot(`
         "import { foo } from 'commonjs-module';

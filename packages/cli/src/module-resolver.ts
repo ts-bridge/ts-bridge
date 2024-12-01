@@ -142,18 +142,30 @@ export function resolveRelativePackageSpecifier(
  * @param packageSpecifier - The specifier for the module.
  * @param parentUrl - The URL of the parent module.
  * @param system - The TypeScript system.
+ * @param extensions - The extensions to use for resolving the module.
  * @returns The resolved module, or `null` if the module could not be resolved.
  */
 function resolveModule(
   packageSpecifier: string,
   parentUrl: string,
   system: System,
+  extensions?: string[],
 ): ResolvedModule | null {
   if (isRelative(packageSpecifier)) {
-    return resolveRelativePackageSpecifier(packageSpecifier, parentUrl, system);
+    return resolveRelativePackageSpecifier(
+      packageSpecifier,
+      parentUrl,
+      system,
+      extensions,
+    );
   }
 
-  return resolvePackageSpecifier(packageSpecifier, parentUrl, system);
+  return resolvePackageSpecifier(
+    packageSpecifier,
+    parentUrl,
+    system,
+    extensions,
+  );
 }
 
 export type GetModulePathOptions = {
@@ -327,7 +339,14 @@ export function getCommonJsExports(
   system: System,
   parentUrl: string,
 ): string[] {
-  const resolution = resolveModule(packageSpecifier, parentUrl, system);
+  const relative = isRelative(packageSpecifier);
+  const resolution = resolveModule(
+    packageSpecifier,
+    parentUrl,
+    system,
+    // We assume that if the packageSpecifier is relative, we are traversing a specific file looking for CJS imports
+    relative ? DEFAULT_EXTENSIONS : undefined,
+  );
   if (!resolution || resolution.format !== 'commonjs') {
     return [];
   }
@@ -339,5 +358,10 @@ export function getCommonJsExports(
   }
 
   const { exports, reexports } = parse(code);
-  return [...exports, ...reexports];
+
+  // Re-exports are paths to exports that must be resolved themselves
+  const resolvedReexports = reexports.flatMap((reexport: string) =>
+    getCommonJsExports(reexport, system, path),
+  );
+  return [...new Set([...exports, ...resolvedReexports])];
 }

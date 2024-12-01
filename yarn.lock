@@ -1440,6 +1440,7 @@ __metadata:
   resolution: "@ts-bridge/named-imports-fixture@workspace:packages/test-utils/test/fixtures/named-imports"
   dependencies:
     commonjs-module: "workspace:^"
+    reexport-module: "workspace:^"
   languageName: unknown
   linkType: soft
 
@@ -4938,6 +4939,12 @@ __metadata:
   checksum: 10c0/6fa848cf63d1b82ab4e985f4cf72bd55b7dcfd8e0a376905804e48c3634b7e749170940ba77b32804d5fe93b3cc521aa95a8d7e7d725f830da6d93f3669ce66b
   languageName: node
   linkType: hard
+
+"reexport-module@workspace:^, reexport-module@workspace:packages/test-utils/test/fixtures/named-imports/packages/reexport-module":
+  version: 0.0.0-use.local
+  resolution: "reexport-module@workspace:packages/test-utils/test/fixtures/named-imports/packages/reexport-module"
+  languageName: unknown
+  linkType: soft
 
 "regexpp@npm:^3.0.0":
   version: 3.2.0
