@@ -145,6 +145,14 @@ describe('getNamedImportNodes', () => {
       '/index.ts': '// no-op',
       '/foo.ts': 'export const $foo: number = 1;',
       '/fake.js': 'module.exports.foo = 1;',
+      '/invalid.js': `
+        import typeof Bar from './Bar';
+        module.exports = {
+          get foo(): Bar {
+            return 'foo';
+          },
+        };
+      `,
     },
   });
 
@@ -455,6 +463,56 @@ describe('getNamedImportNodes', () => {
     expect(compile(result)).toMatchInlineSnapshot(`
       ""use strict";
       import {} from "foo";
+      "
+    `);
+  });
+
+  it('returns the same node if the file cannot be parsed', () => {
+    const resolveMock = vi.mocked(resolve);
+    resolveMock
+      .mockReturnValueOnce({
+        format: 'commonjs',
+        path: '/invalid.js',
+      })
+      .mockReturnValueOnce({
+        format: 'commonjs',
+        path: '/invalid.js',
+      });
+
+    const sourceFile = program.getSourceFile('/index.ts') as SourceFile;
+    const importDeclaration = factory.createImportDeclaration(
+      undefined,
+      factory.createImportClause(
+        false,
+        undefined,
+        factory.createNamedImports([
+          factory.createImportSpecifier(
+            false,
+            undefined,
+            factory.createIdentifier('foo'),
+          ),
+          factory.createImportSpecifier(
+            false,
+            undefined,
+            factory.createIdentifier('undetected'),
+          ),
+        ]),
+      ),
+      factory.createStringLiteral('invalid'),
+      undefined,
+    );
+
+    const result = getNamedImportNodes(
+      typeChecker,
+      sourceFile,
+      importDeclaration,
+      system,
+    );
+
+    expect(result).toBe(importDeclaration);
+    expect(compile(result)).toMatchInlineSnapshot(`
+      ""use strict";
+      import { foo, undetected } from "invalid";
       "
     `);
   });
