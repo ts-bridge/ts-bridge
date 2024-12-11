@@ -333,6 +333,7 @@ export function isCommonJs(
  * @param system - The TypeScript system.
  * @param parentUrl - The URL of the parent module.
  * @returns The exports for the CommonJS package.
+ * @throws If the package could not be parsed.
  */
 export function getCommonJsExports(
   packageSpecifier: string,

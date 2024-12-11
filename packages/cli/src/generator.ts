@@ -234,93 +234,102 @@ export function getNamedImportNodes(
     return node;
   }
 
-  const importNames = getImports(
-    node.moduleSpecifier.text,
-    system,
-    sourceFile.fileName,
-    namedBindings.elements,
-  );
+  try {
+    const importNames = getImports(
+      node.moduleSpecifier.text,
+      system,
+      sourceFile.fileName,
+      namedBindings.elements,
+    );
 
-  // If there are no named imports, return the node as is.
-  if (
-    importNames.detected.length === 0 &&
-    importNames.undetected.length === 0
-  ) {
-    return node;
-  }
+    // If there are no named imports, return the node as is.
+    if (
+      importNames.detected.length === 0 &&
+      importNames.undetected.length === 0
+    ) {
+      return node;
+    }
 
-  // If there are no undetected imports, return the node as is.
-  if (importNames.undetected.length === 0) {
-    return node;
-  }
+    // If there are no undetected imports, return the node as is.
+    if (importNames.undetected.length === 0) {
+      return node;
+    }
 
-  const moduleSpecifier = getIdentifierName(node.moduleSpecifier.text);
-  const importIdentifier =
-    // If the import declaration has a name (default import), use that name, to
-    // avoid breaking the default import transformer.
-    node.importClause.name?.text ??
-    getUniqueIdentifier(typeChecker, sourceFile, moduleSpecifier);
+    const moduleSpecifier = getIdentifierName(node.moduleSpecifier.text);
+    const importIdentifier =
+      // If the import declaration has a name (default import), use that name, to
+      // avoid breaking the default import transformer.
+      node.importClause.name?.text ??
+      getUniqueIdentifier(typeChecker, sourceFile, moduleSpecifier);
 
-  const statements: Statement[] = [];
+    const statements: Statement[] = [];
 
-  if (importNames.detected.length > 0) {
-    // Create a new named import node for the detected imports.
-    const namedImport = factory.createImportDeclaration(
-      node.modifiers,
-      factory.createImportClause(
-        false,
-        undefined,
-        factory.createNamedImports(
-          importNames.detected.map(({ propertyName, name }) =>
-            factory.createImportSpecifier(
-              false,
-              propertyName ? factory.createIdentifier(propertyName) : undefined,
-              factory.createIdentifier(name),
+    if (importNames.detected.length > 0) {
+      // Create a new named import node for the detected imports.
+      const namedImport = factory.createImportDeclaration(
+        node.modifiers,
+        factory.createImportClause(
+          false,
+          undefined,
+          factory.createNamedImports(
+            importNames.detected.map(({ propertyName, name }) =>
+              factory.createImportSpecifier(
+                false,
+                propertyName
+                  ? factory.createIdentifier(propertyName)
+                  : undefined,
+                factory.createIdentifier(name),
+              ),
             ),
           ),
         ),
+        node.moduleSpecifier,
+      );
+
+      statements.push(namedImport);
+    }
+
+    // Create a new default import node.
+    const defaultImport = factory.createImportDeclaration(
+      node.modifiers,
+      factory.createImportClause(
+        false,
+        factory.createIdentifier(importIdentifier),
+        undefined,
       ),
       node.moduleSpecifier,
     );
 
-    statements.push(namedImport);
-  }
-
-  // Create a new default import node.
-  const defaultImport = factory.createImportDeclaration(
-    node.modifiers,
-    factory.createImportClause(
-      false,
-      factory.createIdentifier(importIdentifier),
+    // Create a variable declaration for the undetected import names.
+    const variableStatement = factory.createVariableStatement(
       undefined,
-    ),
-    node.moduleSpecifier,
-  );
+      factory.createVariableDeclarationList(
+        [
+          factory.createVariableDeclaration(
+            factory.createObjectBindingPattern([
+              ...importNames.undetected.map(({ propertyName, name }) =>
+                factory.createBindingElement(undefined, propertyName, name),
+              ),
+            ]),
+            undefined,
+            undefined,
+            factory.createIdentifier(importIdentifier),
+          ),
+        ],
+        // eslint-disable-next-line no-bitwise
+        NodeFlags.Const,
+      ),
+    );
 
-  // Create a variable declaration for the undetected import names.
-  const variableStatement = factory.createVariableStatement(
-    undefined,
-    factory.createVariableDeclarationList(
-      [
-        factory.createVariableDeclaration(
-          factory.createObjectBindingPattern([
-            ...importNames.undetected.map(({ propertyName, name }) =>
-              factory.createBindingElement(undefined, propertyName, name),
-            ),
-          ]),
-          undefined,
-          undefined,
-          factory.createIdentifier(importIdentifier),
-        ),
-      ],
-      // eslint-disable-next-line no-bitwise
-      NodeFlags.Const,
-    ),
-  );
+    statements.push(defaultImport, variableStatement);
 
-  statements.push(defaultImport, variableStatement);
-
-  return statements;
+    return statements;
+  } catch {
+    // If there is an error, return the node as is. This may occur if the module
+    // cannot be parsed by `cjs-module-lexer`, e.g., in the case of React
+    // Native, which resolves to a Flow file.
+    return node;
+  }
 }
 
 /**
