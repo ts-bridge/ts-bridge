@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.6.2]
 
-### Uncategorized
+### Fixed
 
 - Handle export detection errors ([#73](https://github.com/ts-bridge/ts-bridge/pull/73))
 
