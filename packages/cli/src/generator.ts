@@ -396,7 +396,7 @@ export function getNonTypeImports(
     isEmittable(typeChecker, element),
   );
 
-  if (elements.length === 0) {
+  if (!node.importClause.name && elements.length === 0) {
     return undefined;
   }
 
@@ -407,7 +407,9 @@ export function getNonTypeImports(
       node.importClause,
       false,
       node.importClause.name,
-      factory.updateNamedImports(node.importClause.namedBindings, elements),
+      elements.length === 0
+        ? undefined
+        : factory.updateNamedImports(node.importClause.namedBindings, elements),
     ),
     node.moduleSpecifier,
     node.attributes,
