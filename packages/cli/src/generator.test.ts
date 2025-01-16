@@ -531,10 +531,14 @@ describe('getNonTypeImports', () => {
         export type Foo = number;
         export const bar: string = 'bar';
       `,
-      '/bar.ts': `
+      '/combined-import.ts': `
         import { Foo, bar } from './foo';
         export type Baz = Foo;
         console.log(bar);
+      `,
+      '/type-import.ts': `
+        import { Foo } from './foo';
+        export type Baz = Foo;
       `,
     },
     tsconfig: getMockTsConfig({
@@ -582,7 +586,7 @@ describe('getNonTypeImports', () => {
   it('removes implicit type imports from an import declaration', () => {
     // This test uses an actual source file, since the type checker is needed to
     // detect the implicit type imports.
-    const sourceFile = program.getSourceFile('/bar.ts');
+    const sourceFile = program.getSourceFile('/combined-import.ts');
     assert(sourceFile);
 
     const importDeclaration = sourceFile.statements.find(
@@ -596,7 +600,7 @@ describe('getNonTypeImports', () => {
     expect(result).not.toStrictEqual(importDeclaration);
 
     program.emit(undefined, undefined, undefined, false);
-    expect(system.readFile('/bar.js')).toMatchInlineSnapshot(`
+    expect(system.readFile('/combined-import.js')).toMatchInlineSnapshot(`
       "import { bar } from './foo';
       console.log(bar);
       "
@@ -657,17 +661,38 @@ describe('getNonTypeImports', () => {
     const result = getNonTypeImports(typeChecker, importDeclaration);
     expect(result).toBeUndefined();
   });
+
+  it('returns `undefined` if there are no implicit non-type named imports', () => {
+    // This test uses an actual source file, since the type checker is needed to
+    // detect the implicit type imports.
+    const sourceFile = program.getSourceFile('/type-import.ts');
+    assert(sourceFile);
+
+    const importDeclaration = sourceFile.statements.find(
+      typescript.isImportDeclaration,
+    );
+
+    assert(importDeclaration);
+
+    const result = getNonTypeImports(typeChecker, importDeclaration);
+    expect(result).toBeUndefined();
+  });
 });
 
 describe('getNonTypeExports', () => {
   const { program, typeChecker, system } = getVirtualEnvironment({
     files: {
       '/index.ts': '// no-op',
-      '/foo.ts': `
+      '/combined-export.ts': `
         type Foo = number;
         const bar: string = 'bar';
 
         export { Foo, bar };
+      `,
+      '/type-export.ts': `
+        type Foo = number;
+
+        export { Foo };
       `,
     },
     tsconfig: getMockTsConfig({
@@ -710,7 +735,7 @@ describe('getNonTypeExports', () => {
   it('removes implicit type exports from an export declaration', () => {
     // This test uses an actual source file, since the type checker is needed to
     // detect the implicit type exports.
-    const sourceFile = program.getSourceFile('/foo.ts');
+    const sourceFile = program.getSourceFile('/combined-export.ts');
     assert(sourceFile);
 
     const exportDeclaration = sourceFile.statements.find(
@@ -724,7 +749,7 @@ describe('getNonTypeExports', () => {
     expect(result).not.toStrictEqual(exportDeclaration);
 
     program.emit(undefined, undefined, undefined, false);
-    expect(system.readFile('/foo.js')).toMatchInlineSnapshot(`
+    expect(system.readFile('/combined-export.js')).toMatchInlineSnapshot(`
       "const bar = 'bar';
       export { bar };
       "
@@ -770,6 +795,22 @@ describe('getNonTypeExports', () => {
         ),
       ]),
     );
+
+    const result = getNonTypeExports(typeChecker, exportDeclaration);
+    expect(result).toBeUndefined();
+  });
+
+  it('returns `undefined` if there are no implicit non-type named exported', () => {
+    // This test uses an actual source file, since the type checker is needed to
+    // detect the implicit type imports.
+    const sourceFile = program.getSourceFile('/type-export.ts');
+    assert(sourceFile);
+
+    const exportDeclaration = sourceFile.statements.find(
+      typescript.isExportDeclaration,
+    );
+
+    assert(exportDeclaration);
 
     const result = getNonTypeExports(typeChecker, exportDeclaration);
     expect(result).toBeUndefined();
