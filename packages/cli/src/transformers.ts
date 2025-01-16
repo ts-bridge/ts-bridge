@@ -736,8 +736,8 @@ export function getNamedImportTransformer({
 
 /**
  * Get a transformer that removes type-only imports and exports. This is the
- * standard behaviour for TypeScript 5.x, but this transformer is needed for
- * TypeScript 4.x. This may be a bug in TypeScript 4.x's compiler API.
+ * default behaviour for TypeScript when invoked from the command line, but does
+ * not seem to be the default behaviour when using the TypeScript API.
  *
  * For example, the following type-only imports and exports:
  * ```ts
@@ -747,10 +747,13 @@ export function getNamedImportTransformer({
  *
  * will be removed.
  *
- * @param _context - The transformer options. This is not used.
+ * @param context - The transformer options.
+ * @param context.typeChecker - The type checker to use.
  * @returns The transformer function.
  */
-export function getTypeImportExportTransformer(_context: TransformerOptions) {
+export function getTypeImportExportTransformer({
+  typeChecker,
+}: TransformerOptions) {
   return (context: TransformationContext): Transformer<SourceFile> => {
     return (sourceFile: SourceFile) => {
       const visitor = (node: Node): Node | Node[] | undefined => {
@@ -759,7 +762,7 @@ export function getTypeImportExportTransformer(_context: TransformerOptions) {
             return undefined;
           }
 
-          return getNonTypeImports(node);
+          return getNonTypeImports(typeChecker, node);
         }
 
         if (isExportDeclaration(node)) {
@@ -767,7 +770,7 @@ export function getTypeImportExportTransformer(_context: TransformerOptions) {
             return undefined;
           }
 
-          return getNonTypeExports(node);
+          return getNonTypeExports(typeChecker, node);
         }
 
         return visitEachChild(node, visitor, context);

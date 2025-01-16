@@ -8,6 +8,7 @@ import type {
   ExportDeclaration,
   NodeArray,
   ImportSpecifier,
+  ImportOrExportSpecifier,
 } from 'typescript';
 import typescript from 'typescript';
 
@@ -332,14 +333,58 @@ export function getNamedImportNodes(
   }
 }
 
+/* eslint-disable no-bitwise */
+/**
+ * Check if the symbol is a type-only symbol.
+ *
+ * @param symbol - The symbol to check.
+ * @returns `true` if the symbol is a type-only symbol, or `false` otherwise.
+ */
+function isSymbolTypeOnly(symbol: typescript.Symbol): boolean {
+  return (
+    Boolean(symbol.flags & SymbolFlags.Type) &&
+    !(symbol.flags & SymbolFlags.Value)
+  );
+}
+/* eslint-enable no-bitwise */
+
+/**
+ * Check if the specifier is emittable, i.e., if it should be included in the
+ * emitted output.
+ *
+ * @param typeChecker - The type checker to use.
+ * @param specifier - The import or export specifier to check.
+ * @returns `true` if the specifier is emittable, or `false` otherwise.
+ */
+function isEmittable(
+  typeChecker: TypeChecker,
+  specifier: ImportOrExportSpecifier,
+) {
+  if (specifier.isTypeOnly) {
+    return false;
+  }
+
+  const symbol = typeChecker.getSymbolAtLocation(specifier.name);
+  if (symbol) {
+    const originalSymbol = typeChecker.getAliasedSymbol(symbol);
+    return !isSymbolTypeOnly(originalSymbol);
+  }
+
+  return true;
+}
+
 /**
  * Get the import declaration without type-only imports.
  *
+ * @param typeChecker - The type checker to use.
  * @param node - The import declaration node.
  * @returns The import declaration without type-only imports. If there are no
  * type-only imports, the node is returned as is.
  */
-export function getNonTypeImports(node: ImportDeclaration) {
+export function getNonTypeImports(
+  typeChecker: TypeChecker,
+  node: ImportDeclaration,
+) {
   if (
     !node.importClause?.namedBindings ||
     !isNamedImports(node.importClause.namedBindings)
@@ -347,8 +392,8 @@ export function getNonTypeImports(node: ImportDeclaration) {
     return node;
   }
 
-  const elements = node.importClause.namedBindings.elements.filter(
-    (element) => !element.isTypeOnly,
+  const elements = node.importClause.namedBindings.elements.filter((element) =>
+    isEmittable(typeChecker, element),
   );
 
   if (elements.length === 0) {
@@ -372,17 +417,21 @@ export function getNonTypeImports(node: ImportDeclaration) {
 /**
  * Get the export declaration without type-only exports.
  *
+ * @param typeChecker - The type checker to use.
  * @param node - The export declaration node.
  * @returns The export declaration without type-only exports. If there are no
  * type-only exports, the node is returned as is.
  */
-export function getNonTypeExports(node: ExportDeclaration) {
+export function getNonTypeExports(
+  typeChecker: TypeChecker,
+  node: ExportDeclaration,
+) {
   if (!node.exportClause || !isNamedExports(node.exportClause)) {
     return node;
   }
 
-  const elements = node.exportClause.elements.filter(
-    (element) => !element.isTypeOnly,
+  const elements = node.exportClause.elements.filter((element) =>
+    isEmittable(typeChecker, element),
   );
 
   if (elements.length === 0) {
