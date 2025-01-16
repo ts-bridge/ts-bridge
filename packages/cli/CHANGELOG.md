@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Uncategorized
+
+- Keep default imports when removing type imports ([#78](https://github.com/ts-bridge/ts-bridge/pull/78))
+- Remove implicit type imports and exports from output ([#77](https://github.com/ts-bridge/ts-bridge/pull/77))
+
 ## [0.6.2]
 
 ### Fixed
