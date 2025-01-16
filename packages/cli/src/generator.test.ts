@@ -607,6 +607,40 @@ describe('getNonTypeImports', () => {
     `);
   });
 
+  it('removes named imports but not the default import', () => {
+    const importDeclaration = factory.createImportDeclaration(
+      undefined,
+      factory.createImportClause(
+        false,
+        factory.createIdentifier('foo'),
+        factory.createNamedImports([
+          factory.createImportSpecifier(
+            true,
+            undefined,
+            factory.createIdentifier('bar'),
+          ),
+          factory.createImportSpecifier(
+            true,
+            undefined,
+            factory.createIdentifier('baz'),
+          ),
+        ]),
+      ),
+      factory.createStringLiteral('baz'),
+      undefined,
+    );
+
+    const result = getNonTypeImports(typeChecker, importDeclaration);
+
+    expect(result).not.toBeUndefined();
+    expect(result).not.toStrictEqual(importDeclaration);
+    expect(compile(result as ImportDeclaration)).toMatchInlineSnapshot(`
+      ""use strict";
+      import foo from "baz";
+      "
+    `);
+  });
+
   it('returns the same node if the import declaration is not a named import', () => {
     const importDeclaration = factory.createImportDeclaration(
       undefined,
