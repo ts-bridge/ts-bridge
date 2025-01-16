@@ -1,5 +1,10 @@
+import { assert } from '@metamask/utils';
 import { resolve } from '@ts-bridge/resolver';
-import { getFixture, getVirtualEnvironment } from '@ts-bridge/test-utils';
+import {
+  getFixture,
+  getMockTsConfig,
+  getVirtualEnvironment,
+} from '@ts-bridge/test-utils';
 import type {
   ExportDeclaration,
   ImportDeclaration,
@@ -519,6 +524,27 @@ describe('getNamedImportNodes', () => {
 });
 
 describe('getNonTypeImports', () => {
+  const { program, typeChecker, system } = getVirtualEnvironment({
+    files: {
+      '/index.ts': '// no-op',
+      '/foo.ts': `
+        export type Foo = number;
+        export const bar: string = 'bar';
+      `,
+      '/bar.ts': `
+        import { Foo, bar } from './foo';
+        export type Baz = Foo;
+        console.log(bar);
+      `,
+    },
+    tsconfig: getMockTsConfig({
+      compilerOptions: {
+        module: 'ESNext',
+        moduleResolution: 'ESNext',
+      },
+    }),
+  });
+
   it('removes type imports from an import declaration', () => {
     const importDeclaration = factory.createImportDeclaration(
       undefined,
@@ -542,13 +568,37 @@ describe('getNonTypeImports', () => {
       undefined,
     );
 
-    const result = getNonTypeImports(importDeclaration);
+    const result = getNonTypeImports(typeChecker, importDeclaration);
 
     expect(result).not.toBeUndefined();
     expect(result).not.toStrictEqual(importDeclaration);
     expect(compile(result as ImportDeclaration)).toMatchInlineSnapshot(`
       ""use strict";
       import { bar } from "foo";
+      "
+    `);
+  });
+
+  it('removes implicit type imports from an import declaration', () => {
+    // This test uses an actual source file, since the type checker is needed to
+    // detect the implicit type imports.
+    const sourceFile = program.getSourceFile('/bar.ts');
+    assert(sourceFile);
+
+    const importDeclaration = sourceFile.statements.find(
+      typescript.isImportDeclaration,
+    );
+
+    assert(importDeclaration);
+    const result = getNonTypeImports(typeChecker, importDeclaration);
+
+    expect(result).not.toBeUndefined();
+    expect(result).not.toStrictEqual(importDeclaration);
+
+    program.emit(undefined, undefined, undefined, false);
+    expect(system.readFile('/bar.js')).toMatchInlineSnapshot(`
+      "import { bar } from './foo';
+      console.log(bar);
       "
     `);
   });
@@ -565,7 +615,7 @@ describe('getNonTypeImports', () => {
       undefined,
     );
 
-    const result = getNonTypeImports(importDeclaration);
+    const result = getNonTypeImports(typeChecker, importDeclaration);
     expect(result).toBe(importDeclaration);
   });
 
@@ -577,7 +627,7 @@ describe('getNonTypeImports', () => {
       undefined,
     );
 
-    const result = getNonTypeImports(importDeclaration);
+    const result = getNonTypeImports(typeChecker, importDeclaration);
     expect(result).toBe(importDeclaration);
   });
 
@@ -604,12 +654,30 @@ describe('getNonTypeImports', () => {
       undefined,
     );
 
-    const result = getNonTypeImports(importDeclaration);
+    const result = getNonTypeImports(typeChecker, importDeclaration);
     expect(result).toBeUndefined();
   });
 });
 
 describe('getNonTypeExports', () => {
+  const { program, typeChecker, system } = getVirtualEnvironment({
+    files: {
+      '/index.ts': '// no-op',
+      '/foo.ts': `
+        type Foo = number;
+        const bar: string = 'bar';
+
+        export { Foo, bar };
+      `,
+    },
+    tsconfig: getMockTsConfig({
+      compilerOptions: {
+        module: 'ESNext',
+        moduleResolution: 'ESNext',
+      },
+    }),
+  });
+
   it('removes type exports from an export declaration', () => {
     const exportDeclaration = factory.createExportDeclaration(
       undefined,
@@ -628,12 +696,36 @@ describe('getNonTypeExports', () => {
       ]),
     );
 
-    const result = getNonTypeExports(exportDeclaration);
+    const result = getNonTypeExports(typeChecker, exportDeclaration);
 
     expect(result).not.toBeUndefined();
     expect(result).not.toStrictEqual(exportDeclaration);
     expect(compile(result as ExportDeclaration)).toMatchInlineSnapshot(`
       ""use strict";
+      export { bar };
+      "
+    `);
+  });
+
+  it('removes implicit type exports from an export declaration', () => {
+    // This test uses an actual source file, since the type checker is needed to
+    // detect the implicit type exports.
+    const sourceFile = program.getSourceFile('/foo.ts');
+    assert(sourceFile);
+
+    const exportDeclaration = sourceFile.statements.find(
+      typescript.isExportDeclaration,
+    );
+
+    assert(exportDeclaration);
+    const result = getNonTypeExports(typeChecker, exportDeclaration);
+
+    expect(result).not.toBeUndefined();
+    expect(result).not.toStrictEqual(exportDeclaration);
+
+    program.emit(undefined, undefined, undefined, false);
+    expect(system.readFile('/foo.js')).toMatchInlineSnapshot(`
+      "const bar = 'bar';
       export { bar };
       "
     `);
@@ -646,7 +738,7 @@ describe('getNonTypeExports', () => {
       factory.createNamespaceExport(factory.createIdentifier('foo')),
     );
 
-    const result = getNonTypeExports(exportDeclaration);
+    const result = getNonTypeExports(typeChecker, exportDeclaration);
     expect(result).toBe(exportDeclaration);
   });
 
@@ -657,7 +749,7 @@ describe('getNonTypeExports', () => {
       undefined,
     );
 
-    const result = getNonTypeExports(exportDeclaration);
+    const result = getNonTypeExports(typeChecker, exportDeclaration);
     expect(result).toBe(exportDeclaration);
   });
 
@@ -679,7 +771,7 @@ describe('getNonTypeExports', () => {
       ]),
     );
 
-    const result = getNonTypeExports(exportDeclaration);
+    const result = getNonTypeExports(typeChecker, exportDeclaration);
     expect(result).toBeUndefined();
   });
 });
