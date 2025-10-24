@@ -129,6 +129,35 @@ describe('getTypeScriptConfig', () => {
       'Failed to parse the TypeScript configuration.',
     );
   });
+
+  it.each([
+    {
+      module: 'Node16',
+      moduleResolution: 'NodeNext',
+    },
+    { module: 'NodeNext', moduleResolution: 'Node16' },
+    { module: 'CommonJS', moduleResolution: 'Node16' },
+    { module: 'ESNext', moduleResolution: 'NodeNext' },
+    { module: 'Node16' },
+    { moduleResolution: 'NodeNext' },
+  ])(
+    'throws an error if the `module` and `moduleResolution` options do not match',
+    (compilerOptions) => {
+      const { system } = getVirtualEnvironment({
+        files: {
+          '/index.ts': '// no-op',
+        },
+        tsconfig: {
+          compilerOptions,
+        },
+        checkDiagnostic: false,
+      });
+
+      expect(() => getTypeScriptConfig('/tsconfig.json', system)).toThrowError(
+        'When using "Node16" or "NodeNext" module resolution, the "module" and "moduleResolution" compiler options must be the same.',
+      );
+    },
+  );
 });
 
 describe('getBaseCompilerOptions', () => {
