@@ -76,18 +76,6 @@ export class TypeScriptError extends Error {
       },
     );
 
-    const hasProjectReferencesError = diagnosticsArray.some((diagnostic) => {
-      return diagnostic.code === 6305;
-    });
-
-    if (hasProjectReferencesError) {
-      formattedDiagnostics.concat(
-        `\n${chalk.yellow(
-          'It looks like you are using project references. Make sure to build all referenced projects first.',
-        )}`,
-      );
-    }
-
     super(
       `${chalk.red(
         message,
