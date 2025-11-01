@@ -1366,7 +1366,6 @@ __metadata:
     "@metamask/utils": "npm:^9.2.1"
     "@ts-bridge/resolver": "workspace:^"
     "@ts-bridge/test-utils": "workspace:^"
-    "@types/node": "npm:^24.9.2"
     "@types/yargs": "npm:^17.0.32"
     "@typescript/vfs": "npm:^1.5.0"
     chalk: "npm:^5.3.0"

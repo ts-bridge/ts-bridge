@@ -3,10 +3,10 @@ import {
   createSystem,
   createVirtualCompilerHost,
 } from '@typescript/vfs';
-import { readFileSync, readdirSync, statSync } from 'fs';
-import { dirname, resolve, relative } from 'path';
+import { readFileSync, readdirSync, statSync } from 'node:fs';
+import { dirname, resolve, relative } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import typescript from 'typescript';
-import { fileURLToPath } from 'url';
 
 import { getMockPackageJson, getMockTsConfig } from './mocks.js';
 
