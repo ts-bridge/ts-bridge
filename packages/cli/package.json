@@ -55,7 +55,7 @@
     "@metamask/auto-changelog": "^3.4.4",
     "@metamask/utils": "^9.2.1",
     "@ts-bridge/test-utils": "workspace:^",
-    "@types/node": "^20.12.7",
+    "@types/node": "^24.9.2",
     "@types/yargs": "^17.0.32",
     "@typescript/vfs": "^1.5.0",
     "tsx": "^4.19.1",
