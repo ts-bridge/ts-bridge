@@ -6,8 +6,5 @@
   "types": "./dist/index.d.cts",
   "dependencies": {
     "@project-references-test/project-2": "workspace:^"
-  },
-  "devDependencies": {
-    "@ts-bridge/cli": "workspace:^"
   }
 }
