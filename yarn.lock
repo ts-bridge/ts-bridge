@@ -1209,6 +1209,7 @@ __metadata:
   resolution: "@project-references-test/project-5@workspace:packages/test-utils/test/fixtures/project-references/packages/project-5"
   dependencies:
     "@project-references-test/project-2": "workspace:^"
+    "@ts-bridge/cli": "workspace:^"
   languageName: unknown
   linkType: soft
 
@@ -1358,7 +1359,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@ts-bridge/cli@workspace:packages/cli":
+"@ts-bridge/cli@workspace:^, @ts-bridge/cli@workspace:packages/cli":
   version: 0.0.0-use.local
   resolution: "@ts-bridge/cli@workspace:packages/cli"
   dependencies:

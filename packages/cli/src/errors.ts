@@ -76,7 +76,48 @@ export class TypeScriptError extends Error {
       },
     );
 
-    super(`${chalk.red(message)}\n${formattedDiagnostics}`);
+    const hasProjectReferencesError = diagnosticsArray.some((diagnostic) => {
+      return diagnostic.code === 6305;
+    });
+
+    if (hasProjectReferencesError) {
+      formattedDiagnostics.concat(
+        `\n${chalk.yellow(
+          'It looks like you are using project references. Make sure to build all referenced projects first.',
+        )}`,
+      );
+    }
+
+    super(
+      `${chalk.red(
+        message,
+      )}\n\n${formattedDiagnostics}${TypeScriptError.#getErrorHint(
+        diagnosticsArray,
+      )}`,
+    );
+  }
+
+  /**
+   * Get a hint for the error based on the diagnostics.
+   *
+   * @param diagnostics - The TypeScript diagnostics.
+   * @returns The error hint, or an empty string.
+   */
+  // This is a static method to allow calling it from the constructor, before
+  // `super()` has been called.
+  static #getErrorHint(diagnostics: readonly Diagnostic[]): string {
+    const hasProjectReferencesError = diagnostics.some((diagnostic) => {
+      // "Output file '...' has not been built from source file '...'."
+      return diagnostic.code === 6305;
+    });
+
+    if (hasProjectReferencesError) {
+      return `\n${chalk.yellow(
+        'It looks like you are using project references. Make sure to build all referenced projects first.',
+      )}`;
+    }
+
+    return '';
   }
 }
 
