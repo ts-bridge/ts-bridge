@@ -120,6 +120,7 @@ describe('getTypeScriptConfig', () => {
       tsconfig: {
         compilerOptions: {
           lib: false,
+          skipLibCheck: true,
         },
       },
     });

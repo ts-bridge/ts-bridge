@@ -1366,7 +1366,7 @@ __metadata:
     "@metamask/utils": "npm:^9.2.1"
     "@ts-bridge/resolver": "workspace:^"
     "@ts-bridge/test-utils": "workspace:^"
-    "@types/node": "npm:^20.12.7"
+    "@types/node": "npm:^22.9.0"
     "@types/yargs": "npm:^17.0.32"
     "@typescript/vfs": "npm:^1.5.0"
     chalk: "npm:^5.3.0"
@@ -1533,7 +1533,7 @@ __metadata:
   resolution: "@ts-bridge/test-utils@workspace:packages/test-utils"
   dependencies:
     "@types/lz-string": "npm:^1.5.0"
-    "@types/node": "npm:^20.12.7"
+    "@types/node": "npm:^22.9.0"
     "@typescript/vfs": "npm:^1.5.0"
     strip-ansi: "npm:^7.1.0"
     typescript: "npm:^5.4.5"
@@ -1593,12 +1593,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/node@npm:^20.12.7":
-  version: 20.12.7
-  resolution: "@types/node@npm:20.12.7"
+"@types/node@npm:^22.9.0":
+  version: 22.18.13
+  resolution: "@types/node@npm:22.18.13"
   dependencies:
-    undici-types: "npm:~5.26.4"
-  checksum: 10c0/dce80d63a3b91892b321af823d624995c61e39c6a223cc0ac481a44d337640cc46931d33efb3beeed75f5c85c3bda1d97cef4c5cd4ec333caf5dee59cff6eca0
+    undici-types: "npm:~6.21.0"
+  checksum: 10c0/4d97b447274f6e566fc5afb464146e9db77b5892c318364eb927b13441e6dbf9fe0ec9d1ed2cb6b5e7e85f5154a5ff52913d2cfc4b952bcf19fb0ddaaff5e533
   languageName: node
   linkType: hard
 
@@ -5700,10 +5700,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"undici-types@npm:~5.26.4":
-  version: 5.26.5
-  resolution: "undici-types@npm:5.26.5"
-  checksum: 10c0/bb673d7876c2d411b6eb6c560e0c571eef4a01c1c19925175d16e3a30c4c428181fb8d7ae802a261f283e4166a0ac435e2f505743aa9e45d893f9a3df017b501
+"undici-types@npm:~6.21.0":
+  version: 6.21.0
+  resolution: "undici-types@npm:6.21.0"
+  checksum: 10c0/c01ed51829b10aa72fc3ce64b747f8e74ae9b60eafa19a7b46ef624403508a54c526ffab06a14a26b3120d055e1104d7abe7c9017e83ced038ea5cf52f8d5e04
   languageName: node
   linkType: hard
 

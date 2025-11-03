@@ -1,4 +1,5 @@
 import { createRequire } from 'module';
+import type { Module } from 'node:vm';
 import { dirname, join } from 'path';
 import { createContext, Script, SyntheticModule, SourceTextModule } from 'vm';
 
@@ -48,7 +49,7 @@ function getSyntheticModule(importedModule: Record<string, unknown>) {
 export function resolveFromVirtualFileSystem(
   fileSystem: Map<string, string>,
   specifier: string,
-  referencingModule: SourceTextModule,
+  referencingModule: Module,
 ) {
   const fileName = join(dirname(referencingModule.identifier), specifier);
   if (fileSystem.has(fileName)) {
@@ -85,7 +86,7 @@ function getInitializeImportMeta(fileName: string) {
  * @returns The module linker.
  */
 function getModuleLinker(fileSystem: Map<string, string>) {
-  return async (specifier: string, referencingModule: SourceTextModule) => {
+  return async (specifier: string, referencingModule: Module) => {
     const fileName = join(dirname(referencingModule.identifier), specifier);
     const file = resolveFromVirtualFileSystem(
       fileSystem,
