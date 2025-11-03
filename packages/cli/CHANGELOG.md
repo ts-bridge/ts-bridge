@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.4]
+
 ### Uncategorized
 
 - fix: Validate `module` and `moduleResolution` in `tsconfig` ([#84](https://github.com/ts-bridge/ts-bridge/pull/84))
@@ -182,7 +184,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Initial release of the `@ts-bridge/cli` package.
 
-[Unreleased]: https://github.com/ts-bridge/ts-bridge/compare/@ts-bridge/cli@0.6.3...HEAD
+[Unreleased]: https://github.com/ts-bridge/ts-bridge/compare/@ts-bridge/cli@0.6.4...HEAD
+[0.6.4]: https://github.com/ts-bridge/ts-bridge/compare/@ts-bridge/cli@0.6.3...@ts-bridge/cli@0.6.4
 [0.6.3]: https://github.com/ts-bridge/ts-bridge/compare/@ts-bridge/cli@0.6.2...@ts-bridge/cli@0.6.3
 [0.6.2]: https://github.com/ts-bridge/ts-bridge/compare/@ts-bridge/cli@0.6.1...@ts-bridge/cli@0.6.2
 [0.6.1]: https://github.com/ts-bridge/ts-bridge/compare/@ts-bridge/cli@0.6.0...@ts-bridge/cli@0.6.1
