@@ -74,6 +74,24 @@ describe('TypeScriptError', () => {
     expect(error.message).toContain('This is an error.');
     expect(error.message).toContain('This is another error.');
   });
+
+  it('creates an error with a hint if one of the diagnostics has error code `6305`', () => {
+    const diagnostics = [
+      {
+        code: 6305,
+        messageText: 'This is an error.',
+        file: undefined,
+        start: undefined,
+        length: undefined,
+        category: DiagnosticCategory.Error,
+      },
+    ];
+
+    const error = new TypeScriptError('TypeScript error', diagnostics);
+    expect(error.message).toContain(
+      'It looks like you are using project references. Make sure to build all referenced projects first.',
+    );
+  });
 });
 
 describe('NodeError', () => {
