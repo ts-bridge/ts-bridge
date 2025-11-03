@@ -9,11 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.6.4]
 
-### Uncategorized
+### Fixed
 
-- fix: Validate `module` and `moduleResolution` in `tsconfig` ([#84](https://github.com/ts-bridge/ts-bridge/pull/84))
-- fix: Add error hint to project references error ([#85](https://github.com/ts-bridge/ts-bridge/pull/85))
-- chore(dev-deps): Bump `@types/node` from `^20.12.7` to `^22.9.0` ([#86](https://github.com/ts-bridge/ts-bridge/pull/86))
+- Validate `module` and `moduleResolution` in `tsconfig` ([#84](https://github.com/ts-bridge/ts-bridge/pull/84))
+  - This prevents misconfiguration that could lead to incorrect behavior when
+    building the project.
+- Add error hint to project references error ([#85](https://github.com/ts-bridge/ts-bridge/pull/85))
 
 ## [0.6.3]
 
