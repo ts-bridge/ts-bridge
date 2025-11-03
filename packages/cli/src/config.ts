@@ -1,5 +1,5 @@
 import { dirname, join } from 'path';
-import type { CompilerOptions, System } from 'typescript';
+import type { CompilerOptions, ParsedCommandLine, System } from 'typescript';
 import typescript from 'typescript';
 
 import { TypeScriptError } from './errors.js';
@@ -43,6 +43,41 @@ function getTypeScriptConfigPath(path: string, system: System) {
 }
 
 /**
+ * Validate the TypeScript configuration. This checks for common
+ * misconfigurations and throws an error if any are found.
+ *
+ * @param config - The TypeScript configuration.
+ * @throws Will throw an error if the configuration is invalid.
+ */
+export function validateTypeScriptConfig(config: ParsedCommandLine) {
+  if (config.errors.length) {
+    throw new TypeScriptError(
+      'Failed to parse the TypeScript configuration.',
+      config.errors,
+    );
+  }
+
+  if (
+    (config.options.module === typescript.ModuleKind.Node16 &&
+      config.options.moduleResolution !==
+        typescript.ModuleResolutionKind.Node16) ||
+    (config.options.module === typescript.ModuleKind.NodeNext &&
+      config.options.moduleResolution !==
+        typescript.ModuleResolutionKind.NodeNext) ||
+    (config.options.moduleResolution ===
+      typescript.ModuleResolutionKind.Node16 &&
+      config.options.module !== typescript.ModuleKind.Node16) ||
+    (config.options.moduleResolution ===
+      typescript.ModuleResolutionKind.NodeNext &&
+      config.options.module !== typescript.ModuleKind.NodeNext)
+  ) {
+    throw new Error(
+      `When using "Node16" or "NodeNext" module resolution, the "module" and "moduleResolution" compiler options must be the same.`,
+    );
+  }
+}
+
+/**
  * Get the TypeScript configuration.
  *
  * This function reads the TypeScript configuration from the specified path.
@@ -73,12 +108,7 @@ export function getTypeScriptConfig(path: string, system = sys) {
     resolvedPath,
   );
 
-  if (parsedConfig.errors.length) {
-    throw new TypeScriptError(
-      'Failed to parse the TypeScript configuration.',
-      parsedConfig.errors,
-    );
-  }
+  validateTypeScriptConfig(parsedConfig);
 
   return parsedConfig;
 }
